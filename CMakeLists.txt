@@ -4,7 +4,7 @@ project(StorageAT VERSION 0.0.1)
 
 
 option(STORAGEAT_BEDUG "Enable extended warnings output" OFF)
-option(STORAGEAT_TEST "Enable storage tests." OFF)
+option(STORAGEAT_TEST "Enable StorageAT tests." OFF)
 
 
 if(STORAGEAT_BEDUG)

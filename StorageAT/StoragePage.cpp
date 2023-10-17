@@ -1,21 +1,21 @@
 /* Copyright © 2023 Georgy E. All rights reserved. */
 
-#include "StoragePage.hpp"
-#include "StoragePage.hpp"
+#include "StoragePage.h"
+#include "StoragePage.h"
 
 #include <memory>
 #include <string.h>
 #include <stdint.h>
 
-#include "StorageAT.hpp"
-#include "StorageSector.hpp"
+#include "StorageAT.h"
+#include "StorageSector.h"
 
 
 typedef StorageAT FS;
 
 Page::Page(uint32_t address): address(address)
 {
-	memset((void*)&page, 0, sizeof(page));
+	memset(reinterpret_cast<void*>(&page), 0, sizeof(page));
 	page.header.magic   = STORAGE_MAGIC;
 	page.header.version = STORAGE_VERSION;
 	page.header.status  = PAGE_STATUS_EMPTY;
@@ -28,12 +28,12 @@ void Page::setPageStatus(uint8_t status)
 
 bool Page::isSetPageStatus(uint8_t status)
 {
-	return (bool)(page.header.status & status);
+	return static_cast<bool>(page.header.status & status);
 }
 
 StorageStatus Page::load(bool startPage)
 {
-	StorageStatus status = (FS::readCallback())(address, (uint8_t*)&page, sizeof(page));
+	StorageStatus status = (FS::readCallback())(address, reinterpret_cast<uint8_t*>(&page), sizeof(page));
 	if (status != STORAGE_OK) {
 		return status;
 	}
@@ -61,7 +61,7 @@ StorageStatus Page::loadNext() {
 
 StorageStatus Page::save()
 {
-	StorageStatus status = (FS::writeCallback())(address, (uint8_t*)&page, sizeof(page));
+	StorageStatus status = (FS::writeCallback())(address, reinterpret_cast<uint8_t*>(&page), sizeof(page));
 	if (status != STORAGE_OK) {
 		return status;
 	}
@@ -110,7 +110,7 @@ bool Page::validate()
 		return false;
 	}
 
-	uint16_t crc = this->getCRC16((uint8_t*)&page, sizeof(page) - sizeof(page.crc));
+	uint16_t crc = this->getCRC16(reinterpret_cast<uint8_t*>(&page), sizeof(page) - sizeof(page.crc));
 	if (crc != page.crc) {
 		return false;
 	}
@@ -121,11 +121,11 @@ bool Page::validate()
 uint16_t Page::getCRC16(uint8_t* buf, uint16_t len) {
     uint16_t crc = 0;
     for (uint16_t i = 1; i < len; i++) {
-        crc  = (uint8_t)(crc >> 8) | (crc << 8);
-        crc ^= buf[i];
-        crc ^= (uint8_t)(crc & 0xFF) >> 4;
-        crc ^= (crc << 8) << 4;
-        crc ^= ((crc & 0xff) << 4) << 1;
+        crc  = static_cast<uint16_t>((crc >> 8) | (crc << 8));
+        crc ^= static_cast<uint16_t>(buf[i]);
+        crc ^= static_cast<uint16_t>((crc & 0xFF) >> 4);
+        crc ^= static_cast<uint16_t>((crc << 8) << 4);
+        crc ^= static_cast<uint16_t>(((crc & 0xff) << 4) << 1);
     }
     return crc;
 }
@@ -138,7 +138,7 @@ bool Page::validateNextAddress()
 HeaderPage::HeaderPage(uint32_t address): Page(address)
 {
 	this->address     = address - (address % StorageSector::SECTOR_PAGES_COUNT);
-	this->data        = (HeaderPageStruct*)(uint8_t*)page.payload;
+	this->data        = reinterpret_cast<HeaderPageStruct*>(page.payload);
 	this->sectorIndex = StorageSector::getSectorIndex(address);
 }
 
@@ -149,7 +149,7 @@ void HeaderPage::setHeaderStatus(uint32_t pageIndex, uint8_t status)
 
 bool HeaderPage::isSetHeaderStatus(uint32_t pageIndex, uint8_t status)
 {
-	return (bool)(data->pages[pageIndex].status & status);
+	return static_cast<bool>(data->pages[pageIndex].status & status);
 }
 
 StorageStatus HeaderPage::createHeader()
@@ -180,7 +180,7 @@ StorageStatus HeaderPage::load()
 
 	StorageStatus status = STORAGE_ERROR;
 	for (uint8_t i = 0; i < StorageSector::SECTOR_RESERVED_PAGES_COUNT; i++) {
-		this->address = startAddress + i * Page::STORAGE_PAGE_SIZE;
+		this->address = startAddress + static_cast<uint32_t>(i * Page::STORAGE_PAGE_SIZE);
 
 		status = Page::load();
 		if (status == STORAGE_BUSY) {
@@ -199,7 +199,7 @@ StorageStatus HeaderPage::save()
 
 	StorageStatus status = STORAGE_ERROR;
 	for (uint8_t i = 0; i < StorageSector::SECTOR_RESERVED_PAGES_COUNT; i++) {
-		this->address = startAddress + i * Page::STORAGE_PAGE_SIZE;
+		this->address = startAddress + static_cast<uint32_t>(i * Page::STORAGE_PAGE_SIZE);
 
 		status = Page::save();
 		if (status == STORAGE_BUSY) {

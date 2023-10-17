@@ -6,7 +6,7 @@
 
 #include <stdint.h>
 
-#include "StorageType.hpp"
+#include "StorageType.h"
 
 
 class Page
@@ -26,10 +26,10 @@ public:
 
 
 	typedef enum _PageStatus {
-	    PAGE_STATUS_EMPTY = ((uint8_t)0b00000001),
-	    PAGE_STATUS_START = ((uint8_t)0b00000010),
-		PAGE_STATUS_MID   = ((uint8_t)0b00000100),
-	    PAGE_STATUS_END   = ((uint8_t)0b00001000)
+	    PAGE_STATUS_EMPTY = static_cast<uint8_t>(0b00000001),
+	    PAGE_STATUS_START = static_cast<uint8_t>(0b00000010),
+		PAGE_STATUS_MID   = static_cast<uint8_t>(0b00000100),
+	    PAGE_STATUS_END   = static_cast<uint8_t>(0b00001000)
 	} PageStatus;
 
 	/* Page header meta data structure */
@@ -82,9 +82,9 @@ class HeaderPage: public Page
 {
 public:
 	typedef enum _PageHeaderStatus {
-		PAGE_OK      = ((uint8_t)0b00000001),
-		PAGE_EMPTY   = ((uint8_t)0b00000010),
-		PAGE_BLOCKED = ((uint8_t)0b00000100),
+		PAGE_OK      = static_cast<uint8_t>(0b00000001),
+		PAGE_EMPTY   = static_cast<uint8_t>(0b00000010),
+		PAGE_BLOCKED = static_cast<uint8_t>(0b00000100),
 	} PageHeaderStatus;
 
 	typedef struct __attribute__((packed)) _PageHeader {
@@ -94,7 +94,7 @@ public:
 	} PageHeader;
 
 	/* Pages in block that header page contains */
-	static const uint16_t PAGE_HEADERS_COUNT = STORAGE_PAGE_PAYLOAD_SIZE / sizeof(struct _PageHeader);
+	static const uint32_t PAGE_HEADERS_COUNT = STORAGE_PAGE_PAYLOAD_SIZE / sizeof(struct _PageHeader);
 
 	typedef struct __attribute__((packed)) _HeaderPageStruct {
 		PageHeader pages[PAGE_HEADERS_COUNT];

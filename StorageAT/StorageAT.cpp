@@ -1,16 +1,16 @@
 /* Copyright © 2023 Georgy E. All rights reserved. */
 
-#include "StorageAT.hpp"
+#include "StorageAT.h"
 
 #include <memory>
 #include <string.h>
 #include <stdint.h>
 #include <stddef.h>
 
-#include "StorageData.hpp"
-#include "StorageType.hpp"
-#include "StorageSearch.hpp"
-#include "StorageSector.hpp"
+#include "StorageData.h"
+#include "StorageType.h"
+#include "StorageSearch.h"
+#include "StorageSector.h"
 
 
 // using namespace _SAT;
