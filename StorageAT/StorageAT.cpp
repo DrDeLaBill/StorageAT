@@ -8,22 +8,23 @@
 #include <stddef.h>
 
 #include "StorageData.hpp"
+#include "StorageType.hpp"
 #include "StorageSearch.hpp"
 #include "StorageSector.hpp"
 
 
-using namespace _SAT;
+// using namespace _SAT;
 
 
 uint32_t StorageAT::m_pagesCount = 0;
-StorgeDriverCallback StorageAT::m_readDriver  = NULL;
-StorgeDriverCallback StorageAT::m_writeDriver = NULL;
+StorageDriverCallback StorageAT::m_readDriver  = NULL;
+StorageDriverCallback StorageAT::m_writeDriver = NULL;
 
 
 StorageAT::StorageAT(
 	uint32_t pagesCount,
-	StorgeDriverCallback read_driver,
-	StorgeDriverCallback write_driver
+	StorageDriverCallback read_driver,
+	StorageDriverCallback write_driver
 ) {
 	StorageAT::m_pagesCount   = pagesCount;
 	StorageAT::m_readDriver  = read_driver;
@@ -94,12 +95,12 @@ uint32_t StorageAT::getBytesSize()
 	return StorageAT::getPagesCount() * Page::STORAGE_PAGE_SIZE;
 }
 
-StorgeDriverCallback StorageAT::readCallback()
+StorageDriverCallback StorageAT::readCallback()
 {
 	return StorageAT::m_readDriver;
 }
 
-StorgeDriverCallback StorageAT::writeCallback()
+StorageDriverCallback StorageAT::writeCallback()
 {
 	return StorageAT::m_writeDriver;
 }

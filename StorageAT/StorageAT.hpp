@@ -7,8 +7,8 @@
 #include <stdint.h>
 
 #include "StoragePage.hpp"
-#include "StorageSector.hpp"
 #include "StorageType.hpp"
+#include "StorageSector.hpp"
 
 /*
  * class StorageAT
@@ -23,8 +23,8 @@ private:
 	static uint32_t m_pagesCount;
 
 	// TODO: docs
-	static StorgeDriverCallback m_readDriver;
-	static StorgeDriverCallback m_writeDriver;
+	static StorageDriverCallback m_readDriver;
+	static StorageDriverCallback m_writeDriver;
 
 public:
 	/* Max available address for StorageFS */

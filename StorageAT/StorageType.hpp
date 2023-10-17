@@ -25,7 +25,7 @@ typedef enum _StorageFindMode {
 } StorageFindMode;
 
 
-typedef StorageStatus (*StorgeDriverCallback) (uint32_t, uint8_t*, uint16_t);
+typedef StorageStatus (*StorageDriverCallback) (uint32_t, uint8_t*, uint32_t);
 
 
 #endif

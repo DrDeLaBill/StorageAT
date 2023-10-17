@@ -7,8 +7,8 @@
 #include <string.h>
 
 #include "StoragePage.hpp"
-#include "StorageSearch.hpp"
 #include "StorageType.hpp"
+#include "StorageSearch.hpp"
 
 
 StorageData::StorageData(uint32_t startAddress): m_startAddress(startAddress) {}
