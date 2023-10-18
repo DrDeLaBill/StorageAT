@@ -7,6 +7,15 @@
 #include <stdint.h>
 
 
+#ifdef __GNUC__
+#define PACK( __Declaration__ ) __Declaration__ __attribute__((__packed__))
+#endif
+
+#ifdef _MSC_VER
+#define PACK( __Declaration__ ) __pragma( pack(push, 1) ) __Declaration__ __pragma( pack(pop))
+#endif
+
+
 typedef enum _StorageStatus {
 	STORAGE_OK        = static_cast<uint8_t>(0b00000001),
 	STORAGE_ERROR     = static_cast<uint8_t>(0b00000010),

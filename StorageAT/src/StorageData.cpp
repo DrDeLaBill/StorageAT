@@ -17,6 +17,10 @@ StorageStatus StorageData::load(uint8_t* data, uint32_t len)
 {
 	Page page(m_startAddress);
 
+	if (!len) {
+		return STORAGE_ERROR;
+	}
+
 	StorageStatus status = page.load(/*startPage=*/true);
 	if (status != STORAGE_OK) {
 		return status;

@@ -1,10 +1,13 @@
-#include <iostream>
+#include <gtest/gtest.h>
+#include <string>
+// #include "gmock/gmock.h"
 
-#include "StorageAT.h"
+#include "../StorageAT/include/StorageAT.h"
 #include "StorageEmulator.h"
 
 
 const int PAGES_COUNT = 200; // bytes
+const int PAGE_LEN    = 256;
 
 StorageEmulator storage(PAGES_COUNT);
 
@@ -32,7 +35,8 @@ StorageStatus write_driver(uint32_t address, uint8_t* data, uint32_t len)
     return STORAGE_OK;
 };
 
-int main()
+
+TEST(Core, primitive)
 {
     StorageAT sat(
         storage.getPagesCount(),
@@ -40,7 +44,9 @@ int main()
         write_driver
     );
 
-    std::cout << "Start testing" << std::endl;
+    uint8_t emptyData256[256] = { 0xFF };
 
-    return 0;
+    uint8_t data256[256] = {};
+    EXPECT_EQ(sat.load(0, data256, 0), STORAGE_ERROR);
+    EXPECT_EQ(sat.load(0, data256, PAGE_LEN), STORAGE_ERROR);
 }
