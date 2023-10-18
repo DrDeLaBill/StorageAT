@@ -31,6 +31,8 @@ public:
     uint32_t getPagesCount();
 
     void setBusy(bool busy);
+
+    void clear();
 };
 
 

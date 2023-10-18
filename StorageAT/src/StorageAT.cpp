@@ -32,10 +32,10 @@ StorageAT::StorageAT(
 }
 
 StorageStatus StorageAT::find(
-	uint8_t         prefix[Page::STORAGE_PAGE_PREFIX_SIZE],
-	uint32_t        id,
 	StorageFindMode mode,
-	uint32_t*       address
+	uint32_t*       address,
+	uint8_t         prefix[Page::STORAGE_PAGE_PREFIX_SIZE],
+	uint32_t        id
 ) {
 	std::unique_ptr<StorageSearchBase> search;
 
@@ -64,6 +64,9 @@ StorageStatus StorageAT::find(
 
 StorageStatus StorageAT::load(uint32_t address, uint8_t* data, uint32_t len)
 {
+	if (!data) {
+		return STORAGE_ERROR;
+	}
 	StorageData storageData(address);
 	return storageData.load(data, len);
 }
@@ -75,6 +78,9 @@ StorageStatus StorageAT::save(
 	uint8_t* data,
 	uint32_t len
 ) {
+	if (!data) {
+		return STORAGE_ERROR;
+	}
 	StorageData storageData(address);
 	return storageData.save(prefix, id, data, len);
 }

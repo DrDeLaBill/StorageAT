@@ -49,10 +49,10 @@ public:
 	 * @return           Returns STORAGE_OK if the data was found
 	 */
 	StorageStatus find(
-		uint8_t         prefix[Page::STORAGE_PAGE_PREFIX_SIZE],
-		uint32_t        id,
 		StorageFindMode mode,
-		uint32_t*       address
+		uint32_t*       address,
+		uint8_t         prefix[Page::STORAGE_PAGE_PREFIX_SIZE] = {},
+		uint32_t        id = 0
 	);
 
 

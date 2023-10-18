@@ -62,7 +62,9 @@ public:
 	 */
 	static uint32_t getPageIndexByAddress(uint32_t address);
 
-	static StorageStatus loadHeader(HeaderPage *header);
+	static bool isSectorAddress(uint32_t address);
+
+	static StorageStatus loadHeader(HeaderPage *header); // TODO: do operator= for Page class
 };
 
 #endif

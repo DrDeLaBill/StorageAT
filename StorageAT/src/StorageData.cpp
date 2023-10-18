@@ -16,6 +16,10 @@ StorageData::StorageData(uint32_t startAddress): m_startAddress(startAddress) {}
 StorageStatus StorageData::load(uint8_t* data, uint32_t len)
 {
 	Page page(m_startAddress);
+	
+	if (StorageSector::isSectorAddress(m_startAddress)) {
+		return STORAGE_ERROR;
+	}
 
 	if (!len) {
 		return STORAGE_ERROR;
@@ -53,6 +57,11 @@ StorageStatus StorageData::save(
 	uint32_t len
 ) {
 	uint32_t pageAddress = m_startAddress;
+	
+	if (StorageSector::isSectorAddress(pageAddress)) {
+		return STORAGE_ERROR;
+	}
+
 	StorageStatus status = this->findStartAddress(&pageAddress);
 	if (status == STORAGE_BUSY) {
 		return STORAGE_BUSY;
@@ -80,6 +89,7 @@ StorageStatus StorageData::save(
 		}
 
 		uint32_t nextAddress = 0;
+		status = STORAGE_OK;
 		if (!isEnd) {
 			status = (std::make_unique<StorageSearchEmpty>(/*startSearchAddress=*/curAddr + Page::STORAGE_PAGE_SIZE))
 				->searchPageAddress(
@@ -126,12 +136,17 @@ StorageStatus StorageData::save(
 		page    = std::make_unique<Page>(curAddr);
 	}
 
-    return STORAGE_ERROR;
+    return STORAGE_OK;
 }
 
 StorageStatus StorageData::deleteData()
 {
 	uint32_t address = 0;
+
+	if (StorageSector::isSectorAddress(address)) {
+		return STORAGE_ERROR;
+	}
+
 	StorageStatus status = this->findStartAddress(&address);
 	if (status == STORAGE_BUSY) {
 		return STORAGE_BUSY;

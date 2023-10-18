@@ -61,6 +61,8 @@ StorageStatus Page::loadNext() {
 
 StorageStatus Page::save()
 {
+	page.crc = this->getCRC16(reinterpret_cast<uint8_t*>(&page), sizeof(page) - sizeof(page.crc));
+
 	StorageStatus status = (FS::writeCallback())(address, reinterpret_cast<uint8_t*>(&page), sizeof(page));
 	if (status != STORAGE_OK) {
 		return status;
@@ -171,7 +173,12 @@ StorageStatus HeaderPage::createHeader()
 		}
 	}
 
-	return this->save();
+	StorageStatus status = dumpHeader.save();
+	if (status != STORAGE_OK) {
+		return status;
+	}
+
+	return this->load();
 }
 
 StorageStatus HeaderPage::load()
