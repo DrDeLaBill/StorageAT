@@ -57,9 +57,9 @@ TEST(Core, primitive)
     EXPECT_EQ(sat.find(FIND_MODE_MAX, &address, nullptr, 0), STORAGE_NOT_FOUND);
     EXPECT_EQ(sat.find(FIND_MODE_MIN, &address, nullptr, 0), STORAGE_NOT_FOUND);
     EXPECT_EQ(sat.find(FIND_MODE_NEXT, &address, nullptr, 0), STORAGE_NOT_FOUND);
-    EXPECT_EQ(sat.save(address, reinterpret_cast<uint8_t*>(""), 0, nullptr, 0), STORAGE_ERROR);
-    EXPECT_EQ(sat.save(address, reinterpret_cast<uint8_t*>(""), 0, nullptr, 1000), STORAGE_ERROR);
-    EXPECT_EQ(sat.save(address, reinterpret_cast<uint8_t*>(""), 0, nullptr, 1000000), STORAGE_ERROR);
+    EXPECT_EQ(sat.save(address, const_cast<uint8_t*>(reinterpret_cast<const uint8_t*>("")), 0, nullptr, 0), STORAGE_ERROR);
+    EXPECT_EQ(sat.save(address, const_cast<uint8_t*>(reinterpret_cast<const uint8_t*>("")), 0, nullptr, 1000), STORAGE_ERROR);
+    EXPECT_EQ(sat.save(address, const_cast<uint8_t*>(reinterpret_cast<const uint8_t*>("")), 0, nullptr, 1000000), STORAGE_ERROR);
     EXPECT_EQ(sat.save(address, nullptr, 0, nullptr, 0), STORAGE_ERROR);
     EXPECT_EQ(sat.save(address, nullptr, 0, nullptr, 1000), STORAGE_ERROR);
     EXPECT_EQ(sat.save(address, nullptr, 0, nullptr, 1000000), STORAGE_ERROR);
