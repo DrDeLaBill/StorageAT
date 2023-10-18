@@ -3,13 +3,18 @@ cmake_minimum_required(VERSION 3.27)
 project(StorageAT-lib VERSION 0.0.1)
 
 
-file(GLOB ${PROJECT_NAME}_HEADERS "./*.h")
-file(GLOB ${PROJECT_NAME}_SOURCES "./*.cpp")
+message(STATUS "StorageAT library found.")
 
-add_library(
+
+file(GLOB ${PROJECT_NAME}_HEADERS "./include/*.h")
+file(GLOB ${PROJECT_NAME}_SOURCES "./src/*.cpp")
+set(ALL_SRCS "${${PROJECT_NAME}_SOURCES};${${PROJECT_NAME}_HEADERS}")
+
+add_library(storageatlib STATIC ${ALL_SRCS})
+target_include_directories(
     storageatlib
-    STATIC
-    ${${PROJECT_NAME}_SOURCES} ${${PROJECT_NAME}_HEADERS}
+    PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 set_target_properties(
     storageatlib PROPERTIES

@@ -1,11 +1,11 @@
-#include "StorageSearch.hpp"
+#include "StorageSearch.h"
 
 #include <string.h>
 #include <stdint.h>
 #include <stdbool.h>
 
-#include "StoragePage.hpp"
-#include "StorageSector.hpp"
+#include "StoragePage.h"
+#include "StorageSector.h"
 
 
 StorageStatus StorageSearchBase::searchPageAddress(
@@ -46,7 +46,7 @@ StorageStatus StorageSearchBase::searchPageAddressInBox(
 	bool foundOnce  = true;
 	uint32_t prevId = getStartCmpId();
 
-	uint16_t pageIndex = StorageSector::getPageIndexByAddress(this->m_startSearchAddress);
+	uint32_t pageIndex = StorageSector::getPageIndexByAddress(this->m_startSearchAddress);
 	for (; pageIndex < HeaderPage::PAGE_HEADERS_COUNT; pageIndex++) {
 		if (!header->isSetHeaderStatus(pageIndex, HeaderPage::PAGE_OK)) {
 			continue;

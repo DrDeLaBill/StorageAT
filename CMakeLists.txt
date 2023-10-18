@@ -3,10 +3,6 @@ cmake_minimum_required(VERSION 3.27)
 project(StorageAT VERSION 0.0.1)
 
 
-option(STORAGEAT_BEDUG "Enable extended warnings output" OFF)
-option(STORAGEAT_TEST "Enable storage tests." OFF)
-
-
 if(STORAGEAT_BEDUG)
     add_compile_options(
         -Wall
@@ -30,6 +26,13 @@ endif()
 
 
 add_subdirectory(StorageAT)
-if(STORAGEAT_TEST)
-    add_subdirectory(test)
+
+if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
+    option(STORAGEAT_BEDUG "Enable extended warnings output" OFF)
+    option(STORAGEAT_TEST "Enable StorageAT tests." ON)
+
+    if (STORAGEAT_TEST)
+        enable_testing()
+        add_subdirectory(test)
+    endif()
 endif()

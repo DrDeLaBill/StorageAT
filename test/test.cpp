@@ -1,27 +1,52 @@
-#include <iostream>
+#include <gtest/gtest.h>
+#include <string>
+// #include "gmock/gmock.h"
 
-#include "StorageAT.hpp"
+#include "../StorageAT/include/StorageAT.h"
+#include "StorageEmulator.h"
 
 
-const int MEMORY_SIZE = 65535; // bytes
+const int PAGES_COUNT = 200; // bytes
+const int PAGE_LEN    = 256;
 
-StorageDriverCallback read_driver = [](uint32_t address, uint8_t* data, uint32_t len) {
-	return STORAGE_OK;
+StorageEmulator storage(PAGES_COUNT);
+
+StorageStatus read_driver(uint32_t address, uint8_t* data, uint32_t len) 
+{
+    StorageEmulatorStatus status = storage.readPage(address, data, len);
+    if (status == EMULATOR_BUSY) {
+        return STORAGE_BUSY;
+    }
+    if (status == EMULATOR_ERROR) {
+        STORAGE_ERROR;
+    }
+    return STORAGE_OK;
 };
 
-StorageDriverCallback write_driver = [](uint32_t address, uint8_t* data, uint32_t len) {
-	return STORAGE_OK;
+StorageStatus write_driver(uint32_t address, uint8_t* data, uint32_t len) 
+{
+    StorageEmulatorStatus status = storage.writePage(address, data, len);
+    if (status == EMULATOR_BUSY) {
+        return STORAGE_BUSY;
+    }
+    if (status == EMULATOR_ERROR) {
+        STORAGE_ERROR;
+    }
+    return STORAGE_OK;
 };
 
-int main()
+
+TEST(Core, primitive)
 {
     StorageAT sat(
-        MEMORY_SIZE,
+        storage.getPagesCount(),
         read_driver,
         write_driver
     );
 
-    std::cout << "Start testing" << std::endl;
+    uint8_t emptyData256[256] = { 0xFF };
 
-    return 0;
+    uint8_t data256[256] = {};
+    EXPECT_EQ(sat.load(0, data256, 0), STORAGE_ERROR);
+    EXPECT_EQ(sat.load(0, data256, PAGE_LEN), STORAGE_ERROR);
 }

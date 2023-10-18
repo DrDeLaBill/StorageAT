@@ -1,13 +1,13 @@
 /* Copyright © 2023 Georgy E. All rights reserved. */
 
-#include "StorageSector.hpp"
+#include "StorageSector.h"
 
 #include <string.h>
 #include <stdint.h>
 
-#include "StorageAT.hpp"
-#include "StorageSearch.hpp"
-#include "StorageType.hpp"
+#include "StorageAT.h"
+#include "StorageType.h"
+#include "StorageSearch.h"
 
 
 typedef StorageAT FS;

@@ -1,14 +1,14 @@
 /* Copyright © 2023 Georgy E. All rights reserved. */
 
-#include "StorageData.hpp"
+#include "StorageData.h"
 
 #include <memory>
 #include <algorithm>
 #include <string.h>
 
-#include "StoragePage.hpp"
-#include "StorageType.hpp"
-#include "StorageSearch.hpp"
+#include "StoragePage.h"
+#include "StorageType.h"
+#include "StorageSearch.h"
 
 
 StorageData::StorageData(uint32_t startAddress): m_startAddress(startAddress) {}
@@ -17,6 +17,10 @@ StorageStatus StorageData::load(uint8_t* data, uint32_t len)
 {
 	Page page(m_startAddress);
 
+	if (!len) {
+		return STORAGE_ERROR;
+	}
+
 	StorageStatus status = page.load(/*startPage=*/true);
 	if (status != STORAGE_OK) {
 		return status;
@@ -24,7 +28,7 @@ StorageStatus StorageData::load(uint8_t* data, uint32_t len)
 
 	uint32_t readLen = 0;
 	do {
-		uint32_t neededLen = std::min((uint32_t)(len - readLen), (uint32_t)sizeof(page.page.payload));
+		uint32_t neededLen = std::min(static_cast<uint32_t>(len - readLen), static_cast<uint32_t>(sizeof(page.page.payload)));
 
 		memcpy(data, page.page.payload, neededLen);
 		readLen += neededLen;
@@ -61,7 +65,7 @@ StorageStatus StorageData::save(
 	uint32_t curAddr = m_startAddress;
 	std::unique_ptr<Page> page = std::make_unique<Page>(curAddr);
 	while (curLen < len) {
-		uint32_t neededLen = std::min((uint32_t)(len - curLen), (uint32_t)sizeof(page->page.payload));
+		uint32_t neededLen = std::min(static_cast<uint32_t>(len - curLen), static_cast<uint32_t>(sizeof(page->page.payload)));
 
 		bool isStart = curLen == 0;
 		bool isEnd   = curLen + neededLen >= len;

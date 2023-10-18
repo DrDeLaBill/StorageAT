@@ -7,9 +7,9 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#include "StorageAT.hpp"
-#include "StoragePage.hpp"
-#include "StorageType.hpp"
+#include "StorageAT.h"
+#include "StoragePage.h"
+#include "StorageType.h"
 
 
 class StorageSearchBase

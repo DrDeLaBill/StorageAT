@@ -7,8 +7,8 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#include "StoragePage.hpp"
-#include "StorageType.hpp"
+#include "StoragePage.h"
+#include "StorageType.h"
 
 
 

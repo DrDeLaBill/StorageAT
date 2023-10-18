@@ -6,9 +6,9 @@
 
 #include <stdint.h>
 
-#include "StoragePage.hpp"
-#include "StorageType.hpp"
-#include "StorageSector.hpp"
+#include "StoragePage.h"
+#include "StorageType.h"
+#include "StorageSector.h"
 
 /*
  * class StorageAT
