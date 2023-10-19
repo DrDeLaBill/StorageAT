@@ -11,7 +11,6 @@
 #include "StorageType.h"
 
 
-
 class StorageSector
 {
 public:

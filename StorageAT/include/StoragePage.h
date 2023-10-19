@@ -26,18 +26,18 @@ public:
 
 
 	typedef enum _PageStatus {
-	    PAGE_STATUS_EMPTY = static_cast<uint8_t>(0b00000001),
-	    PAGE_STATUS_START = static_cast<uint8_t>(0b00000010),
+		PAGE_STATUS_EMPTY = static_cast<uint8_t>(0b00000001),
+		PAGE_STATUS_START = static_cast<uint8_t>(0b00000010),
 		PAGE_STATUS_MID   = static_cast<uint8_t>(0b00000100),
-	    PAGE_STATUS_END   = static_cast<uint8_t>(0b00001000)
+		PAGE_STATUS_END   = static_cast<uint8_t>(0b00001000)
 	} PageStatus;
 
 	/* Page header meta data structure */
 	PACK(typedef struct, _PageMeta {
-	    uint32_t magic;
-	    uint8_t  version;
-	    uint8_t  status;
-	    uint32_t next_addr;
+		uint32_t magic;
+		uint8_t  version;
+		uint8_t  status;
+		uint32_t next_addr;
 		uint8_t  prefix[STORAGE_PAGE_PREFIX_SIZE];
 		uint32_t id;
 	} PageMeta);
@@ -52,8 +52,8 @@ public:
 	/* Page structure */
 	PACK(typedef struct, _PageStruct {
 		PageMeta header;
-	    uint8_t  payload[STORAGE_PAGE_PAYLOAD_SIZE];
-	    uint16_t crc;
+		uint8_t  payload[STORAGE_PAGE_PAYLOAD_SIZE];
+		uint16_t crc;
 	} PageStruct);
 
 
@@ -114,7 +114,6 @@ public:
 	StorageStatus save();
 	StorageStatus deletePage() { return STORAGE_ERROR; }
 };
-
 
 
 #endif

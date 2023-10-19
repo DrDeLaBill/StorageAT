@@ -61,7 +61,8 @@ StorageStatus StorageSearchBase::searchPageAddressInSector(
 		}
 
 		Page page(StorageSector::getPageAddressByIndex(header->sectorIndex, pageIndex));
-		if (!page.load(/*startPage=*/true)) {
+		StorageStatus status = page.load(/*startPage=*/true);
+		if (status != STORAGE_OK) {
 			continue;
 		}
 
@@ -124,12 +125,13 @@ StorageStatus StorageSearchEmpty::searchPageAddressInSector(
 	const uint32_t id,
 	uint32_t*      resAddress
 ) {
-	for (uint16_t i = 0; i < HeaderPage::PAGE_HEADERS_COUNT; i++) {
-		if (header->isSetHeaderStatus(i, HeaderPage::PAGE_BLOCKED)) {
+	uint32_t pageIndex = StorageSector::getPageIndexByAddress(this->startSearchAddress);
+	for (; pageIndex < HeaderPage::PAGE_HEADERS_COUNT; pageIndex++) {
+		if (header->isSetHeaderStatus(pageIndex, HeaderPage::PAGE_BLOCKED)) {
 			continue;
 		}
 
-		Page page(StorageSector::getPageAddressByIndex(header->sectorIndex, i));
+		Page page(StorageSector::getPageAddressByIndex(header->sectorIndex, pageIndex));
 
 		StorageStatus status = page.load();
 		if (status == STORAGE_BUSY) {

@@ -13,9 +13,6 @@
 #include "StorageSector.h"
 
 
-// using namespace _SAT;
-
-
 uint32_t StorageAT::m_pagesCount = 0;
 StorageDriverCallback StorageAT::m_readDriver  = NULL;
 StorageDriverCallback StorageAT::m_writeDriver = NULL;
@@ -37,6 +34,14 @@ StorageStatus StorageAT::find(
 	uint8_t         prefix[Page::STORAGE_PAGE_PREFIX_SIZE],
 	uint32_t        id
 ) {
+	if (!address) {
+		return STORAGE_ERROR;
+	}
+
+	if (mode != FIND_MODE_EMPTY && !prefix) {
+		return STORAGE_ERROR;
+	}
+
 	std::unique_ptr<StorageSearchBase> search;
 
 	switch (mode) {
@@ -64,8 +69,14 @@ StorageStatus StorageAT::find(
 
 StorageStatus StorageAT::load(uint32_t address, uint8_t* data, uint32_t len)
 {
+	if (address % Page::STORAGE_PAGE_SIZE > 0) {
+		return STORAGE_ERROR;
+	}
 	if (!data) {
 		return STORAGE_ERROR;
+	}
+	if (address + len > getBytesSize()) {
+		return STORAGE_OOM;
 	}
 	StorageData storageData(address);
 	return storageData.load(data, len);
@@ -78,8 +89,17 @@ StorageStatus StorageAT::save(
 	uint8_t* data,
 	uint32_t len
 ) {
+	if (address % Page::STORAGE_PAGE_SIZE > 0) {
+		return STORAGE_ERROR;
+	}
 	if (!data) {
 		return STORAGE_ERROR;
+	}
+	if (!prefix) {
+		return STORAGE_ERROR;
+	}
+	if (address + len > getBytesSize()) {
+		return STORAGE_OOM;
 	}
 	StorageData storageData(address);
 	return storageData.save(prefix, id, data, len);
@@ -87,6 +107,9 @@ StorageStatus StorageAT::save(
 
 StorageStatus StorageAT::deleteData(uint32_t address)
 {
+	if (address > getBytesSize()) {
+		return STORAGE_OOM;
+	}
 	StorageData storageData(address);
 	return storageData.deleteData();
 }

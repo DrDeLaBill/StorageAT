@@ -1,7 +1,6 @@
 /* Copyright © 2023 Georgy E. All rights reserved. */
 
 #include "StoragePage.h"
-#include "StoragePage.h"
 
 #include <memory>
 #include <string.h>
@@ -12,6 +11,7 @@
 
 
 typedef StorageAT FS;
+
 
 Page::Page(uint32_t address): address(address)
 {
@@ -78,6 +78,10 @@ StorageStatus Page::save()
 
 StorageStatus Page::deletePage()
 {
+	if (StorageSector::isSectorAddress(this->address)) {
+		return STORAGE_ERROR;
+	}
+
 	HeaderPage header(this->address);
 	StorageStatus status = StorageSector::loadHeader(&header);
 	if (status != STORAGE_OK) {

@@ -35,16 +35,15 @@ uint32_t StorageSector::getPageAddressByIndex(uint32_t sectorIndex, uint32_t pag
 
 uint32_t StorageSector::getPageIndexByAddress(uint32_t address)
 {
-	uint32_t pageIndex = ((address / Page::STORAGE_PAGE_SIZE) % SECTOR_PAGES_COUNT);
 	if (StorageSector::isSectorAddress(address)) {
-		return FS::STORAGE_MAX_ADDRESS;
+		return 0;
 	}
-    return pageIndex - SECTOR_RESERVED_PAGES_COUNT;
+    return ((address / Page::STORAGE_PAGE_SIZE) % (SECTOR_PAGES_COUNT)) - SECTOR_RESERVED_PAGES_COUNT;
 }
 
 bool StorageSector::isSectorAddress(uint32_t address)
 {
-	return (address / Page::STORAGE_PAGE_SIZE) < SECTOR_RESERVED_PAGES_COUNT;
+	return ((address / Page::STORAGE_PAGE_SIZE) % (SECTOR_PAGES_COUNT)) < SECTOR_RESERVED_PAGES_COUNT;
 }
 
 StorageStatus StorageSector::loadHeader(HeaderPage *header)
