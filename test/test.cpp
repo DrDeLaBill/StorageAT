@@ -51,6 +51,11 @@ TEST(Core, primitive)
     EXPECT_EQ(sizeof(struct Page::_PageStruct), PAGE_LEN);
     EXPECT_EQ(sizeof(struct HeaderPage::_PageHeader), 9);
 
+    // Page tests
+    
+
+
+
     // Trash requests
     uint32_t address = 0;
     EXPECT_EQ(sat.find(static_cast<StorageFindMode>(0), &address, nullptr, 0), STORAGE_ERROR);
@@ -208,4 +213,6 @@ TEST(Core, object)
     EXPECT_FALSE(memcmp(reinterpret_cast<void*>(&readData100), reinterpret_cast<void*>(&saveData100), sizeof(readData100)));
     EXPECT_EQ(sat.load(foundNewAddress2, reinterpret_cast<uint8_t*>(&readData1000), sizeof(readData1000)), STORAGE_OK);
     EXPECT_FALSE(memcmp(reinterpret_cast<void*>(&readData1000), reinterpret_cast<void*>(&saveData1000), sizeof(readData1000)));
+
+    // TODO: тест с заблокированными страницами в headers, а также недоступными в памяти
 }

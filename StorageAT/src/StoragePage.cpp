@@ -98,7 +98,9 @@ StorageStatus Page::deletePage()
 		return status;
 	}
 
-	return STORAGE_OK;
+	this->page.header.id = 0;
+	memset(this->page.header.prefix, 0, sizeof(this->page.header.prefix));
+	return this->save();
 }
 
 bool Page::isEmpty()
