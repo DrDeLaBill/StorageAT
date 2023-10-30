@@ -7,7 +7,7 @@
 StorageEmulator::StorageEmulator(uint32_t pagesCount): pagesCount(pagesCount) 
 {
     this->memory = std::make_unique<uint8_t[]>(this->getSize());
-    memset(this->memory.get(), 0xFF, this->getSize());
+    this->clear();
     this->isBusy = false;
 }
 
@@ -62,4 +62,9 @@ StorageEmulatorStatus StorageEmulator::writePage(uint32_t address, uint8_t* data
     memcpy(this->memory.get() + address, data, len);
 
     return EMULATOR_OK;
+}
+
+void StorageEmulator::clear()
+{
+    memset(this->memory.get(), 0xFF, this->getSize());
 }

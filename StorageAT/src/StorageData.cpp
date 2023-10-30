@@ -16,6 +16,10 @@ StorageData::StorageData(uint32_t startAddress): m_startAddress(startAddress) {}
 StorageStatus StorageData::load(uint8_t* data, uint32_t len)
 {
 	Page page(m_startAddress);
+	
+	if (StorageSector::isSectorAddress(m_startAddress)) {
+		return STORAGE_ERROR;
+	}
 
 	if (!len) {
 		return STORAGE_ERROR;
@@ -30,7 +34,7 @@ StorageStatus StorageData::load(uint8_t* data, uint32_t len)
 	do {
 		uint32_t neededLen = std::min(static_cast<uint32_t>(len - readLen), static_cast<uint32_t>(sizeof(page.page.payload)));
 
-		memcpy(data, page.page.payload, neededLen);
+		memcpy(&data[readLen], page.page.payload, neededLen);
 		readLen += neededLen;
 
 		status = page.loadNext();
@@ -53,12 +57,14 @@ StorageStatus StorageData::save(
 	uint32_t len
 ) {
 	uint32_t pageAddress = m_startAddress;
-	StorageStatus status = this->findStartAddress(&pageAddress);
-	if (status == STORAGE_BUSY) {
-		return STORAGE_BUSY;
-	}
-	if (status == STORAGE_OK) {
+	
+	if (StorageSector::isSectorAddress(pageAddress)) {
 		return STORAGE_ERROR;
+	}
+
+	StorageStatus status = this->isEmptyAddress(pageAddress);
+	if (status != STORAGE_OK) {
+		return status;
 	}
 
 	uint32_t curLen = 0;
@@ -67,6 +73,7 @@ StorageStatus StorageData::save(
 	while (curLen < len) {
 		uint32_t neededLen = std::min(static_cast<uint32_t>(len - curLen), static_cast<uint32_t>(sizeof(page->page.payload)));
 
+		page->page.header.status = 0;
 		bool isStart = curLen == 0;
 		bool isEnd   = curLen + neededLen >= len;
 		if (isStart) {
@@ -80,6 +87,7 @@ StorageStatus StorageData::save(
 		}
 
 		uint32_t nextAddress = 0;
+		status = STORAGE_OK;
 		if (!isEnd) {
 			status = (std::make_unique<StorageSearchEmpty>(/*startSearchAddress=*/curAddr + Page::STORAGE_PAGE_SIZE))
 				->searchPageAddress(
@@ -98,7 +106,7 @@ StorageStatus StorageData::save(
 
 		memcpy(page->page.payload, data + curLen, neededLen);
 
-		status = page->save();
+		status = page->save(); // TODO: добавить блокировку страницы через header, если сохранение неудачное
 		if (status != STORAGE_OK) {
 			this->deleteData();
 			return status;
@@ -112,8 +120,8 @@ StorageStatus StorageData::save(
 		}
 
 		uint32_t pageIndex = StorageSector::getPageIndexByAddress(curAddr);
-		header.data->pages[pageIndex].id = page->page.header.id;
-		header.data->pages[pageIndex].status = page->page.header.status;
+		header.data->pages[pageIndex].id     = page->page.header.id;
+		header.data->pages[pageIndex].status = HeaderPage::PAGE_OK;
 		memcpy(header.data->pages[pageIndex].prefix, page->page.header.prefix, Page::STORAGE_PAGE_PREFIX_SIZE);
 		status = header.save();
 		if (status != STORAGE_OK) {
@@ -121,17 +129,27 @@ StorageStatus StorageData::save(
 			return status;
 		}
 
+
+		if (isEnd) {
+			break;
+		}
+
 		curAddr = nextAddress;
 		curLen += neededLen;
 		page    = std::make_unique<Page>(curAddr);
-	}
+	} // TODO: сохранение header вне цикла
 
-    return STORAGE_ERROR;
+    return STORAGE_OK;
 }
 
-StorageStatus StorageData::deleteData()
+StorageStatus StorageData::deleteData() // TODO: удалять записи из header
 {
 	uint32_t address = 0;
+
+	if (StorageSector::isSectorAddress(address)) {
+		return STORAGE_ERROR;
+	}
+
 	StorageStatus status = this->findStartAddress(&address);
 	if (status == STORAGE_BUSY) {
 		return STORAGE_BUSY;
@@ -176,6 +194,9 @@ StorageStatus StorageData::findStartAddress(uint32_t* address)
 		page->page.header.id,
 		&tmpAddress
 	);
+	if (status != STORAGE_OK) {
+		return status;
+	}
 
 	page = std::make_unique<Page>(tmpAddress);
 	status = page->load(/*startPage=*/true);
@@ -186,4 +207,16 @@ StorageStatus StorageData::findStartAddress(uint32_t* address)
 	*address = tmpAddress;
 
 	return STORAGE_OK;
+}
+
+StorageStatus StorageData::isEmptyAddress(uint32_t address)
+{
+	StorageStatus status = this->findStartAddress(&address);
+	if (status == STORAGE_BUSY || status == STORAGE_OOM) {
+		return status;
+	}
+	if (status != STORAGE_OK) {
+		return STORAGE_OK;
+	}
+	return STORAGE_ERROR;
 }

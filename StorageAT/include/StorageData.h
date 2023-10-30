@@ -15,6 +15,8 @@ private:
 
 	StorageStatus findStartAddress(uint32_t* address);
 
+	StorageStatus isEmptyAddress(uint32_t address);
+
 public:
 	StorageData(uint32_t startAddress);
 

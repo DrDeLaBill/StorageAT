@@ -75,4 +75,12 @@ jobs:
       # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
       run: |
         cmake --build . --config ${{ matrix.build_type }}
-        ./test/Release/storageattest
+        if [ "$RUNNER_OS" == "Linux" ]; then
+            ./test/storageattest
+        elif [ "$RUNNER_OS" == "Windows" ]; then
+            ./test/Release/storageattest
+        else
+            echo "$RUNNER_OS not supported"
+            exit 1
+        fi
+      shell: bash

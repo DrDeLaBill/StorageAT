@@ -1,27 +1,48 @@
-cmake_minimum_required(VERSION 3.27)
+cmake_minimum_required(VERSION 3.26)
 
 project(StorageAT VERSION 0.0.1)
 
-
-if(STORAGEAT_BEDUG)
+set(CXX_COMPILER ${CMAKE_CXX_COMPILER_ID})
+if(CXX_COMPILER STREQUAL "MSVC")
+    message(STATUS "Add MSVC warnings")
+    if(STORAGEAT_BEDUG)
+        add_compile_options(
+            /Wall
+        )
+    endif()
     add_compile_options(
-        -Wall
-        -Wextra
-        -Wpedantic
-
-        -Wcast-align
-        -Wcast-qual
-        -Wconversion
-        -Wctor-dtor-privacy
-        -Wenum-compare
-        -Wfloat-equal
-        -Wnon-virtual-dtor
-        -Wold-style-cast
-        -Woverloaded-virtual
-        -Wredundant-decls
-        -Wsign-conversion
-        -Wsign-promo
+        /we5240
+        /we4649
+        /we4330
+        /we4926
     )
+elseif(CXX_COMPILER STREQUAL "GNU")
+    message(STATUS "Add GNU warnings")
+    if(STORAGEAT_BEDUG)
+        add_compile_options(
+            -Wall
+            -Wextra
+            -Wpedantic
+
+            -Wcast-align
+            -Wcast-qual
+            -Wconversion
+            -Wctor-dtor-privacy
+            -Wenum-compare
+            -Wfloat-equal
+            -Wnon-virtual-dtor
+            -Wold-style-cast
+            -Woverloaded-virtual
+            -Wredundant-decls
+            -Wsign-conversion
+            -Wsign-promo
+        )
+    else()
+        add_compile_options(
+            -Werror
+            -Wattributes
+        )
+    endif()
 endif()
 
 

@@ -15,8 +15,8 @@
 class StorageSearchBase
 {
 public:
-	StorageSearchBase(uint32_t startSearchAddress): m_startSearchAddress(startSearchAddress) {}
-	virtual ~StorageSearchBase() {}
+	StorageSearchBase(uint32_t startSearchAddress): startSearchAddress(startSearchAddress) {}
+	virtual ~StorageSearchBase() { foundOnce = false; }
 
 	virtual StorageStatus searchPageAddress(
 		const uint8_t  prefix[Page::STORAGE_PAGE_PREFIX_SIZE],
@@ -25,12 +25,13 @@ public:
 	);
 
 protected:
-	uint32_t m_startSearchAddress;
+	uint32_t startSearchAddress;
+	bool     foundOnce;
 
 	virtual uint32_t getStartCmpId() { return 0; }
 	virtual bool isNeededFirstResult() { return false; }
 
-	virtual StorageStatus searchPageAddressInBox(
+	virtual StorageStatus searchPageAddressInSector(
 		HeaderPage*    header,
 		const uint8_t  prefix[Page::STORAGE_PAGE_PREFIX_SIZE],
 		const uint32_t id,
@@ -109,7 +110,9 @@ public:
 	StorageSearchEmpty(uint32_t startSearchAddress): StorageSearchBase(startSearchAddress) {}
 
 protected:
-	StorageStatus searchPageAddressInBox(
+	bool isNeededFirstResult() override { return true; }
+	
+	StorageStatus searchPageAddressInSector(
 		HeaderPage* header,
 		const uint8_t prefix[Page::STORAGE_PAGE_PREFIX_SIZE],
 		const uint32_t id,
