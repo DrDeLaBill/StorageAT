@@ -18,7 +18,7 @@ StorageStatus StorageSearchBase::searchPageAddress(
 	this->foundOnce = false;
 
 	for (; sectorIndex < StorageSector::getSectorsCount(); sectorIndex++) {
-		HeaderPage header(StorageSector::getSectorStartAdderss(sectorIndex));
+		Header header(StorageSector::getSectorStartAdderss(sectorIndex));
 
 		StorageStatus status = StorageSector::loadHeader(&header);
 		if (status == STORAGE_BUSY) {
@@ -50,19 +50,19 @@ StorageStatus StorageSearchBase::searchPageAddress(
 }
 
 StorageStatus StorageSearchBase::searchPageAddressInSector(
-	HeaderPage*    header,
+	Header*    header,
 	const uint8_t  prefix[Page::STORAGE_PAGE_PREFIX_SIZE],
 	const uint32_t id
 ) {
 	uint32_t pageIndex = StorageSector::getPageIndexByAddress(this->startSearchAddress);
 	this->foundInSector = false;
 
-	for (; pageIndex < HeaderPage::PAGE_HEADERS_COUNT; pageIndex++) {
-		if (!header->isSetHeaderStatus(pageIndex, HeaderPage::PAGE_OK)) {
+	for (; pageIndex < Header::PAGE_HEADERS_COUNT; pageIndex++) {
+		if (!header->isSetHeaderStatus(pageIndex, Header::PAGE_OK)) {
 			continue;
 		}
 
-		if (header->isSetHeaderStatus(pageIndex, HeaderPage::PAGE_EMPTY)) {
+		if (header->isSetHeaderStatus(pageIndex, Header::PAGE_EMPTY)) {
 			break;
 		}
 
@@ -102,12 +102,12 @@ bool StorageSearchEqual::isIdFound(
 
 bool StorageSearchNext::isIdFound(
 	const uint32_t headerId,
-	const uint32_t pageId
+	const uint32_t targetId
 ) {
-	if (pageId <= headerId) {
+	if (targetId > headerId) {
 		return false;
 	}
-	return pageId < prevId;
+	return targetId < prevId && headerId < prevId;
 }
 
 bool StorageSearchMin::isIdFound(
@@ -125,19 +125,19 @@ bool StorageSearchMax::isIdFound(
 }
 
 StorageStatus StorageSearchEmpty::searchPageAddressInSector(
-	HeaderPage*    header,
+	Header*    header,
 	const uint8_t  prefix[Page::STORAGE_PAGE_PREFIX_SIZE],
 	const uint32_t id
 ) {
 	uint32_t pageIndex = StorageSector::getPageIndexByAddress(this->startSearchAddress);
-	for (; pageIndex < HeaderPage::PAGE_HEADERS_COUNT; pageIndex++) {
-		if (header->isSetHeaderStatus(pageIndex, HeaderPage::PAGE_BLOCKED)) {
+	for (; pageIndex < Header::PAGE_HEADERS_COUNT; pageIndex++) {
+		if (header->isSetHeaderStatus(pageIndex, Header::PAGE_BLOCKED)) {
 			continue;
 		}
 
 		uint32_t address = StorageSector::getPageAddressByIndex(header->sectorIndex, pageIndex);
 
-		if (header->isSetHeaderStatus(pageIndex, HeaderPage::PAGE_EMPTY)) {
+		if (header->isSetHeaderStatus(pageIndex, Header::PAGE_EMPTY)) {
 			this->foundOnce     = true;
 			this->foundInSector = true;
 			this->prevAddress   = address;

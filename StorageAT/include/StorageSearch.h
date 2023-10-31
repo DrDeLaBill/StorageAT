@@ -36,7 +36,7 @@ protected:
 	virtual bool isNeededFirstResult() { return false; }
 
 	virtual StorageStatus searchPageAddressInSector(
-		HeaderPage*    header,
+		Header*    header,
 		const uint8_t  prefix[Page::STORAGE_PAGE_PREFIX_SIZE],
 		const uint32_t id
 	);
@@ -72,7 +72,7 @@ protected:
 
 	bool isIdFound(
 		const uint32_t headerId,
-		const uint32_t pageId
+		const uint32_t targetId // TODO: поменять pageId на targetId везде
 	) override;
 };
 
@@ -111,7 +111,7 @@ protected:
 	bool isNeededFirstResult() override { return true; }
 	
 	StorageStatus searchPageAddressInSector(
-		HeaderPage* header,
+		Header* header,
 		const uint8_t prefix[Page::STORAGE_PAGE_PREFIX_SIZE],
 		const uint32_t id
 	) override;

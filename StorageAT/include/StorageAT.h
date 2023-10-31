@@ -85,6 +85,13 @@ public:
 	);
 
 	/*
+	 * Format FLASH memory
+	 *
+	 * @return  Returns STORAGE_OK if the memory was formatted successfully
+	 */
+	StorageStatus format();
+
+	/*
 	 * Removes data from address
 	 *
 	 * @param address Data start address

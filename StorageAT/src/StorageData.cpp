@@ -112,7 +112,7 @@ StorageStatus StorageData::save(
 			return status;
 		}
 
-		HeaderPage header(curAddr);
+		Header header(curAddr);
 		status = header.load();
 		if (status != STORAGE_OK) {
 			this->deleteData();
@@ -121,7 +121,7 @@ StorageStatus StorageData::save(
 
 		uint32_t pageIndex = StorageSector::getPageIndexByAddress(curAddr);
 		header.data->pages[pageIndex].id     = page->page.header.id;
-		header.data->pages[pageIndex].status = HeaderPage::PAGE_OK;
+		header.data->pages[pageIndex].status = Header::PAGE_OK;
 		memcpy(header.data->pages[pageIndex].prefix, page->page.header.prefix, Page::STORAGE_PAGE_PREFIX_SIZE);
 		status = header.save();
 		if (status != STORAGE_OK) {
