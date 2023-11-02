@@ -27,21 +27,23 @@ public:
 protected:
 	uint32_t startSearchAddress;
 	bool     foundOnce;
+	bool     foundInSector;
+
+	uint32_t prevAddress;
+	uint32_t prevId;
 
 	virtual uint32_t getStartCmpId() { return 0; }
 	virtual bool isNeededFirstResult() { return false; }
 
 	virtual StorageStatus searchPageAddressInSector(
-		HeaderPage*    header,
+		Header*    header,
 		const uint8_t  prefix[Page::STORAGE_PAGE_PREFIX_SIZE],
-		const uint32_t id,
-		uint32_t*      resAddress
+		const uint32_t id
 	);
 
 	virtual bool isIdFound(
 		const uint32_t headerId,
-		const uint32_t pageId,
-		const uint32_t prevId
+		const uint32_t pageId
 	) { return false; };
 };
 
@@ -56,8 +58,7 @@ protected:
 
 	bool isIdFound(
 		const uint32_t headerId,
-		const uint32_t pageId,
-		const uint32_t prevId
+		const uint32_t pageId
 	) override;
 };
 
@@ -71,8 +72,7 @@ protected:
 
 	bool isIdFound(
 		const uint32_t headerId,
-		const uint32_t pageId,
-		const uint32_t prevId
+		const uint32_t targetId // TODO: поменять pageId на targetId везде
 	) override;
 };
 
@@ -86,8 +86,7 @@ protected:
 
 	bool isIdFound(
 		const uint32_t headerId,
-		const uint32_t pageId,
-		const uint32_t prevId
+		const uint32_t pageId
 	) override;
 };
 
@@ -99,8 +98,7 @@ public:
 protected:
 	bool isIdFound(
 		const uint32_t headerId,
-		const uint32_t pageId,
-		const uint32_t prevId
+		const uint32_t pageId
 	) override;
 };
 
@@ -113,10 +111,9 @@ protected:
 	bool isNeededFirstResult() override { return true; }
 	
 	StorageStatus searchPageAddressInSector(
-		HeaderPage* header,
+		Header* header,
 		const uint8_t prefix[Page::STORAGE_PAGE_PREFIX_SIZE],
-		const uint32_t id,
-		uint32_t* resAddress
+		const uint32_t id
 	) override;
 };
 

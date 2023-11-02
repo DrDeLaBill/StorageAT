@@ -78,7 +78,7 @@ protected:
 	uint16_t getCRC16(uint8_t* buf, uint16_t len);
 };
 
-class HeaderPage: public Page
+class Header: public Page
 {
 public:
 	typedef enum _PageHeaderStatus {
@@ -104,7 +104,7 @@ public:
 	uint32_t          sectorIndex;
 	HeaderPageStruct* data;
 
-	HeaderPage(uint32_t address);
+	Header(uint32_t address);
 
 	void setHeaderStatus(uint32_t pageIndex, uint8_t status);
 	bool isSetHeaderStatus(uint32_t pageIndex, uint8_t status);

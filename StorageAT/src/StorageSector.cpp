@@ -6,6 +6,7 @@
 #include <stdint.h>
 
 #include "StorageAT.h"
+#include "StoragePage.h"
 #include "StorageType.h"
 #include "StorageSearch.h"
 
@@ -46,7 +47,20 @@ bool StorageSector::isSectorAddress(uint32_t address)
 	return ((address / Page::STORAGE_PAGE_SIZE) % (SECTOR_PAGES_COUNT)) < SECTOR_RESERVED_PAGES_COUNT;
 }
 
-StorageStatus StorageSector::loadHeader(HeaderPage *header)
+StorageStatus StorageSector::formatSector(uint32_t sectorIndex)
+{
+	Header header(StorageSector::getSectorStartAdderss(sectorIndex));
+	StorageStatus status = StorageSector::loadHeader(&header);
+	if (status != STORAGE_OK) {
+		return status;
+	}
+
+	memset(reinterpret_cast<void*>(header.data), 0, Page::STORAGE_PAGE_PAYLOAD_SIZE);
+	status = header.save();
+	return status;
+}
+
+StorageStatus StorageSector::loadHeader(Header *header)
 {
 	if (header->address > FS::getBytesSize()) {
 		return STORAGE_OOM;

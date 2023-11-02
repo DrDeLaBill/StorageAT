@@ -14,9 +14,11 @@ StorageStatus StorageSearchBase::searchPageAddress(
 	uint32_t*      resAddress
 ) {
 	uint32_t sectorIndex = StorageSector::getSectorIndex(this->startSearchAddress);
+	this->prevId = getStartCmpId();
 	this->foundOnce = false;
+
 	for (; sectorIndex < StorageSector::getSectorsCount(); sectorIndex++) {
-		HeaderPage header(StorageSector::getSectorStartAdderss(sectorIndex));
+		Header header(StorageSector::getSectorStartAdderss(sectorIndex));
 
 		StorageStatus status = StorageSector::loadHeader(&header);
 		if (status == STORAGE_BUSY) {
@@ -26,37 +28,49 @@ StorageStatus StorageSearchBase::searchPageAddress(
 			continue;
 		}
 
-		status = this->searchPageAddressInSector(&header, prefix, id, resAddress);
+		status = this->searchPageAddressInSector(&header, prefix, id);
 		if (status == STORAGE_BUSY) {
 			return STORAGE_BUSY;
 		}
-		if (this->foundOnce && isNeededFirstResult()) {
-			return STORAGE_OK;
+		if (status != STORAGE_OK) {
+			continue;
 		}
+
+		if (isNeededFirstResult()) {
+			break;
+		}
+	}
+
+	if (this->foundOnce) {
+		*resAddress = this->prevAddress;
+		return STORAGE_OK;
 	}
 
 	return STORAGE_NOT_FOUND;
 }
 
 StorageStatus StorageSearchBase::searchPageAddressInSector(
-	HeaderPage*    header,
+	Header*    header,
 	const uint8_t  prefix[Page::STORAGE_PAGE_PREFIX_SIZE],
-	const uint32_t id,
-	uint32_t*      resAddress
+	const uint32_t id
 ) {
-	uint32_t prevId = getStartCmpId();
-
 	uint32_t pageIndex = StorageSector::getPageIndexByAddress(this->startSearchAddress);
-	for (; pageIndex < HeaderPage::PAGE_HEADERS_COUNT; pageIndex++) {
-		if (!header->isSetHeaderStatus(pageIndex, HeaderPage::PAGE_OK)) {
+	this->foundInSector = false;
+
+	for (; pageIndex < Header::PAGE_HEADERS_COUNT; pageIndex++) {
+		if (!header->isSetHeaderStatus(pageIndex, Header::PAGE_OK)) {
 			continue;
+		}
+
+		if (header->isSetHeaderStatus(pageIndex, Header::PAGE_EMPTY)) {
+			break;
 		}
 
 		if (memcmp(header->data->pages[pageIndex].prefix, prefix, Page::STORAGE_PAGE_PREFIX_SIZE)) {
 			continue;
 		}
 
-		if (!isIdFound(header->data->pages[pageIndex].id, id, prevId)) {
+		if (!isIdFound(header->data->pages[pageIndex].id, id)) {
 			continue;
 		}
 
@@ -66,83 +80,83 @@ StorageStatus StorageSearchBase::searchPageAddressInSector(
 			continue;
 		}
 
-		this->foundOnce = true;
-		prevId          = header->data->pages[pageIndex].id;
-		*resAddress     = StorageSector::getPageAddressByIndex(header->sectorIndex, pageIndex);
+		this->foundOnce     = true;
+		this->foundInSector = true;
+		this->prevId        = header->data->pages[pageIndex].id;
+		this->prevAddress   = StorageSector::getPageAddressByIndex(header->sectorIndex, pageIndex);
 
-		if (this->foundOnce && isNeededFirstResult()) {
-			return STORAGE_OK;
+		if (isNeededFirstResult()) {
+			break;
 		}
 	}
 
-	return foundOnce ? STORAGE_OK : STORAGE_NOT_FOUND;
+	return this->foundInSector ? STORAGE_OK : STORAGE_NOT_FOUND;
 }
 
 bool StorageSearchEqual::isIdFound(
 	const uint32_t headerId,
-	const uint32_t pageId,
-	const uint32_t prevId
+	const uint32_t pageId
 ) {
-	if (pageId == headerId) {
-		return true;
-	}
-	return false;
+	return pageId == headerId;
 }
 
 bool StorageSearchNext::isIdFound(
 	const uint32_t headerId,
-	const uint32_t pageId,
-	const uint32_t prevId
+	const uint32_t targetId
 ) {
-	if (pageId <= headerId) {
+	if (targetId > headerId) {
 		return false;
 	}
-	if (pageId < prevId) {
-		return true;
-	}
-	return false;
+	return targetId < prevId && headerId < prevId;
 }
 
 bool StorageSearchMin::isIdFound(
 	const uint32_t headerId,
-	const uint32_t pageId,
-	const uint32_t prevId
+	const uint32_t pageId
 ) {
-	return prevId > pageId;
+	return prevId > headerId;
 }
 
 bool StorageSearchMax::isIdFound(
 	const uint32_t headerId,
-	const uint32_t pageId,
-	const uint32_t prevId
+	const uint32_t pageId
 ) {
-	return prevId < pageId;
+	return prevId < headerId;
 }
 
 StorageStatus StorageSearchEmpty::searchPageAddressInSector(
-	HeaderPage*    header,
+	Header*    header,
 	const uint8_t  prefix[Page::STORAGE_PAGE_PREFIX_SIZE],
-	const uint32_t id,
-	uint32_t*      resAddress
+	const uint32_t id
 ) {
 	uint32_t pageIndex = StorageSector::getPageIndexByAddress(this->startSearchAddress);
-	for (; pageIndex < HeaderPage::PAGE_HEADERS_COUNT; pageIndex++) {
-		if (header->isSetHeaderStatus(pageIndex, HeaderPage::PAGE_BLOCKED)) {
+	for (; pageIndex < Header::PAGE_HEADERS_COUNT; pageIndex++) {
+		if (header->isSetHeaderStatus(pageIndex, Header::PAGE_BLOCKED)) {
 			continue;
 		}
 
-		Page page(StorageSector::getPageAddressByIndex(header->sectorIndex, pageIndex));
+		uint32_t address = StorageSector::getPageAddressByIndex(header->sectorIndex, pageIndex);
+
+		if (header->isSetHeaderStatus(pageIndex, Header::PAGE_EMPTY)) {
+			this->foundOnce     = true;
+			this->foundInSector = true;
+			this->prevAddress   = address;
+			break;
+		}
+
+		Page page(address);
 
 		StorageStatus status = page.load();
 		if (status == STORAGE_BUSY) {
 			return STORAGE_BUSY;
 		}
 		if (status != STORAGE_OK) {
-			this->foundOnce = true;
-			*resAddress     = page.address;
+			this->foundOnce     = true;
+			this->foundInSector = true;
+			this->prevAddress   = page.address;
 			return STORAGE_OK;
 		}
 	}
 
-	return STORAGE_ERROR;
+	return this->foundInSector ? STORAGE_OK : STORAGE_NOT_FOUND;
 }

@@ -105,6 +105,17 @@ StorageStatus StorageAT::save(
 	return storageData.save(prefix, id, data, len);
 }
 
+StorageStatus StorageAT::format()
+{
+	for (unsigned i = 0; i < StorageSector::getSectorsCount(); i++) {
+		StorageStatus status = StorageSector::formatSector(i);
+		if (status == STORAGE_BUSY) {
+			return STORAGE_BUSY;
+		}
+	}
+	return STORAGE_OK;
+}
+
 StorageStatus StorageAT::deleteData(uint32_t address)
 {
 	if (address > getBytesSize()) {

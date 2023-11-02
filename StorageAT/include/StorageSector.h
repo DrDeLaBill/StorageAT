@@ -18,7 +18,7 @@ public:
 	static const uint32_t SECTOR_RESERVED_PAGES_COUNT = 8;
 
 	/* Sector pages count */
-	static const uint32_t SECTOR_PAGES_COUNT = SECTOR_RESERVED_PAGES_COUNT + HeaderPage::PAGE_HEADERS_COUNT;
+	static const uint32_t SECTOR_PAGES_COUNT = SECTOR_RESERVED_PAGES_COUNT + Header::PAGE_HEADERS_COUNT;
 
 
 	/*
@@ -63,7 +63,9 @@ public:
 
 	static bool isSectorAddress(uint32_t address);
 
-	static StorageStatus loadHeader(HeaderPage *header); // TODO: do operator= for Page class
+	static StorageStatus formatSector(uint32_t sectorIndex);
+
+	static StorageStatus loadHeader(Header *header); // TODO: do operator= for Page class
 };
 
 #endif
