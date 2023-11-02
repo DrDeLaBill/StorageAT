@@ -68,7 +68,7 @@ public:
 	StorageSearchNext(uint32_t startSearchAddress): StorageSearchBase(startSearchAddress) {}
 
 protected:
-	virtual uint32_t getStartCmpId() { return StorageAT::STORAGE_MAX_ADDRESS; }
+	uint32_t getStartCmpId() override { return StorageAT::STORAGE_MAX_ADDRESS; }
 
 	bool isIdFound(
 		const uint32_t headerId,
@@ -82,7 +82,7 @@ public:
 	StorageSearchMin(uint32_t startSearchAddress): StorageSearchBase(startSearchAddress) {}
 
 protected:
-	virtual uint32_t getStartCmpId() { return StorageAT::STORAGE_MAX_ADDRESS; }
+	uint32_t getStartCmpId() override { return StorageAT::STORAGE_MAX_ADDRESS; }
 
 	bool isIdFound(
 		const uint32_t headerId,
