@@ -1,9 +1,9 @@
 cmake_minimum_required(VERSION 3.26)
 
-project(StorageAT VERSION 0.0.1)
+project(StorageAT VERSION 0.0.2)
 
 set(CXX_COMPILER ${CMAKE_CXX_COMPILER_ID})
-if(CXX_COMPILER STREQUAL "MSVC")
+if(MSVC)
     message(STATUS "Add MSVC warnings")
     if(STORAGEAT_BEDUG)
         add_compile_options(
@@ -11,36 +11,17 @@ if(CXX_COMPILER STREQUAL "MSVC")
         )
     endif()
     add_compile_options(
-        /we5240
-        /we4649
-        /we4330
-        /we4926
+        /W4 /we5240 /we4649 /we4330 /we4926
     )
-elseif(CXX_COMPILER STREQUAL "GNU")
+else()
     message(STATUS "Add GNU warnings")
     if(STORAGEAT_BEDUG)
         add_compile_options(
-            -Wall
-            -Wextra
-            -Wpedantic
-
-            -Wcast-align
-            -Wcast-qual
-            -Wconversion
-            -Wctor-dtor-privacy
-            -Wenum-compare
-            -Wfloat-equal
-            -Wnon-virtual-dtor
-            -Wold-style-cast
-            -Woverloaded-virtual
-            -Wredundant-decls
-            -Wsign-conversion
-            -Wsign-promo
+            -Wall -Wextra -pedantic -Werror
         )
     else()
         add_compile_options(
-            -Werror
-            -Wattributes
+            -Werror -Wattributes
         )
     endif()
 endif()

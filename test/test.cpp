@@ -49,7 +49,7 @@ TEST(Core, primitive)
     // Packet structures tests
     EXPECT_EQ(sizeof(struct Page::_PageMeta), 18);
     EXPECT_EQ(sizeof(struct Page::_PageStruct), PAGE_LEN);
-    EXPECT_EQ(sizeof(struct HeaderPage::_PageHeader), 9);
+    EXPECT_EQ(sizeof(struct Header::_PageHeader), 9);
 
     // Page tests
     
@@ -113,7 +113,7 @@ TEST(Core, primitive)
     // Test write all
     storage.clear();
     EXPECT_EQ(sat2.find(FIND_MODE_EMPTY, &sat2Address), STORAGE_OK);
-    uint32_t maxEmptyMemory = SECTORS_COUNT * HeaderPage::PAGE_HEADERS_COUNT * Page::STORAGE_PAGE_PAYLOAD_SIZE;
+    uint32_t maxEmptyMemory = SECTORS_COUNT * Header::PAGE_HEADERS_COUNT * Page::STORAGE_PAGE_PAYLOAD_SIZE;
     EXPECT_EQ(sat2.save(sat2Address, const_cast<uint8_t*>(reinterpret_cast<const uint8_t*>("tst")), 1, (new uint8_t[maxEmptyMemory]), maxEmptyMemory), STORAGE_OK);
 
     // TODO: проверка записи в последний сектор, если он не выровненный по концу памяти
