@@ -11,19 +11,16 @@ if(MSVC)
         )
     endif()
     add_compile_options(
-        StorageAT
         /W4 /we5240 /we4649 /we4330 /we4926
     )
 else()
     message(STATUS "Add GNU warnings")
     if(STORAGEAT_BEDUG)
         add_compile_options(
-            StorageAT
             -Wall -Wextra -pedantic -Werror
         )
     else()
         add_compile_options(
-            StorageAT
             -Werror -Wattributes
         )
     endif()

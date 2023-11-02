@@ -95,9 +95,9 @@ StorageStatus StorageSearchBase::searchPageAddressInSector(
 
 bool StorageSearchEqual::isIdFound(
 	const uint32_t headerId,
-	const uint32_t pageId
+	const uint32_t targetId
 ) {
-	return pageId == headerId;
+	return targetId == headerId;
 }
 
 bool StorageSearchNext::isIdFound(
@@ -112,20 +112,20 @@ bool StorageSearchNext::isIdFound(
 
 bool StorageSearchMin::isIdFound(
 	const uint32_t headerId,
-	const uint32_t pageId
+	const uint32_t
 ) {
 	return prevId > headerId;
 }
 
 bool StorageSearchMax::isIdFound(
 	const uint32_t headerId,
-	const uint32_t pageId
+	const uint32_t
 ) {
 	return prevId < headerId;
 }
 
 StorageStatus StorageSearchEmpty::searchPageAddressInSector(
-	Header*    header,
+	Header*        header,
 	const uint8_t  prefix[Page::STORAGE_PAGE_PREFIX_SIZE],
 	const uint32_t id
 ) {
