@@ -225,3 +225,18 @@ StorageStatus Header::save()
 
 	return status;
 }
+
+bool Header::validate()
+{
+	if (!Page::validate()) {
+		return false;
+	}
+
+	for (unsigned i = 0; i < PAGE_HEADERS_COUNT; i++) {
+		if (!data->pages[i].status) {
+			return false;
+		}
+	}
+
+	return true;
+}

@@ -74,7 +74,7 @@ public:
 	bool validateNextAddress();
 
 protected:
-	bool     validate();
+	virtual bool validate();
 	uint16_t getCRC16(uint8_t* buf, uint16_t len);
 };
 
@@ -113,6 +113,9 @@ public:
 	StorageStatus load();
 	StorageStatus save();
 	StorageStatus deletePage() { return STORAGE_ERROR; }
+
+protected:
+	bool validate() override;
 };
 
 
