@@ -1,8 +1,9 @@
+#include <iostream>
 #include <gtest/gtest.h>
 #include <string>
 // #include "gmock/gmock.h"
 
-#include "../StorageAT/include/StorageAT.h"
+#include "../StorageAT/include/StorageAT.h" // TODO
 #include "StorageEmulator.h"
 
 
@@ -12,8 +13,15 @@ const int PAGE_LEN      = 256;
 
 StorageEmulator storage(PAGES_COUNT);
 
+typedef struct _RequestsCount {
+    unsigned read;
+    unsigned write;
+} RequestsCount;
+RequestsCount requestsCount[PAGES_COUNT] = {};
+
 StorageStatus read_driver(uint32_t address, uint8_t* data, uint32_t len) 
 {
+    requestsCount[address / PAGE_LEN].read++;
     StorageEmulatorStatus status = storage.readPage(address, data, len);
     if (status == EMULATOR_BUSY) {
         return STORAGE_BUSY;
@@ -26,6 +34,7 @@ StorageStatus read_driver(uint32_t address, uint8_t* data, uint32_t len)
 
 StorageStatus write_driver(uint32_t address, uint8_t* data, uint32_t len) 
 {
+    requestsCount[address / PAGE_LEN].write++;
     StorageEmulatorStatus status = storage.writePage(address, data, len);
     if (status == EMULATOR_BUSY) {
         return STORAGE_BUSY;
@@ -36,6 +45,11 @@ StorageStatus write_driver(uint32_t address, uint8_t* data, uint32_t len)
     return STORAGE_OK;
 };
 
+
+TEST(Page, Struct)
+{
+
+}
 
 TEST(Core, primitive)
 {
@@ -215,4 +229,18 @@ TEST(Core, object)
     EXPECT_FALSE(memcmp(reinterpret_cast<void*>(&readData1000), reinterpret_cast<void*>(&saveData1000), sizeof(readData1000)));
 
     // TODO: тест с заблокированными страницами в headers, а также недоступными в памяти
+}
+
+TEST(Storage, RequestsCount)
+{
+    std::cout << "Requests to memory count (Pages count: " << PAGES_COUNT << ")." << std::endl;
+    for (unsigned i = 0; i < PAGES_COUNT; i++) {
+        if (i % StorageSector::SECTOR_PAGES_COUNT == 0) {
+            std::cout << "|===============================|" << std::endl;
+        } else if (i % StorageSector::SECTOR_PAGES_COUNT == StorageSector::SECTOR_RESERVED_PAGES_COUNT) {
+            std::cout << "|-------------------------------|" << std::endl;
+        }
+        std::cout << "| " << i << "\tpage:\tr-" << requestsCount[i].read << "\tw-" << requestsCount[i].write << "\t|" <<std::endl;
+    }
+    std::cout << "|===============================|" << std::endl;
 }
