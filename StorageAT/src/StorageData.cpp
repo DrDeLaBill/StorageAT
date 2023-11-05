@@ -143,8 +143,6 @@ StorageStatus StorageData::save(
 		}
 		if (status != STORAGE_OK) {
 			header->setPageBlocked(StorageSector::getPageIndexByAddress(page->getAddress()));
-		} else {
-			curAddr = nextAddress;
 			continue;
 		}
 
