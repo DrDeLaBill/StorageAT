@@ -231,8 +231,11 @@ TEST(Core, object)
     // TODO: тест с заблокированными страницами в headers, а также недоступными в памяти
 }
 
-TEST(Storage, RequestsCount)
+int main(int args, char** argv)
 {
+    testing::InitGoogleTest(&args, argv);
+    int result = RUN_ALL_TESTS();
+
     std::cout << "Requests to memory count (Pages count: " << PAGES_COUNT << ")." << std::endl;
     for (unsigned i = 0; i < PAGES_COUNT; i++) {
         if (i % StorageSector::SECTOR_PAGES_COUNT == 0) {
@@ -243,10 +246,6 @@ TEST(Storage, RequestsCount)
         std::cout << "| " << i << "\tpage:\tr-" << requestsCount[i].read << "\tw-" << requestsCount[i].write << "\t|" <<std::endl;
     }
     std::cout << "|===============================|" << std::endl;
-}
 
-int main(int args, char** argv)
-{
-    testing::InitGoogleTest(&args, argv);
-    return RUN_ALL_TESTS();
+    return result;
 }

@@ -1,7 +1,6 @@
 /* Copyright © 2023 Georgy E. All rights reserved. */
 
-#ifndef STORAGE_DATA_HPP
-#define STORAGE_DATA_HPP
+#pragma once
 
 
 #include "StoragePage.h"
@@ -29,6 +28,3 @@ public:
 	);
 	StorageStatus deleteData();
 };
-
-
-#endif

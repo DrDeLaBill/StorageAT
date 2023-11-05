@@ -74,7 +74,7 @@ StorageStatus StorageSearchBase::searchPageAddressInSector(
 			continue;
 		}
 
-		Page page(StorageSector::getPageAddressByIndex(header->sectorIndex, pageIndex));
+		Page page(StorageSector::getPageAddressByIndex(header->getSectorIndex(), pageIndex));
 		StorageStatus status = page.load(/*startPage=*/true);
 		if (status != STORAGE_OK) {
 			continue;
@@ -83,7 +83,7 @@ StorageStatus StorageSearchBase::searchPageAddressInSector(
 		this->foundOnce     = true;
 		this->foundInSector = true;
 		this->prevId        = header->data->pages[pageIndex].id;
-		this->prevAddress   = StorageSector::getPageAddressByIndex(header->sectorIndex, pageIndex);
+		this->prevAddress   = StorageSector::getPageAddressByIndex(header->getSectorIndex(), pageIndex);
 
 		if (isNeededFirstResult()) {
 			break;
@@ -135,7 +135,7 @@ StorageStatus StorageSearchEmpty::searchPageAddressInSector(
 			continue;
 		}
 
-		uint32_t address = StorageSector::getPageAddressByIndex(header->sectorIndex, pageIndex);
+		uint32_t address = StorageSector::getPageAddressByIndex(header->getSectorIndex(), pageIndex);
 
 		if (header->isSetHeaderStatus(pageIndex, Header::PAGE_EMPTY)) {
 			this->foundOnce     = true;
@@ -153,7 +153,7 @@ StorageStatus StorageSearchEmpty::searchPageAddressInSector(
 		if (status != STORAGE_OK) {
 			this->foundOnce     = true;
 			this->foundInSector = true;
-			this->prevAddress   = page.address;
+			this->prevAddress   = page.getAddress();
 			return STORAGE_OK;
 		}
 	}

@@ -1,7 +1,6 @@
 /* Copyright © 2023 Georgy E. All rights reserved. */
 
-#ifndef STORAGE_TYPE_HPP
-#define STORAGE_TYPE_HPP
+#pragma once
 
 
 #include <stdint.h>
@@ -35,6 +34,3 @@ typedef enum _StorageFindMode {
 
 
 typedef StorageStatus (*StorageDriverCallback) (uint32_t, uint8_t*, uint32_t);
-
-
-#endif

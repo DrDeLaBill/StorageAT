@@ -62,7 +62,7 @@ StorageStatus StorageSector::formatSector(uint32_t sectorIndex)
 
 StorageStatus StorageSector::loadHeader(Header *header)
 {
-	if (header->address > FS::getBytesSize()) {
+	if (header->getAddress() > FS::getBytesSize()) {
 		return STORAGE_OOM;
 	}
 
@@ -74,7 +74,8 @@ StorageStatus StorageSector::loadHeader(Header *header)
 		return STORAGE_OK;
 	}
 
-	status = header->createHeader();
+	status = header->create();
+	// TODO: if data has broken -> remove from headers
 	if (status == STORAGE_BUSY) {
 		return STORAGE_BUSY;
 	}

@@ -1,7 +1,6 @@
 /* Copyright © 2023 Georgy E. All rights reserved. */
 
-#ifndef STORAGE_FS_HPP
-#define STORAGE_FS_HPP
+#pragma once
 
 
 #include <stdint.h>
@@ -112,6 +111,3 @@ public:
 	static StorageDriverCallback readCallback();
 	static StorageDriverCallback writeCallback();
 };
-
-
-#endif
