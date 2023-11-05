@@ -71,7 +71,7 @@ StorageStatus StorageData::save(
 
 	uint32_t curLen = 0;
 	uint32_t curAddr = m_startAddress;
-	uint32_t sectorAddress = 1;
+	uint32_t sectorAddress = Page::STORAGE_PAGE_SIZE + 1;
 	std::unique_ptr<Header> header;
 	std::unique_ptr<Page> page;
 	while (curLen < len) {
@@ -109,7 +109,7 @@ StorageStatus StorageData::save(
 
 
 		// Check header (and save)
-		uint32_t curSectorAddress = StorageSector::getSectorStartAdderss(curAddr);
+		uint32_t curSectorAddress = Header::getSectorStartAddress(curAddr);
 		if (header && sectorAddress != curSectorAddress) {
 			status = header->save();
 		}
@@ -186,7 +186,7 @@ StorageStatus StorageData::deleteData() // TODO: удалять записи и�
 	}
 
 	uint32_t curAddress = m_startAddress;
-	uint32_t sectorAddress = 1;
+	uint32_t sectorAddress = Page::STORAGE_PAGE_SIZE + 1;
 	std::unique_ptr<Page> page;
 	std::unique_ptr<Header> header;
 
@@ -200,7 +200,7 @@ StorageStatus StorageData::deleteData() // TODO: удалять записи и�
 
 		
 		// Check header (and save)
-		uint32_t curSectorAddress = StorageSector::getSectorStartAdderss(curAddress);	
+		uint32_t curSectorAddress = Header::getSectorStartAddress(curAddress);	
 		if (header && sectorAddress != curSectorAddress) {
 			status = header->save();
 		}
@@ -208,7 +208,7 @@ StorageStatus StorageData::deleteData() // TODO: удалять записи и�
 			continue;
 		}
 		if ( sectorAddress != curSectorAddress) {
-			header = std::make_unique<Header>(StorageSector::getSectorStartAdderss(curAddress));
+			header = std::make_unique<Header>(Header::getSectorStartAddress(curAddress));
 			status = StorageSector::loadHeader(header.get());
 			sectorAddress = curSectorAddress;
 		}

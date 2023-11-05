@@ -118,6 +118,8 @@ public:
 	void setPageBlocked(uint32_t pageIndex);
 	uint32_t getSectorIndex();
 
+	static uint32_t getSectorStartAddress(uint32_t address);
+
 private:
 	uint32_t m_sectorIndex;
 

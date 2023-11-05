@@ -26,7 +26,7 @@ public:
 	 * @param sectorIndex Sector index in memory
 	 * @return            Returns sector start address
 	 */
-	static uint32_t getSectorStartAdderss(uint32_t sectorIndex);
+	static uint32_t getSectorAddress(uint32_t sectorIndex);
 
 	/*
 	 * Calculates sector index by address

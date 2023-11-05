@@ -7,6 +7,7 @@
 #include <stdint.h>
 
 #include "StorageAT.h"
+#include "StoragePage.h"
 #include "StorageSector.h"
 
 
@@ -150,8 +151,8 @@ uint32_t Page::getAddress()
 
 Header::Header(uint32_t address): Page(address)
 {
-	this->address     = address - (address % StorageSector::SECTOR_PAGES_COUNT);
-	this->data        = reinterpret_cast<HeaderPageStruct*>(page.payload);
+	this->address       = Header::getSectorStartAddress(address);
+	this->data          = reinterpret_cast<HeaderPageStruct*>(page.payload);
 	this->m_sectorIndex = StorageSector::getSectorIndex(address);
 }
 
@@ -180,6 +181,11 @@ void Header::setPageBlocked(uint32_t pageIndex)
 uint32_t Header::getSectorIndex()
 {
 	return this->m_sectorIndex;
+}
+
+uint32_t Header::getSectorStartAddress(uint32_t address)
+{
+	return (address / (StorageSector::SECTOR_PAGES_COUNT * Page::STORAGE_PAGE_SIZE)) * Page::STORAGE_PAGE_SIZE;
 }
 
 StorageStatus Header::create()
@@ -211,7 +217,7 @@ StorageStatus Header::create()
 
 StorageStatus Header::load()
 {
-	uint32_t startAddress = StorageSector::getSectorStartAdderss(this->m_sectorIndex);
+	uint32_t startAddress = StorageSector::getSectorAddress(this->m_sectorIndex);
 
 	StorageStatus status = STORAGE_ERROR;
 	for (uint8_t i = 0; i < StorageSector::SECTOR_RESERVED_PAGES_COUNT; i++) {
@@ -230,7 +236,7 @@ StorageStatus Header::load()
 
 StorageStatus Header::save()
 {
-	uint32_t startAddress = StorageSector::getSectorStartAdderss(this->m_sectorIndex);
+	uint32_t startAddress = StorageSector::getSectorAddress(this->m_sectorIndex);
 
 	StorageStatus status = STORAGE_ERROR;
 	for (uint8_t i = 0; i < StorageSector::SECTOR_RESERVED_PAGES_COUNT; i++) {

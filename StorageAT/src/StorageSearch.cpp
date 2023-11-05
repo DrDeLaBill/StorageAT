@@ -18,7 +18,7 @@ StorageStatus StorageSearchBase::searchPageAddress(
 	this->foundOnce = false;
 
 	for (; sectorIndex < StorageSector::getSectorsCount(); sectorIndex++) {
-		Header header(StorageSector::getSectorStartAdderss(sectorIndex));
+		Header header(StorageSector::getSectorAddress(sectorIndex));
 
 		StorageStatus status = StorageSector::loadHeader(&header);
 		if (status == STORAGE_BUSY) {

@@ -14,7 +14,7 @@
 typedef StorageAT FS;
 
 
-uint32_t StorageSector::getSectorStartAdderss(uint32_t sectorIndex)
+uint32_t StorageSector::getSectorAddress(uint32_t sectorIndex)
 {
 	return SECTOR_PAGES_COUNT * sectorIndex * Page::STORAGE_PAGE_SIZE;
 }
@@ -31,7 +31,7 @@ uint32_t StorageSector::getSectorsCount()
 
 uint32_t StorageSector::getPageAddressByIndex(uint32_t sectorIndex, uint32_t pageIndex)
 {
-	return getSectorStartAdderss(sectorIndex) + (SECTOR_RESERVED_PAGES_COUNT + pageIndex) * Page::STORAGE_PAGE_SIZE;
+	return getSectorAddress(sectorIndex) + (SECTOR_RESERVED_PAGES_COUNT + pageIndex) * Page::STORAGE_PAGE_SIZE;
 }
 
 uint32_t StorageSector::getPageIndexByAddress(uint32_t address)
@@ -49,7 +49,7 @@ bool StorageSector::isSectorAddress(uint32_t address)
 
 StorageStatus StorageSector::formatSector(uint32_t sectorIndex)
 {
-	Header header(StorageSector::getSectorStartAdderss(sectorIndex));
+	Header header(StorageSector::getSectorAddress(sectorIndex));
 	StorageStatus status = StorageSector::loadHeader(&header);
 	if (status != STORAGE_OK) {
 		return status;
