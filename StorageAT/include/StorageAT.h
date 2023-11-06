@@ -1,7 +1,6 @@
 /* Copyright © 2023 Georgy E. All rights reserved. */
 
-#ifndef STORAGE_FS_HPP
-#define STORAGE_FS_HPP
+#pragma once
 
 
 #include <stdint.h>
@@ -10,6 +9,13 @@
 #include "StorageType.h"
 #include "StorageSector.h"
 
+
+class IStorageDriver
+{
+public:
+	virtual StorageStatus read(uint32_t, uint8_t*, uint32_t) { return STORAGE_ERROR; }
+	virtual StorageStatus write(uint32_t, uint8_t*, uint32_t) { return STORAGE_ERROR; }
+};
 
 /*
  * class StorageAT
@@ -24,8 +30,7 @@ private:
 	static uint32_t m_pagesCount;
 
 	// TODO: docs
-	static StorageDriverCallback m_readDriver;
-	static StorageDriverCallback m_writeDriver;
+	static IStorageDriver* m_driver;
 
 public:
 	/* Max available address for StorageFS */
@@ -37,9 +42,8 @@ public:
 	 * @param // TODO: params
 	 */
 	StorageAT(
-		uint32_t              pagesCount,
-		StorageDriverCallback read_driver,
-		StorageDriverCallback write_driver
+		uint32_t        pagesCount,
+		IStorageDriver* driver
 	);
 
 	/*
@@ -109,9 +113,5 @@ public:
 	 */
 	static uint32_t getBytesSize();
 // TODO: docs
-	static StorageDriverCallback readCallback();
-	static StorageDriverCallback writeCallback();
+	static IStorageDriver* driverCallback();
 };
-
-
-#endif

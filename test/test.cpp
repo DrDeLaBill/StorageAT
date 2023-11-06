@@ -1,9 +1,10 @@
 #include <iostream>
-#include <gtest/gtest.h>
 #include <string>
-// #include "gmock/gmock.h"
 
-#include "../StorageAT/include/StorageAT.h" // TODO
+#include <gtest/gtest.h>
+#include <gmock/gmock.h>
+
+#include "StorageAT.h"
 #include "StorageEmulator.h"
 
 
@@ -11,95 +12,217 @@ const int SECTORS_COUNT = 20;
 const int PAGES_COUNT   = StorageSector::SECTOR_PAGES_COUNT * SECTORS_COUNT;
 const int PAGE_LEN      = 256;
 
+
 StorageEmulator storage(PAGES_COUNT);
+
 
 typedef struct _RequestsCount {
     unsigned read;
     unsigned write;
 } RequestsCount;
+
 RequestsCount requestsCount[PAGES_COUNT] = {};
 
-StorageStatus read_driver(uint32_t address, uint8_t* data, uint32_t len) 
+
+class StorageDriver: public IStorageDriver
 {
-    requestsCount[address / PAGE_LEN].read++;
-    StorageEmulatorStatus status = storage.readPage(address, data, len);
-    if (status == EMULATOR_BUSY) {
-        return STORAGE_BUSY;
+public: 
+    StorageDriver() {}
+	StorageStatus read(uint32_t address, uint8_t* data, uint32_t len) override
+    {
+        requestsCount[address / PAGE_LEN].read++;
+        StorageEmulatorStatus status = storage.readPage(address, data, len);
+        if (status == EMULATOR_BUSY) {
+            return STORAGE_BUSY;
+        }
+        if (status == EMULATOR_ERROR) {
+            return STORAGE_ERROR;
+        }
+        return STORAGE_OK;
     }
-    if (status == EMULATOR_ERROR) {
-        return STORAGE_ERROR;
+	StorageStatus write(uint32_t address, uint8_t* data, uint32_t len) override
+    {
+        requestsCount[address / PAGE_LEN].write++;
+        StorageEmulatorStatus status = storage.writePage(address, data, len);
+        if (status == EMULATOR_BUSY) {
+            return STORAGE_BUSY;
+        }
+        if (status == EMULATOR_ERROR) {
+            return STORAGE_ERROR;
+        }
+        return STORAGE_OK;
     }
-    return STORAGE_OK;
 };
 
-StorageStatus write_driver(uint32_t address, uint8_t* data, uint32_t len) 
+
+class MockStorageDriver: public IStorageDriver
 {
-    requestsCount[address / PAGE_LEN].write++;
-    StorageEmulatorStatus status = storage.writePage(address, data, len);
-    if (status == EMULATOR_BUSY) {
-        return STORAGE_BUSY;
+public:
+    MockStorageDriver() {}
+
+    MOCK_METHOD(
+        StorageStatus,
+        read,
+        (uint32_t, uint8_t*, uint32_t),
+        (override)
+    );
+
+    MOCK_METHOD(
+        StorageStatus,
+        write,
+        (uint32_t, uint8_t*, uint32_t),
+        (override)
+    );
+};
+
+
+class StorageFixture: public testing::Test
+{
+public:
+    uint32_t address;
+    StorageDriver driver;
+    std::unique_ptr<StorageAT> sat;
+
+    void SetUp() override
+    {
+        storage.clear();
+        address = 0;
+        sat = std::make_unique<StorageAT>(
+            storage.getPagesCount(),
+            &driver
+        );
     }
-    if (status == EMULATOR_ERROR) {
-        return STORAGE_ERROR;
+
+    void TearDown() override
+    {
+        sat.reset();
     }
-    return STORAGE_OK;
 };
 
 
 TEST(Page, Struct)
 {
+    EXPECT_EQ(sizeof(struct Page::_PageMeta), 18);
+    EXPECT_EQ(sizeof(struct Page::_PageStruct), PAGE_LEN);
+}
 
+TEST(Header, Struct)
+{
+    EXPECT_EQ(sizeof(struct Header::_PageHeader), 9);
+}
+
+TEST(StorageSector, CheckSectorAddresses)
+{
+    struct SectorAddressIndex {
+        uint32_t address;
+        uint32_t sectorAddress;
+        uint32_t sectorIndex;
+        uint32_t pageIndex;
+        uint32_t indexAddress;
+        bool isSectorAddress;
+    };
+    SectorAddressIndex addrIndex[] = {
+        {0,     0,    0,    0,    2048,  true},
+        {1,     0,    0,    0,    2048,  true},
+        {255,   0,    0,    0,    2048,  true},
+        {256,   0,    0,    0,    2048,  true},
+        {2048,  0,    0,    0,    2048,  false},
+        {2049,  0,    0,    0,    2048,  false},
+        {8703,  0,    0,    25,   8448,  false},
+        {8704,  8704, 1,    0,    10752, true},
+        {8705,  8704, 1,    0,    10752, true},
+        {8959,  8704, 1,    0,    10752, true},
+        {11008, 8704, 1,    1,    11008, false},
+    };
+
+    for (unsigned i = 0; i < sizeof(addrIndex) / sizeof(*addrIndex); i++) {
+        EXPECT_EQ(StorageSector::getSectorAddress(addrIndex[i].sectorIndex), addrIndex[i].sectorAddress);
+        EXPECT_EQ(StorageSector::getSectorIndex(addrIndex[i].sectorAddress), addrIndex[i].sectorIndex);
+        EXPECT_EQ(StorageSector::getSectorIndex(addrIndex[i].address), addrIndex[i].sectorIndex);
+        EXPECT_EQ(StorageSector::getPageAddressByIndex(addrIndex[i].sectorIndex, addrIndex[i].pageIndex), addrIndex[i].indexAddress);
+        EXPECT_EQ(StorageSector::getPageIndexByAddress(addrIndex[i].address), addrIndex[i].pageIndex);
+        EXPECT_EQ(StorageSector::isSectorAddress(addrIndex[i].address), addrIndex[i].isSectorAddress);
+        EXPECT_EQ(Header::getSectorStartAddress(addrIndex[i].address), addrIndex[i].sectorAddress);
+    }
+}
+
+TEST(StorageDriver, RequestExists)
+{
+    storage.clear();
+    MockStorageDriver mockDriver;
+    StorageAT sat(
+        storage.getPagesCount(),
+        &mockDriver
+    );
+    uint8_t prefix[] = "tst";
+    uint32_t id = 0;
+    uint8_t data[] = { 1, 2, 3, 4, 5 };
+    uint32_t address = 0;
+
+    EXPECT_CALL(mockDriver, read)
+        .Times(::testing::AtLeast(1));
+
+    EXPECT_CALL(mockDriver, write)
+        .Times(::testing::AtLeast(1));
+
+    EXPECT_EQ(sat.find(FIND_MODE_EMPTY, &address), STORAGE_NOT_FOUND);
+}
+
+TEST_F(StorageFixture, BadFindRequest)
+{
+    uint8_t shortStr[] = "tst";
+    uint8_t longStr[] = "longstringparameter";
+
+    EXPECT_EQ(sat->find(static_cast<StorageFindMode>(0), &address, nullptr, 0), STORAGE_ERROR);
+    EXPECT_EQ(sat->find(FIND_MODE_EMPTY, &address), STORAGE_OK);
+    EXPECT_EQ(sat->find(FIND_MODE_EQUAL, &address, nullptr, 0), STORAGE_ERROR);
+    EXPECT_EQ(sat->find(FIND_MODE_MAX, &address, nullptr, 0), STORAGE_ERROR);
+    EXPECT_EQ(sat->find(FIND_MODE_MIN, &address, nullptr, 0), STORAGE_ERROR);
+    EXPECT_EQ(sat->find(FIND_MODE_NEXT, &address, nullptr, 0), STORAGE_ERROR);
+    EXPECT_EQ(sat->find(FIND_MODE_EMPTY, nullptr), STORAGE_ERROR);
+    EXPECT_EQ(sat->find(FIND_MODE_EQUAL, nullptr, nullptr, 0), STORAGE_ERROR);
+    EXPECT_EQ(sat->find(FIND_MODE_MAX, nullptr, nullptr, 0), STORAGE_ERROR);
+    EXPECT_EQ(sat->find(FIND_MODE_MIN, nullptr, nullptr, 0), STORAGE_ERROR);
+    EXPECT_EQ(sat->find(FIND_MODE_NEXT, nullptr, nullptr, 0), STORAGE_ERROR);
+    EXPECT_EQ(sat->find(FIND_MODE_EQUAL, nullptr, longStr, 0), STORAGE_ERROR);
+    EXPECT_EQ(sat->find(FIND_MODE_MAX, nullptr, longStr, 0), STORAGE_ERROR);
+    EXPECT_EQ(sat->find(FIND_MODE_MIN, nullptr, longStr, 0), STORAGE_ERROR);
+    EXPECT_EQ(sat->find(FIND_MODE_NEXT, nullptr, longStr, 0), STORAGE_ERROR);
+    EXPECT_EQ(sat->find(FIND_MODE_EQUAL, nullptr, shortStr, 0), STORAGE_ERROR);
+    EXPECT_EQ(sat->find(FIND_MODE_MAX, nullptr, shortStr, 0), STORAGE_ERROR);
+    EXPECT_EQ(sat->find(FIND_MODE_MIN, nullptr, shortStr, 0), STORAGE_ERROR);
+    EXPECT_EQ(sat->find(FIND_MODE_NEXT, nullptr, shortStr, 0), STORAGE_ERROR);
+}
+
+TEST_F(StorageFixture, BadSaveRequest)
+{
+    uint8_t emptyStr[] = "";
+
+    EXPECT_EQ(sat->save(address, emptyStr, 0, nullptr, 0), STORAGE_ERROR);
+    EXPECT_EQ(sat->save(address, emptyStr, 0, nullptr, 1000), STORAGE_ERROR);
+    EXPECT_EQ(sat->save(address, emptyStr, 0, nullptr, 1000000), STORAGE_ERROR);
+    EXPECT_EQ(sat->save(address, nullptr, 0, nullptr, 0), STORAGE_ERROR);
+    EXPECT_EQ(sat->save(address, nullptr, 0, nullptr, 1000), STORAGE_ERROR);
+    EXPECT_EQ(sat->save(address, nullptr, 0, nullptr, 1000000), STORAGE_ERROR);
+}
+
+TEST_F(StorageFixture, BadLoadRequest)
+{
+    EXPECT_EQ(sat->load(address, nullptr, 0), STORAGE_ERROR);
+    EXPECT_EQ(sat->load(address, nullptr, 1000), STORAGE_ERROR);
+    EXPECT_EQ(sat->load(address, nullptr, 1000000), STORAGE_ERROR);
 }
 
 TEST(Core, primitive)
 {
+    StorageDriver driver;
     storage.clear();
     StorageAT sat(
         storage.getPagesCount(),
-        read_driver,
-        write_driver
+        &driver
     );
-
-    // Packet structures tests
-    EXPECT_EQ(sizeof(struct Page::_PageMeta), 18);
-    EXPECT_EQ(sizeof(struct Page::_PageStruct), PAGE_LEN);
-    EXPECT_EQ(sizeof(struct Header::_PageHeader), 9);
-
-    // Page tests
-    
-
-
-
-    // Trash requests
     uint32_t address = 0;
-    EXPECT_EQ(sat.find(static_cast<StorageFindMode>(0), &address, nullptr, 0), STORAGE_ERROR);
-    EXPECT_EQ(sat.find(FIND_MODE_EMPTY, &address), STORAGE_OK);
-    EXPECT_EQ(sat.find(FIND_MODE_EQUAL, &address, nullptr, 0), STORAGE_ERROR);
-    EXPECT_EQ(sat.find(FIND_MODE_MAX, &address, nullptr, 0), STORAGE_ERROR);
-    EXPECT_EQ(sat.find(FIND_MODE_MIN, &address, nullptr, 0), STORAGE_ERROR);
-    EXPECT_EQ(sat.find(FIND_MODE_NEXT, &address, nullptr, 0), STORAGE_ERROR);
-    EXPECT_EQ(sat.find(FIND_MODE_EMPTY, nullptr), STORAGE_ERROR);
-    EXPECT_EQ(sat.find(FIND_MODE_EQUAL, nullptr, nullptr, 0), STORAGE_ERROR);
-    EXPECT_EQ(sat.find(FIND_MODE_MAX, nullptr, nullptr, 0), STORAGE_ERROR);
-    EXPECT_EQ(sat.find(FIND_MODE_MIN, nullptr, nullptr, 0), STORAGE_ERROR);
-    EXPECT_EQ(sat.find(FIND_MODE_NEXT, nullptr, nullptr, 0), STORAGE_ERROR);
-    EXPECT_EQ(sat.find(FIND_MODE_EQUAL, nullptr, const_cast<uint8_t*>(reinterpret_cast<const uint8_t*>("nullptr")), 0), STORAGE_ERROR);
-    EXPECT_EQ(sat.find(FIND_MODE_MAX, nullptr, const_cast<uint8_t*>(reinterpret_cast<const uint8_t*>("nullptr")), 0), STORAGE_ERROR);
-    EXPECT_EQ(sat.find(FIND_MODE_MIN, nullptr, const_cast<uint8_t*>(reinterpret_cast<const uint8_t*>("nullptr")), 0), STORAGE_ERROR);
-    EXPECT_EQ(sat.find(FIND_MODE_NEXT, nullptr, const_cast<uint8_t*>(reinterpret_cast<const uint8_t*>("nullptr")), 0), STORAGE_ERROR);
-    EXPECT_EQ(sat.find(FIND_MODE_EQUAL, nullptr, const_cast<uint8_t*>(reinterpret_cast<const uint8_t*>("tst")), 0), STORAGE_ERROR);
-    EXPECT_EQ(sat.find(FIND_MODE_MAX, nullptr, const_cast<uint8_t*>(reinterpret_cast<const uint8_t*>("tst")), 0), STORAGE_ERROR);
-    EXPECT_EQ(sat.find(FIND_MODE_MIN, nullptr, const_cast<uint8_t*>(reinterpret_cast<const uint8_t*>("tst")), 0), STORAGE_ERROR);
-    EXPECT_EQ(sat.find(FIND_MODE_NEXT, nullptr, const_cast<uint8_t*>(reinterpret_cast<const uint8_t*>("tst")), 0), STORAGE_ERROR);
-    EXPECT_EQ(sat.save(address, const_cast<uint8_t*>(reinterpret_cast<const uint8_t*>("")), 0, nullptr, 0), STORAGE_ERROR);
-    EXPECT_EQ(sat.save(address, const_cast<uint8_t*>(reinterpret_cast<const uint8_t*>("")), 0, nullptr, 1000), STORAGE_ERROR);
-    EXPECT_EQ(sat.save(address, const_cast<uint8_t*>(reinterpret_cast<const uint8_t*>("")), 0, nullptr, 1000000), STORAGE_ERROR);
-    EXPECT_EQ(sat.save(address, nullptr, 0, nullptr, 0), STORAGE_ERROR);
-    EXPECT_EQ(sat.save(address, nullptr, 0, nullptr, 1000), STORAGE_ERROR);
-    EXPECT_EQ(sat.save(address, nullptr, 0, nullptr, 1000000), STORAGE_ERROR);
-    EXPECT_EQ(sat.load(address, nullptr, 0), STORAGE_ERROR);
-    EXPECT_EQ(sat.load(address, nullptr, 1000), STORAGE_ERROR);
-    EXPECT_EQ(sat.load(address, nullptr, 1000000), STORAGE_ERROR);
+    uint8_t shortStr[] = "tst";
 
     // Test busy
     storage.setBusy(true);
@@ -117,29 +240,28 @@ TEST(Core, primitive)
     // Test read and write unacceptable address
     StorageAT sat2(
         storage.getPagesCount() * 2,
-        read_driver,
-        write_driver
+        &driver
     );
     uint32_t sat2Address = storage.getPagesCount() * PAGE_LEN * 2 - 1024;
     EXPECT_EQ(sat2.load(sat2Address, (new uint8_t[PAGE_LEN]), PAGE_LEN), STORAGE_ERROR);
-    EXPECT_EQ(sat2.save(sat2Address, const_cast<uint8_t*>(reinterpret_cast<const uint8_t*>("tst")), 1, (new uint8_t[PAGE_LEN]), PAGE_LEN), STORAGE_NOT_FOUND);
+    EXPECT_EQ(sat2.save(sat2Address, shortStr, 1, (new uint8_t[PAGE_LEN]), PAGE_LEN), STORAGE_NOT_FOUND);
 
     // Test write all
     storage.clear();
     EXPECT_EQ(sat2.find(FIND_MODE_EMPTY, &sat2Address), STORAGE_OK);
     uint32_t maxEmptyMemory = SECTORS_COUNT * Header::PAGE_HEADERS_COUNT * Page::STORAGE_PAGE_PAYLOAD_SIZE;
-    EXPECT_EQ(sat2.save(sat2Address, const_cast<uint8_t*>(reinterpret_cast<const uint8_t*>("tst")), 1, (new uint8_t[maxEmptyMemory]), maxEmptyMemory), STORAGE_OK);
+    EXPECT_EQ(sat2.save(sat2Address, shortStr, 1, (new uint8_t[maxEmptyMemory]), maxEmptyMemory), STORAGE_OK);
 
     // TODO: проверка записи в последний сектор, если он не выровненный по концу памяти
 }
 
 TEST(Core, object)
 {
+    StorageDriver driver;
     storage.clear();
     StorageAT sat(
         storage.getPagesCount(),
-        read_driver,
-        write_driver
+        &driver
     );
     const uint8_t emptyPage256[256] = { 0xFF };
 
@@ -231,8 +353,11 @@ TEST(Core, object)
     // TODO: тест с заблокированными страницами в headers, а также недоступными в памяти
 }
 
-TEST(Storage, RequestsCount)
+int main(int args, char** argv)
 {
+    testing::InitGoogleTest(&args, argv);
+    int result = RUN_ALL_TESTS();
+
     std::cout << "Requests to memory count (Pages count: " << PAGES_COUNT << ")." << std::endl;
     for (unsigned i = 0; i < PAGES_COUNT; i++) {
         if (i % StorageSector::SECTOR_PAGES_COUNT == 0) {
@@ -243,4 +368,6 @@ TEST(Storage, RequestsCount)
         std::cout << "| " << i << "\tpage:\tr-" << requestsCount[i].read << "\tw-" << requestsCount[i].write << "\t|" <<std::endl;
     }
     std::cout << "|===============================|" << std::endl;
+
+    return result;
 }

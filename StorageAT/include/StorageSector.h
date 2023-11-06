@@ -1,7 +1,6 @@
 /* Copyright © 2023 Georgy E. All rights reserved. */
 
-#ifndef STORAGE_BOX_HPP
-#define STORAGE_BOX_HPP
+#pragma once
 
 
 #include <stdint.h>
@@ -27,7 +26,7 @@ public:
 	 * @param sectorIndex Sector index in memory
 	 * @return            Returns sector start address
 	 */
-	static uint32_t getSectorStartAdderss(uint32_t sectorIndex);
+	static uint32_t getSectorAddress(uint32_t sectorIndex);
 
 	/*
 	 * Calculates sector index by address
@@ -67,5 +66,3 @@ public:
 
 	static StorageStatus loadHeader(Header *header); // TODO: do operator= for Page class
 };
-
-#endif
