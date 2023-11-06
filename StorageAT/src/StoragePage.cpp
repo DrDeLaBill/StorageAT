@@ -185,7 +185,7 @@ uint32_t Header::getSectorIndex()
 
 uint32_t Header::getSectorStartAddress(uint32_t address)
 {
-	return (address / (StorageSector::SECTOR_PAGES_COUNT * Page::STORAGE_PAGE_SIZE)) * Page::STORAGE_PAGE_SIZE;
+	return (address / (StorageSector::SECTOR_PAGES_COUNT * Page::STORAGE_PAGE_SIZE)) * (StorageSector::SECTOR_PAGES_COUNT * Page::STORAGE_PAGE_SIZE);
 }
 
 StorageStatus Header::create()
