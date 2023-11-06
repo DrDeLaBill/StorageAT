@@ -1,9 +1,10 @@
 #include <iostream>
-#include <gtest/gtest.h>
 #include <string>
-// #include "gmock/gmock.h"
 
-#include "../StorageAT/include/StorageAT.h" // TODO
+#include <gtest/gtest.h>
+#include "gmock/gmock.h"
+
+#include "StorageAT.h"
 #include "StorageEmulator.h"
 
 
@@ -11,62 +12,73 @@ const int SECTORS_COUNT = 20;
 const int PAGES_COUNT   = StorageSector::SECTOR_PAGES_COUNT * SECTORS_COUNT;
 const int PAGE_LEN      = 256;
 
+
 StorageEmulator storage(PAGES_COUNT);
+
 
 typedef struct _RequestsCount {
     unsigned read;
     unsigned write;
 } RequestsCount;
+
 RequestsCount requestsCount[PAGES_COUNT] = {};
 
-StorageStatus read_driver(uint32_t address, uint8_t* data, uint32_t len) 
+
+class StorageDriver: public IStorageDriver
 {
-    requestsCount[address / PAGE_LEN].read++;
-    StorageEmulatorStatus status = storage.readPage(address, data, len);
-    if (status == EMULATOR_BUSY) {
-        return STORAGE_BUSY;
+public: 
+    StorageDriver() {}
+	StorageStatus read(uint32_t address, uint8_t* data, uint32_t len) override
+    {
+        requestsCount[address / PAGE_LEN].read++;
+        StorageEmulatorStatus status = storage.readPage(address, data, len);
+        if (status == EMULATOR_BUSY) {
+            return STORAGE_BUSY;
+        }
+        if (status == EMULATOR_ERROR) {
+            return STORAGE_ERROR;
+        }
+        return STORAGE_OK;
     }
-    if (status == EMULATOR_ERROR) {
-        return STORAGE_ERROR;
+	StorageStatus write(uint32_t address, uint8_t* data, uint32_t len) override
+    {
+        requestsCount[address / PAGE_LEN].write++;
+        StorageEmulatorStatus status = storage.writePage(address, data, len);
+        if (status == EMULATOR_BUSY) {
+            return STORAGE_BUSY;
+        }
+        if (status == EMULATOR_ERROR) {
+            return STORAGE_ERROR;
+        }
+        return STORAGE_OK;
     }
-    return STORAGE_OK;
 };
 
-StorageStatus write_driver(uint32_t address, uint8_t* data, uint32_t len) 
-{
-    requestsCount[address / PAGE_LEN].write++;
-    StorageEmulatorStatus status = storage.writePage(address, data, len);
-    if (status == EMULATOR_BUSY) {
-        return STORAGE_BUSY;
-    }
-    if (status == EMULATOR_ERROR) {
-        return STORAGE_ERROR;
-    }
-    return STORAGE_OK;
-};
+StorageDriver driver;
 
 
 TEST(Page, Struct)
 {
-
+    EXPECT_EQ(sizeof(struct Page::_PageMeta), 18);
+    EXPECT_EQ(sizeof(struct Page::_PageStruct), PAGE_LEN);
 }
+
+TEST(Header, Struct)
+{
+    EXPECT_EQ(sizeof(struct Header::_PageHeader), 9);
+}
+
+
 
 TEST(Core, primitive)
 {
     storage.clear();
     StorageAT sat(
         storage.getPagesCount(),
-        read_driver,
-        write_driver
+        &driver
     );
 
-    // Packet structures tests
-    EXPECT_EQ(sizeof(struct Page::_PageMeta), 18);
-    EXPECT_EQ(sizeof(struct Page::_PageStruct), PAGE_LEN);
-    EXPECT_EQ(sizeof(struct Header::_PageHeader), 9);
-
     // Page tests
-    
 
 
 
@@ -117,8 +129,7 @@ TEST(Core, primitive)
     // Test read and write unacceptable address
     StorageAT sat2(
         storage.getPagesCount() * 2,
-        read_driver,
-        write_driver
+        &driver
     );
     uint32_t sat2Address = storage.getPagesCount() * PAGE_LEN * 2 - 1024;
     EXPECT_EQ(sat2.load(sat2Address, (new uint8_t[PAGE_LEN]), PAGE_LEN), STORAGE_ERROR);
@@ -138,8 +149,7 @@ TEST(Core, object)
     storage.clear();
     StorageAT sat(
         storage.getPagesCount(),
-        read_driver,
-        write_driver
+        &driver
     );
     const uint8_t emptyPage256[256] = { 0xFF };
 

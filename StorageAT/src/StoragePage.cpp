@@ -11,7 +11,7 @@
 #include "StorageSector.h"
 
 
-typedef StorageAT FS;
+typedef StorageAT AT;
 
 
 Page::Page(uint32_t address): address(address)
@@ -41,7 +41,7 @@ bool Page::isSetPageStatus(uint8_t status)
 
 StorageStatus Page::load(bool startPage)
 {
-	StorageStatus status = (FS::readCallback())(address, reinterpret_cast<uint8_t*>(&page), sizeof(page));
+	StorageStatus status = AT::driverCallback()->read(address, reinterpret_cast<uint8_t*>(&page), sizeof(page));
 	if (status != STORAGE_OK) {
 		return status;
 	}
@@ -71,7 +71,7 @@ StorageStatus Page::save()
 {
 	page.crc = this->getCRC16(reinterpret_cast<uint8_t*>(&page), sizeof(page) - sizeof(page.crc));
 
-	StorageStatus status = (FS::writeCallback())(address, reinterpret_cast<uint8_t*>(&page), sizeof(page));
+	StorageStatus status = AT::driverCallback()->write(address, reinterpret_cast<uint8_t*>(&page), sizeof(page));
 	if (status != STORAGE_OK) {
 		return status;
 	}
@@ -192,15 +192,15 @@ StorageStatus Header::create()
 {
 	Header dumpHeader(this->address);
 	for (uint16_t i = 0; i < PAGE_HEADERS_COUNT; i++) {
-		Page page(StorageSector::getPageAddressByIndex(this->m_sectorIndex, i));
+		Page tmpPage(StorageSector::getPageAddressByIndex(this->m_sectorIndex, i));
 
-		StorageStatus status = page.load();
+		StorageStatus status = tmpPage.load();
 		if (status == STORAGE_BUSY) {
 			return STORAGE_BUSY;
 		}
 		if (status == STORAGE_OK) {
-			memcpy(dumpHeader.data->pages[i].prefix, page.page.header.prefix, sizeof(page.page.header.prefix));
-			dumpHeader.data->pages[i].id     = page.page.header.id;
+			memcpy(dumpHeader.data->pages[i].prefix, tmpPage.page.header.prefix, sizeof(tmpPage.page.header.prefix));
+			dumpHeader.data->pages[i].id     = tmpPage.page.header.id;
 			dumpHeader.data->pages[i].status = Header::PAGE_OK;
 		} else {
 			dumpHeader.data->pages[i].status = Header::PAGE_EMPTY;

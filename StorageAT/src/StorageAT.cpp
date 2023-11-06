@@ -14,18 +14,15 @@
 
 
 uint32_t StorageAT::m_pagesCount = 0;
-StorageDriverCallback StorageAT::m_readDriver  = NULL;
-StorageDriverCallback StorageAT::m_writeDriver = NULL;
+IStorageDriver* StorageAT::m_driver = nullptr;
 
 
 StorageAT::StorageAT(
 	uint32_t pagesCount,
-	StorageDriverCallback read_driver,
-	StorageDriverCallback write_driver
+	IStorageDriver* driver
 ) {
-	StorageAT::m_pagesCount   = pagesCount;
-	StorageAT::m_readDriver  = read_driver;
-	StorageAT::m_writeDriver = write_driver;
+	StorageAT::m_pagesCount = pagesCount;
+	StorageAT::m_driver = driver;
 }
 
 StorageStatus StorageAT::find(
@@ -135,12 +132,7 @@ uint32_t StorageAT::getBytesSize()
 	return StorageAT::getPagesCount() * Page::STORAGE_PAGE_SIZE;
 }
 
-StorageDriverCallback StorageAT::readCallback()
+IStorageDriver* StorageAT::driverCallback()
 {
-	return StorageAT::m_readDriver;
-}
-
-StorageDriverCallback StorageAT::writeCallback()
-{
-	return StorageAT::m_writeDriver;
+	return StorageAT::m_driver;
 }
