@@ -81,15 +81,21 @@ StorageStatus StorageData::save(
 		page->page.header.status = 0;
 		bool isStart = curLen == 0;
 		bool isEnd   = curLen + neededLen >= len;
+		uint8_t status = 0x00;
 		if (isStart) {
-			page->setPageStatus(Page::PAGE_STATUS_START);
+			status |= Page::PAGE_STATUS_START;
 		}
 		if (isEnd) {
-			page->setPageStatus(Page::PAGE_STATUS_END);
+			status |= Page::PAGE_STATUS_END;
 		}
 		if (!isStart && !isEnd) {
-			page->setPageStatus(Page::PAGE_STATUS_MID);
+			status |= Page::PAGE_STATUS_MID;
 		}
+		if (!status) {
+			status = STORAGE_ERROR;
+			break;
+		}
+		page->setPageStatus(status);
 
 		// Search
 		uint32_t nextAddress = 0;
@@ -103,7 +109,7 @@ StorageStatus StorageData::save(
 				);
 		}
 		if (status != STORAGE_OK) {
-			return status;
+			break;
 		}
 		page->page.header.next_addr = nextAddress;
 
@@ -113,11 +119,8 @@ StorageStatus StorageData::save(
 		if (header && sectorAddress != curSectorAddress) {
 			status = header->save();
 		}
-		if (status == STORAGE_BUSY) {
-			break;
-		}
 		if (status != STORAGE_OK) {
-			return status;
+			break;
 		}
 		if (sectorAddress != curSectorAddress) {
 			header = std::make_unique<Header>(curAddr);
@@ -260,11 +263,12 @@ StorageStatus StorageData::findStartAddress(uint32_t* address)
 
 StorageStatus StorageData::isEmptyAddress(uint32_t address)
 {
-	StorageStatus status = this->findStartAddress(&address);
-	if (status == STORAGE_BUSY || status == STORAGE_OOM) {
+	Header header(address);
+	StorageStatus status = StorageSector::loadHeader(&header);
+	if (status != STORAGE_OK) {
 		return status;
 	}
-	if (status != STORAGE_OK) {
+	if (header.isSetHeaderStatus(StorageSector::getPageIndexByAddress(address), Page::PAGE_STATUS_EMPTY)) {
 		return STORAGE_OK;
 	}
 	return STORAGE_ERROR;
