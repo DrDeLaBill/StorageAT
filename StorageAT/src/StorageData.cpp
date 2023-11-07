@@ -256,11 +256,11 @@ StorageStatus StorageData::findStartAddress(uint32_t* address)
 		return status;
 	}
 
-	if (!page->isSetPageStatus(Page::PAGE_STATUS_START)) {
-		return STORAGE_ERROR;
+	if (!page->isStart()) {
+		return STORAGE_NOT_FOUND;
 	}
 
-	*address = tmpAddress;
+	*address = page->getAddress();
 
 	return STORAGE_OK;
 }
