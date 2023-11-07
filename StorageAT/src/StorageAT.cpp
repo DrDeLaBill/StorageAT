@@ -124,7 +124,12 @@ StorageStatus StorageAT::deleteData(uint32_t address)
 
 uint32_t StorageAT::getPagesCount()
 {
-	return m_pagesCount;
+	uint32_t sectorsCount = m_pagesCount / StorageSector::SECTOR_PAGES_COUNT;
+	uint32_t pagesCount = sectorsCount * StorageSector::SECTOR_PAGES_COUNT;
+	if (m_pagesCount % StorageSector::SECTOR_PAGES_COUNT > StorageSector::SECTOR_RESERVED_PAGES_COUNT) {
+		pagesCount += (StorageSector::SECTOR_RESERVED_PAGES_COUNT - (m_pagesCount % StorageSector::SECTOR_PAGES_COUNT));
+	}
+	return pagesCount;
 }
 
 uint32_t StorageAT::getBytesSize()

@@ -13,7 +13,7 @@ StorageEmulator::StorageEmulator(uint32_t pagesCount): pagesCount(pagesCount)
 
 uint32_t StorageEmulator::getSize()
 {
-    return this->getPagesCount() * 256;;
+    return this->getPagesCount() * 256;
 }
 
 uint32_t StorageEmulator::getPagesCount()
