@@ -19,9 +19,9 @@ uint32_t StorageSector::getSectorAddress(uint32_t sectorIndex)
 	return SECTOR_PAGES_COUNT * sectorIndex * Page::STORAGE_PAGE_SIZE;
 }
 
-uint32_t StorageSector::getSectorIndex(uint32_t sectorAddress)
+uint32_t StorageSector::getSectorIndex(uint32_t address)
 {
-	return sectorAddress / Page::STORAGE_PAGE_SIZE / SECTOR_PAGES_COUNT;
+	return address / Page::STORAGE_PAGE_SIZE / SECTOR_PAGES_COUNT;
 }
 
 uint32_t StorageSector::getSectorsCount()

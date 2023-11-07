@@ -18,24 +18,17 @@ public:
 	static const uint32_t STORAGE_MAGIC           = 0xBEDAC0DE;
 
 	/* Current page structure version */
-	static const uint8_t STORAGE_VERSION          = 0x04;
+	static const uint8_t STORAGE_VERSION          = 0x05;
 
 	/* Available page title bytes in block header */
 	static const uint8_t STORAGE_PAGE_PREFIX_SIZE = 4;
 
 
-	typedef enum _PageStatus {
-		PAGE_STATUS_EMPTY = static_cast<uint8_t>(0b00000001),
-		PAGE_STATUS_START = static_cast<uint8_t>(0b00000010),
-		PAGE_STATUS_MID   = static_cast<uint8_t>(0b00000100),
-		PAGE_STATUS_END   = static_cast<uint8_t>(0b00001000)
-	} PageStatus;
-
 	/* Page header meta data structure */
 	PACK(typedef struct, _PageMeta {
 		uint32_t magic;
 		uint8_t  version;
-		uint8_t  status;
+		uint32_t prev_addr;
 		uint32_t next_addr;
 		uint8_t  prefix[STORAGE_PAGE_PREFIX_SIZE];
 		uint32_t id;
@@ -64,13 +57,19 @@ public:
 	virtual StorageStatus load(bool startPage = false);
 	virtual StorageStatus save();
 	virtual StorageStatus deletePage();
+	StorageStatus loadPrev();
 	StorageStatus loadNext();
 
-	void setPageStatus(uint8_t status);
-	bool isSetPageStatus(uint8_t status);
+	bool isStart();
+	bool isMiddle();
+	bool isEnd();
+	bool validatePrevAddress();
 	bool validateNextAddress();
 	bool isEmpty();
 	uint32_t getAddress();
+
+	void setPrevAddress(uint32_t address);
+	void setNextAddress(uint32_t address);
 
 protected:
 	uint32_t address;
@@ -117,6 +116,7 @@ public:
 	bool isSetHeaderStatus(uint32_t pageIndex, uint8_t status);
 	void setPageBlocked(uint32_t pageIndex);
 	uint32_t getSectorIndex();
+	bool isAddressEmpty(uint32_t targetAddress);
 
 	static uint32_t getSectorStartAddress(uint32_t address);
 

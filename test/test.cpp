@@ -102,7 +102,7 @@ public:
 
 TEST(Page, Struct)
 {
-    EXPECT_EQ(sizeof(struct Page::_PageMeta), 18);
+    EXPECT_EQ(sizeof(struct Page::_PageMeta), 21);
     EXPECT_EQ(sizeof(struct Page::_PageStruct), PAGE_LEN);
 }
 
@@ -128,14 +128,15 @@ TEST(StorageSector, CheckSectorAddresses)
         {256,   0,    0,    0,    2048,  true},
         {2048,  0,    0,    0,    2048,  false},
         {2049,  0,    0,    0,    2048,  false},
-        {8703,  0,    0,    25,   8448,  false},
-        {8704,  8704, 1,    0,    10752, true},
-        {8705,  8704, 1,    0,    10752, true},
-        {8959,  8704, 1,    0,    10752, true},
-        {11008, 8704, 1,    1,    11008, false},
+        {8447,  0,    0,    24,   8192,  false},
+        {8448,  8448, 1,    0,    10496, true},
+        {8705,  8448, 1,    0,    10496, true},
+        {8959,  8448, 1,    0,    10496, true},
+        {10752, 8448, 1,    1,    10752, false},
     };
 
     for (unsigned i = 0; i < sizeof(addrIndex) / sizeof(*addrIndex); i++) {
+        // std::cout << "addr=" << addrIndex[i].address << ",sectorIdx=" << addrIndex[i].sectorIndex << ",pageIdx=" << addrIndex[i].pageIndex << std::endl;
         EXPECT_EQ(StorageSector::getSectorAddress(addrIndex[i].sectorIndex), addrIndex[i].sectorAddress);
         EXPECT_EQ(StorageSector::getSectorIndex(addrIndex[i].sectorAddress), addrIndex[i].sectorIndex);
         EXPECT_EQ(StorageSector::getSectorIndex(addrIndex[i].address), addrIndex[i].sectorIndex);
