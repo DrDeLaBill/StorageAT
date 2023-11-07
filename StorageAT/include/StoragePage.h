@@ -123,10 +123,11 @@ public:
 	StorageStatus load();
 	StorageStatus save();
 	StorageStatus deletePage() { return STORAGE_ERROR; }
+	
+	static uint32_t getSectorStartAddress(uint32_t address);
 
 protected:
 	bool validate() override;
-	static uint32_t getSectorStartAddress(uint32_t address);
 
 private:
 	uint32_t m_sectorIndex;
