@@ -171,7 +171,7 @@ StorageStatus StorageData::save(
 
 StorageStatus StorageData::deleteData() // TODO: удалять записи из header
 {
-	uint32_t address = 0;
+	uint32_t address = this->m_startAddress;
 
 	if (StorageSector::isSectorAddress(address)) {
 		return STORAGE_ERROR;
@@ -247,6 +247,10 @@ StorageStatus StorageData::findStartAddress(uint32_t* address)
 	status = page->load(/*startPage=*/true);
 	if (status != STORAGE_OK) {
 		return status;
+	}
+
+	if (!page->isSetPageStatus(Page::PAGE_STATUS_START)) {
+		return STORAGE_ERROR;
 	}
 
 	*address = tmpAddress;
