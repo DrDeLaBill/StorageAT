@@ -75,7 +75,8 @@ public:
 protected:
 	uint32_t address;
 
-	bool validate();
+protected:
+	virtual bool validate();
 	uint16_t getCRC16(uint8_t* buf, uint16_t len);
 };
 
@@ -118,6 +119,13 @@ public:
 	void setPageBlocked(uint32_t pageIndex);
 	uint32_t getSectorIndex();
 
+	StorageStatus createHeader();
+	StorageStatus load();
+	StorageStatus save();
+	StorageStatus deletePage() { return STORAGE_ERROR; }
+
+protected:
+	bool validate() override;
 	static uint32_t getSectorStartAddress(uint32_t address);
 
 private:
