@@ -118,11 +118,6 @@ public:
 	bool isSetHeaderStatus(uint32_t pageIndex, uint8_t status);
 	void setPageBlocked(uint32_t pageIndex);
 	uint32_t getSectorIndex();
-
-	StorageStatus createHeader();
-	StorageStatus load();
-	StorageStatus save();
-	StorageStatus deletePage() { return STORAGE_ERROR; }
 	
 	static uint32_t getSectorStartAddress(uint32_t address);
 
