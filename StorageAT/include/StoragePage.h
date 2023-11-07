@@ -1,7 +1,6 @@
 /* Copyright © 2023 Georgy E. All rights reserved. */
 
-#ifndef STORAGE_STRUCT_HPP
-#define STORAGE_STRUCT_HPP
+#pragma once
 
 
 #include <stdint.h>
@@ -56,22 +55,25 @@ public:
 		uint16_t crc;
 	} PageStruct);
 
-
-	uint32_t   address;
 	PageStruct page;
 
 	Page(uint32_t address);
 
+	Page& operator=(Page* other);
+
+	virtual StorageStatus load(bool startPage = false);
+	virtual StorageStatus save();
+	virtual StorageStatus deletePage();
+	StorageStatus loadNext();
+
 	void setPageStatus(uint8_t status);
 	bool isSetPageStatus(uint8_t status);
-
-	StorageStatus load(bool startPage = false);
-	StorageStatus save();
-	StorageStatus deletePage();
-	bool isEmpty();
-
-	StorageStatus loadNext();
 	bool validateNextAddress();
+	bool isEmpty();
+	uint32_t getAddress();
+
+protected:
+	uint32_t address;
 
 protected:
 	virtual bool validate();
@@ -100,23 +102,34 @@ public:
 		PageHeader pages[PAGE_HEADERS_COUNT];
 	} HeaderPageStruct);
 
-
-	uint32_t          sectorIndex;
 	HeaderPageStruct* data;
 
 	Header(uint32_t address);
 
+	Header& operator=(Header* other);
+
+	StorageStatus load();
+	StorageStatus load(bool) override { return this->load(); };
+	StorageStatus save() override;
+	StorageStatus create();
+	StorageStatus deletePage() override { return STORAGE_ERROR; }
+
 	void setHeaderStatus(uint32_t pageIndex, uint8_t status);
 	bool isSetHeaderStatus(uint32_t pageIndex, uint8_t status);
+	void setPageBlocked(uint32_t pageIndex);
+	uint32_t getSectorIndex();
 
 	StorageStatus createHeader();
 	StorageStatus load();
 	StorageStatus save();
 	StorageStatus deletePage() { return STORAGE_ERROR; }
+	
+	static uint32_t getSectorStartAddress(uint32_t address);
 
 protected:
 	bool validate() override;
+
+private:
+	uint32_t m_sectorIndex;
+
 };
-
-
-#endif

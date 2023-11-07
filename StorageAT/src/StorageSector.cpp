@@ -11,10 +11,10 @@
 #include "StorageSearch.h"
 
 
-typedef StorageAT FS;
+typedef StorageAT AT;
 
 
-uint32_t StorageSector::getSectorStartAdderss(uint32_t sectorIndex)
+uint32_t StorageSector::getSectorAddress(uint32_t sectorIndex)
 {
 	return SECTOR_PAGES_COUNT * sectorIndex * Page::STORAGE_PAGE_SIZE;
 }
@@ -26,12 +26,12 @@ uint32_t StorageSector::getSectorIndex(uint32_t sectorAddress)
 
 uint32_t StorageSector::getSectorsCount()
 {
-	return FS::getPagesCount() / SECTOR_PAGES_COUNT;
+	return AT::getPagesCount() / SECTOR_PAGES_COUNT;
 }
 
 uint32_t StorageSector::getPageAddressByIndex(uint32_t sectorIndex, uint32_t pageIndex)
 {
-	return getSectorStartAdderss(sectorIndex) + (SECTOR_RESERVED_PAGES_COUNT + pageIndex) * Page::STORAGE_PAGE_SIZE;
+	return getSectorAddress(sectorIndex) + (SECTOR_RESERVED_PAGES_COUNT + pageIndex) * Page::STORAGE_PAGE_SIZE;
 }
 
 uint32_t StorageSector::getPageIndexByAddress(uint32_t address)
@@ -49,7 +49,7 @@ bool StorageSector::isSectorAddress(uint32_t address)
 
 StorageStatus StorageSector::formatSector(uint32_t sectorIndex)
 {
-	Header header(StorageSector::getSectorStartAdderss(sectorIndex));
+	Header header(StorageSector::getSectorAddress(sectorIndex));
 	StorageStatus status = StorageSector::loadHeader(&header);
 	if (status != STORAGE_OK) {
 		return status;
@@ -62,7 +62,7 @@ StorageStatus StorageSector::formatSector(uint32_t sectorIndex)
 
 StorageStatus StorageSector::loadHeader(Header *header)
 {
-	if (header->address > FS::getBytesSize()) {
+	if (header->getAddress() > AT::getBytesSize()) {
 		return STORAGE_OOM;
 	}
 
@@ -74,7 +74,8 @@ StorageStatus StorageSector::loadHeader(Header *header)
 		return STORAGE_OK;
 	}
 
-	status = header->createHeader();
+	status = header->create();
+	// TODO: if data has broken -> remove from headers
 	if (status == STORAGE_BUSY) {
 		return STORAGE_BUSY;
 	}

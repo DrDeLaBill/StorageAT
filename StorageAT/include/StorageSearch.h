@@ -1,7 +1,6 @@
 /* Copyright © 2023 Georgy E. All rights reserved. */
 
-#ifndef STORAGE_SEARCH_HPP
-#define STORAGE_SEARCH_HPP
+#pragma once
 
 
 #include <stdint.h>
@@ -116,6 +115,3 @@ protected:
 		const uint32_t id
 	) override;
 };
-
-
-#endif

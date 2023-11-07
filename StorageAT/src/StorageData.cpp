@@ -47,6 +47,8 @@ StorageStatus StorageData::load(uint8_t* data, uint32_t len)
 		return STORAGE_OK;
 	}
 
+	// TODO: if data has broken -> remove from headers
+
 	return status;
 }
 
@@ -69,10 +71,13 @@ StorageStatus StorageData::save(
 
 	uint32_t curLen = 0;
 	uint32_t curAddr = m_startAddress;
-	std::unique_ptr<Page> page = std::make_unique<Page>(curAddr);
+	uint32_t sectorAddress = Page::STORAGE_PAGE_SIZE + 1;
+	std::unique_ptr<Header> header;
+	std::unique_ptr<Page> page;
 	while (curLen < len) {
+		// Initialize page
+		page = std::make_unique<Page>(curAddr);
 		uint32_t neededLen = std::min(static_cast<uint32_t>(len - curLen), static_cast<uint32_t>(sizeof(page->page.payload)));
-
 		page->page.header.status = 0;
 		bool isStart = curLen == 0;
 		bool isEnd   = curLen + neededLen >= len;
@@ -86,6 +91,7 @@ StorageStatus StorageData::save(
 			page->setPageStatus(Page::PAGE_STATUS_MID);
 		}
 
+		// Search
 		uint32_t nextAddress = 0;
 		status = STORAGE_OK;
 		if (!isEnd) {
@@ -101,45 +107,66 @@ StorageStatus StorageData::save(
 		}
 		page->page.header.next_addr = nextAddress;
 
-		memcpy(page->page.header.prefix, prefix, Page::STORAGE_PAGE_PREFIX_SIZE);
-		page->page.header.id = id;
 
-		memcpy(page->page.payload, data + curLen, neededLen);
-
-		status = page->save(); // TODO: добавить блокировку страницы через header, если сохранение неудачное
-		if (status != STORAGE_OK) {
-			this->deleteData();
-			return status;
+		// Check header (and save)
+		uint32_t curSectorAddress = Header::getSectorStartAddress(curAddr);
+		if (header && sectorAddress != curSectorAddress) {
+			status = header->save();
 		}
-
-		Header header(curAddr);
-		status = header.load();
-		if (status != STORAGE_OK) {
-			this->deleteData();
-			return status;
-		}
-
-		uint32_t pageIndex = StorageSector::getPageIndexByAddress(curAddr);
-		header.data->pages[pageIndex].id     = page->page.header.id;
-		header.data->pages[pageIndex].status = Header::PAGE_OK;
-		memcpy(header.data->pages[pageIndex].prefix, page->page.header.prefix, Page::STORAGE_PAGE_PREFIX_SIZE);
-		status = header.save();
-		if (status != STORAGE_OK) {
-			this->deleteData();
-			return status;
-		}
-
-
-		if (isEnd) {
+		if (status == STORAGE_BUSY) {
 			break;
 		}
+		if (status != STORAGE_OK) {
+			return status;
+		}
+		if (sectorAddress != curSectorAddress) {
+			header = std::make_unique<Header>(curAddr);
+			status = StorageSector::loadHeader(header.get());
+			sectorAddress = curSectorAddress;
+		}
+		if (status == STORAGE_BUSY) {
+			break;
+		}
+		if (status != STORAGE_OK) {
+			curAddr = nextAddress;
+			continue;
+		}
 
+
+		// Save page
+		memcpy(page->page.header.prefix, prefix, Page::STORAGE_PAGE_PREFIX_SIZE);
+		page->page.header.id = id;
+		memcpy(page->page.payload, data + curLen, neededLen);
+		status = page->save();
+		if (status == STORAGE_BUSY) {
+			break;
+		}
+		if (status != STORAGE_OK) {
+			header->setPageBlocked(StorageSector::getPageIndexByAddress(page->getAddress()));
+			continue;
+		}
+
+
+		// Registrate page in header
+		uint32_t pageIndex = StorageSector::getPageIndexByAddress(curAddr);
+		header->data->pages[pageIndex].id     = page->page.header.id;
+		header->data->pages[pageIndex].status = Header::PAGE_OK;
+		memcpy(header->data->pages[pageIndex].prefix, page->page.header.prefix, Page::STORAGE_PAGE_PREFIX_SIZE);
+
+
+		// Update current values
 		curAddr = nextAddress;
 		curLen += neededLen;
-		page    = std::make_unique<Page>(curAddr);
-	} // TODO: сохранение header вне цикла
+	} 
 
-    return STORAGE_OK;
+	if (status != STORAGE_OK) {
+		// TODO: remove data
+		this->deleteData();
+		return status;
+	}
+	
+	// Save last header
+	return header->save();
 }
 
 StorageStatus StorageData::deleteData() // TODO: удалять записи из header
@@ -151,32 +178,50 @@ StorageStatus StorageData::deleteData() // TODO: удалять записи и�
 	}
 
 	StorageStatus status = this->findStartAddress(&address);
-	if (status == STORAGE_BUSY) {
-		return STORAGE_BUSY;
+	if (status != STORAGE_BUSY) {
+		return status;
 	}
 	if (status == STORAGE_OK) {
 		m_startAddress = address;
 	}
 
 	uint32_t curAddress = m_startAddress;
+	uint32_t sectorAddress = Page::STORAGE_PAGE_SIZE + 1;
 	std::unique_ptr<Page> page;
+	std::unique_ptr<Header> header;
 
 	do {
+		// Find target page
 		page = std::make_unique<Page>(curAddress);
-		curAddress = page->page.header.next_addr;
-
 		status = page->load();
 		if (status != STORAGE_OK) {
 			return status;
 		}
 
-		status = page->deletePage();
-		if (status != STORAGE_OK) {
-			return status;
+		
+		// Check header (and save)
+		uint32_t curSectorAddress = Header::getSectorStartAddress(curAddress);	
+		if (header && sectorAddress != curSectorAddress) {
+			status = header->save();
 		}
-	} while (page->validateNextAddress());
+		if (status != STORAGE_OK) {
+			continue;
+		}
+		if ( sectorAddress != curSectorAddress) {
+			header = std::make_unique<Header>(Header::getSectorStartAddress(curAddress));
+			status = StorageSector::loadHeader(header.get());
+			sectorAddress = curSectorAddress;
+		}
+		if (status != STORAGE_OK) {
+			continue;
+		}
 
-	return STORAGE_OK;
+		// Update current address
+		curAddress = page->page.header.next_addr;
+	} while (page->validateNextAddress());
+	
+	// Save last header
+	return header->save();
 }
 
 
