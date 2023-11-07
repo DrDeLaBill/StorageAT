@@ -74,7 +74,8 @@ public:
 protected:
 	uint32_t address;
 
-	bool validate();
+protected:
+	virtual bool validate();
 	uint16_t getCRC16(uint8_t* buf, uint16_t len);
 };
 
@@ -119,6 +120,9 @@ public:
 	bool isAddressEmpty(uint32_t targetAddress);
 
 	static uint32_t getSectorStartAddress(uint32_t address);
+
+protected:
+	bool validate() override;
 
 private:
 	uint32_t m_sectorIndex;
