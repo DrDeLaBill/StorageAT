@@ -72,7 +72,7 @@ StorageStatus StorageAT::load(uint32_t address, uint8_t* data, uint32_t len)
 	if (!data) {
 		return STORAGE_ERROR;
 	}
-	if (address + len > getBytesSize()) {
+	if (len > StorageAT::getOffsetPayloadSize(address)) {
 		return STORAGE_OOM;
 	}
 	StorageData storageData(address);
@@ -95,7 +95,7 @@ StorageStatus StorageAT::save(
 	if (!prefix) {
 		return STORAGE_ERROR;
 	}
-	if (address + len > getBytesSize()) {
+	if (len > StorageAT::getOffsetPayloadSize(address)) {
 		return STORAGE_OOM;
 	}
 	StorageData storageData(address);
@@ -115,21 +115,56 @@ StorageStatus StorageAT::format()
 
 StorageStatus StorageAT::deleteData(uint32_t address)
 {
-	if (address > getBytesSize()) {
+	if (address > StorageAT::getStorageSize()) {
 		return STORAGE_OOM;
 	}
 	StorageData storageData(address);
 	return storageData.deleteData();
 }
 
-uint32_t StorageAT::getPagesCount()
+uint32_t StorageAT::getStoragePagesCount()
 {
 	return m_pagesCount;
 }
 
-uint32_t StorageAT::getBytesSize()
+uint32_t StorageAT::getPayloadPagesCount()
 {
-	return StorageAT::getPagesCount() * Page::STORAGE_PAGE_SIZE;
+	uint32_t pagesCount = (getStoragePagesCount() / StorageSector::SECTOR_PAGES_COUNT) * Header::PAGE_HEADERS_COUNT;
+	uint32_t lastPagesCount = getStoragePagesCount() % StorageSector::SECTOR_PAGES_COUNT;
+	if (lastPagesCount > StorageSector::SECTOR_RESERVED_PAGES_COUNT) {
+		pagesCount += (lastPagesCount - StorageSector::SECTOR_RESERVED_PAGES_COUNT);
+	}
+	return pagesCount;
+}
+
+uint32_t StorageAT::getStorageSize()
+{
+	return StorageAT::getStoragePagesCount() * Page::STORAGE_PAGE_SIZE;
+}
+
+uint32_t StorageAT::getPayloadSize()
+{
+	return StorageAT::getPayloadPagesCount() * Page::STORAGE_PAGE_PAYLOAD_SIZE;
+}
+
+uint32_t StorageAT::getOffsetPayloadSize(uint32_t offsetAddress)
+{
+	return getOffsetPayloadPages(offsetAddress) * Page::STORAGE_PAGE_PAYLOAD_SIZE;
+}
+
+uint32_t StorageAT::getOffsetPayloadPages(uint32_t offsetAddress)
+{
+	uint32_t offsetPage = offsetAddress / Page::STORAGE_PAGE_PAYLOAD_SIZE;
+	uint32_t prevPages = (offsetPage / StorageSector::SECTOR_PAGES_COUNT) * Header::PAGE_HEADERS_COUNT;
+	uint32_t prevLastPages = offsetPage % StorageSector::SECTOR_PAGES_COUNT;
+	if (prevLastPages > StorageSector::SECTOR_RESERVED_PAGES_COUNT) {
+		prevPages += (prevLastPages - StorageSector::SECTOR_RESERVED_PAGES_COUNT);
+	}
+	uint32_t pagesCount = getPayloadPagesCount();
+	if (pagesCount < prevPages) {
+		return 0;
+	}
+	return pagesCount - prevPages;
 }
 
 IStorageDriver* StorageAT::driverCallback()

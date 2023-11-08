@@ -19,14 +19,14 @@ uint32_t StorageSector::getSectorAddress(uint32_t sectorIndex)
 	return SECTOR_PAGES_COUNT * sectorIndex * Page::STORAGE_PAGE_SIZE;
 }
 
-uint32_t StorageSector::getSectorIndex(uint32_t sectorAddress)
+uint32_t StorageSector::getSectorIndex(uint32_t address)
 {
-	return sectorAddress / Page::STORAGE_PAGE_SIZE / SECTOR_PAGES_COUNT;
+	return address / Page::STORAGE_PAGE_SIZE / SECTOR_PAGES_COUNT;
 }
 
 uint32_t StorageSector::getSectorsCount()
 {
-	return AT::getPagesCount() / SECTOR_PAGES_COUNT;
+	return AT::getStoragePagesCount() / SECTOR_PAGES_COUNT;
 }
 
 uint32_t StorageSector::getPageAddressByIndex(uint32_t sectorIndex, uint32_t pageIndex)
@@ -62,7 +62,7 @@ StorageStatus StorageSector::formatSector(uint32_t sectorIndex)
 
 StorageStatus StorageSector::loadHeader(Header *header)
 {
-	if (header->getAddress() > AT::getBytesSize()) {
+	if (header->getAddress() > AT::getStorageSize()) {
 		return STORAGE_OOM;
 	}
 

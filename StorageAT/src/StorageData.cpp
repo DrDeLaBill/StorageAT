@@ -71,6 +71,7 @@ StorageStatus StorageData::save(
 
 	uint32_t curLen = 0;
 	uint32_t curAddr = m_startAddress;
+	uint32_t prevAddr = m_startAddress;
 	uint32_t sectorAddress = Page::STORAGE_PAGE_SIZE + 1;
 	std::unique_ptr<Header> header;
 	std::unique_ptr<Page> page;
@@ -78,40 +79,33 @@ StorageStatus StorageData::save(
 		// Initialize page
 		page = std::make_unique<Page>(curAddr);
 		uint32_t neededLen = std::min(static_cast<uint32_t>(len - curLen), static_cast<uint32_t>(sizeof(page->page.payload)));
-		page->page.header.status = 0;
 		bool isStart = curLen == 0;
 		bool isEnd   = curLen + neededLen >= len;
-		uint8_t status = 0x00;
-		if (isStart) {
-			status |= Page::PAGE_STATUS_START;
-		}
-		if (isEnd) {
-			status |= Page::PAGE_STATUS_END;
-		}
-		if (!isStart && !isEnd) {
-			status |= Page::PAGE_STATUS_MID;
-		}
-		if (!status) {
-			status = STORAGE_ERROR;
-			break;
-		}
-		page->setPageStatus(status);
 
 		// Search
-		uint32_t nextAddress = 0;
+		uint32_t nextAddr = 0;
 		status = STORAGE_OK;
 		if (!isEnd) {
 			status = (std::make_unique<StorageSearchEmpty>(/*startSearchAddress=*/curAddr + Page::STORAGE_PAGE_SIZE))
 				->searchPageAddress(
 					page->page.header.prefix,
 					page->page.header.id,
-					&nextAddress
+					&nextAddr
 				);
 		}
 		if (status != STORAGE_OK) {
 			break;
 		}
-		page->page.header.next_addr = nextAddress;
+
+		// Set prev and next pages
+		page->setPrevAddress(prevAddr);
+		page->setNextAddress(nextAddr);
+		if (isStart) {
+			page->setPrevAddress(curAddr);
+		}
+		if (isEnd) {
+			page->setNextAddress(curAddr);
+		}
 
 
 		// Check header (and save)
@@ -131,7 +125,11 @@ StorageStatus StorageData::save(
 			break;
 		}
 		if (status != STORAGE_OK) {
-			curAddr = nextAddress;
+			curAddr = nextAddr;
+			continue;
+		}
+		if (!header->isAddressEmpty(curAddr)) {
+			curAddr = nextAddr;
 			continue;
 		}
 
@@ -158,7 +156,8 @@ StorageStatus StorageData::save(
 
 
 		// Update current values
-		curAddr = nextAddress;
+		prevAddr = curAddr;
+		curAddr = nextAddr;
 		curLen += neededLen;
 	} 
 
@@ -180,7 +179,7 @@ StorageStatus StorageData::deleteData() // TODO: удалять записи и�
 		return STORAGE_ERROR;
 	}
 
-	StorageStatus status = this->findStartAddress(&address);
+	StorageStatus status = StorageData::findStartAddress(&address);
 	if (status != STORAGE_BUSY) {
 		return status;
 	}
@@ -236,27 +235,56 @@ StorageStatus StorageData::findStartAddress(uint32_t* address)
 		return status;
 	}
 
-	uint32_t tmpAddress = 0;
-	status = (std::make_unique<StorageSearchEqual>(/*startSearchAddress=*/0))->searchPageAddress(
-		page->page.header.prefix,
-		page->page.header.id,
-		&tmpAddress
-	);
+	while (!page->isStart()) {
+		status = page->loadPrev();
+		if (status != STORAGE_OK) {
+			break;
+		}
+	}
+
 	if (status != STORAGE_OK) {
 		return status;
 	}
 
-	page = std::make_unique<Page>(tmpAddress);
 	status = page->load(/*startPage=*/true);
 	if (status != STORAGE_OK) {
 		return status;
 	}
 
-	if (!page->isSetPageStatus(Page::PAGE_STATUS_START)) {
-		return STORAGE_ERROR;
+	if (!page->isStart()) {
+		return STORAGE_NOT_FOUND;
 	}
 
-	*address = tmpAddress;
+	*address = page->getAddress();
+
+	return STORAGE_OK;
+}
+
+StorageStatus StorageData::findEndAddress(uint32_t* address)
+{
+	std::unique_ptr<Page> page = std::make_unique<Page>(*address);
+	StorageStatus status = page->load();
+	if (status != STORAGE_OK) {
+		return status;
+	}
+
+	while (!page->isEnd()) {
+		status = page->loadNext();
+		if (status != STORAGE_OK) {
+			break;
+		}
+	}
+
+	if (status != STORAGE_OK) {
+		return status;
+	}
+
+	status = page->load(/*startPage=*/true);
+	if (status != STORAGE_OK) {
+		return status;
+	}
+
+	*address = page->getAddress();
 
 	return STORAGE_OK;
 }
@@ -268,7 +296,7 @@ StorageStatus StorageData::isEmptyAddress(uint32_t address)
 	if (status != STORAGE_OK) {
 		return status;
 	}
-	if (header.isSetHeaderStatus(StorageSector::getPageIndexByAddress(address), Page::PAGE_STATUS_EMPTY)) {
+	if (header.isSetHeaderStatus(StorageSector::getPageIndexByAddress(address), Header::PAGE_EMPTY)) {
 		return STORAGE_OK;
 	}
 	return STORAGE_ERROR;
