@@ -296,7 +296,7 @@ StorageStatus StorageData::isEmptyAddress(uint32_t address)
 	if (status != STORAGE_OK) {
 		return status;
 	}
-	if (header.isSetHeaderStatus(StorageSector::getPageIndexByAddress(address), Page::PAGE_STATUS_EMPTY)) {
+	if (header.isSetHeaderStatus(StorageSector::getPageIndexByAddress(address), Header::PAGE_EMPTY)) {
 		return STORAGE_OK;
 	}
 	return STORAGE_ERROR;
