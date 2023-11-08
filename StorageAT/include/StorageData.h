@@ -12,8 +12,6 @@ class StorageData
 private:
 	uint32_t m_startAddress;
 
-	StorageStatus findStartAddress(uint32_t* address);
-
 	StorageStatus isEmptyAddress(uint32_t address);
 
 public:
@@ -27,4 +25,7 @@ public:
 		uint32_t len
 	);
 	StorageStatus deleteData();
+	
+	static StorageStatus findStartAddress(uint32_t* address);
+	static StorageStatus findEndAddress(uint32_t* address);
 };

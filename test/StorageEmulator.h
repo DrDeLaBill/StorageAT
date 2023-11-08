@@ -22,6 +22,13 @@ private:
     bool isBusy;
 
 public:
+    typedef struct _RequestsCount {
+        unsigned read;
+        unsigned write;
+    } RequestsCount;
+
+    std::unique_ptr<RequestsCount[]> requestsCount;
+
     StorageEmulator(uint32_t pagesCount);
 
     StorageEmulatorStatus writePage(uint32_t address, uint8_t* data, uint32_t len);
@@ -33,6 +40,9 @@ public:
     void setBusy(bool busy);
 
     void clear();
+
+    void showReadWrite();
+    void showPage(uint32_t address);
 };
 
 

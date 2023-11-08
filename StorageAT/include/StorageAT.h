@@ -32,6 +32,10 @@ private:
 	// TODO: docs
 	static IStorageDriver* m_driver;
 
+	static uint32_t getOffsetPayloadSize(uint32_t offsetAddress);
+
+	static uint32_t getOffsetPayloadPages(uint32_t offsetAddress);
+
 public:
 	/* Max available address for StorageFS */
 	static const uint32_t STORAGE_MAX_ADDRESS = 0xFFFFFFFF;
@@ -88,6 +92,8 @@ public:
 		uint32_t len
 	);
 
+	// TODO: rewrite - find start, check prefix and id, save, din't update headers
+
 	/*
 	 * Format FLASH memory
 	 *
@@ -106,12 +112,17 @@ public:
 	/*
 	 * @return Returns pages count on physical storage
 	 */
-	static uint32_t getPagesCount();
+	static uint32_t getStoragePagesCount();
+
+	static uint32_t getPayloadPagesCount();
 
 	/*
 	 * @return Returns bytes count on physical storage
 	 */
-	static uint32_t getBytesSize();
+	static uint32_t getStorageSize();
+
+	static uint32_t getPayloadSize();
+
 // TODO: docs
 	static IStorageDriver* driverCallback();
 };
