@@ -68,10 +68,11 @@ public:
 
 class StorageFixture: public testing::Test
 {
-public:
+protected:
     static const constexpr uint8_t shortPrefix[] = "tst";
     static const constexpr uint8_t longPrefix[] = "longstringprefix";
 
+public:
     uint32_t address = 0;
     StorageDriver driver;
     std::unique_ptr<StorageAT> sat;
@@ -219,10 +220,10 @@ TEST_F(StorageFixture, StorageBusy)
 
 TEST_F(StorageFixture, FindEmptyAddress)
 {
+    uint32_t nextAddress = 0;
+
     EXPECT_EQ(sat->find(FIND_MODE_EMPTY, &address), STORAGE_OK);
 }
-
-// TODO: all find mods
 
 TEST_F(StorageFixture, Format)
 {
