@@ -113,11 +113,8 @@ StorageStatus StorageData::save(
 		if (header && sectorAddress != curSectorAddress) {
 			status = header->save();
 		}
-		if (status == STORAGE_BUSY) {
-			break;
-		}
 		if (status != STORAGE_OK) {
-			return status;
+			break;
 		}
 		if (sectorAddress != curSectorAddress) {
 			header = std::make_unique<Header>(curAddr);
@@ -294,11 +291,12 @@ StorageStatus StorageData::findEndAddress(uint32_t* address)
 
 StorageStatus StorageData::isEmptyAddress(uint32_t address)
 {
-	StorageStatus status = StorageData::findStartAddress(&address);
-	if (status == STORAGE_BUSY || status == STORAGE_OOM) {
+	Header header(address);
+	StorageStatus status = StorageSector::loadHeader(&header);
+	if (status != STORAGE_OK) {
 		return status;
 	}
-	if (status != STORAGE_OK) {
+	if (header.isSetHeaderStatus(StorageSector::getPageIndexByAddress(address), Page::PAGE_STATUS_EMPTY)) {
 		return STORAGE_OK;
 	}
 	return STORAGE_ERROR;
