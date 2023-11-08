@@ -128,12 +128,10 @@ StorageStatus StorageData::save(
 			break;
 		}
 		if (status != STORAGE_OK) {
-			prevAddr = curAddr;
 			curAddr = nextAddr;
 			continue;
 		}
-		if (header->isAddressEmpty(curAddr)) {
-			prevAddr = curAddr;
+		if (!header->isAddressEmpty(curAddr)) {
 			curAddr = nextAddr;
 			continue;
 		}

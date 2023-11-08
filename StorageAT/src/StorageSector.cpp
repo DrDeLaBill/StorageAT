@@ -26,7 +26,7 @@ uint32_t StorageSector::getSectorIndex(uint32_t address)
 
 uint32_t StorageSector::getSectorsCount()
 {
-	return AT::getPagesCount() / SECTOR_PAGES_COUNT;
+	return AT::getStoragePagesCount() / SECTOR_PAGES_COUNT;
 }
 
 uint32_t StorageSector::getPageAddressByIndex(uint32_t sectorIndex, uint32_t pageIndex)
@@ -62,7 +62,7 @@ StorageStatus StorageSector::formatSector(uint32_t sectorIndex)
 
 StorageStatus StorageSector::loadHeader(Header *header)
 {
-	if (header->getAddress() > AT::getBytesSize()) {
+	if (header->getAddress() > AT::getStorageSize()) {
 		return STORAGE_OOM;
 	}
 

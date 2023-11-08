@@ -104,6 +104,7 @@ StorageStatus Page::loadNext() {
 
 StorageStatus Page::save()
 {
+	// TODO: if page in memory equal new page -> return OK
 	page.crc = this->getCRC16(reinterpret_cast<uint8_t*>(&page), sizeof(page) - sizeof(page.crc));
 
 	StorageStatus status = AT::driverCallback()->write(address, reinterpret_cast<uint8_t*>(&page), sizeof(page));
@@ -191,7 +192,7 @@ bool Page::isEnd()
 
 bool Page::validatePrevAddress()
 {
-	return !this->isMiddle() && this->page.header.prev_addr > 0;
+	return !this->isStart() && this->page.header.prev_addr > 0;
 }
 
 bool Page::validateNextAddress()
@@ -273,6 +274,10 @@ StorageStatus Header::create()
 		}
 
 		dumpHeader.data->pages[i].status = Header::PAGE_EMPTY;
+		
+		if (status != STORAGE_OK) {
+			continue;
+		}
 
 		uint32_t tmpAddress = 0;
 		status = StorageData::findStartAddress(&tmpAddress);
