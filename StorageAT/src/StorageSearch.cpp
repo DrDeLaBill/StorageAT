@@ -57,7 +57,7 @@ StorageStatus StorageSearchBase::searchPageAddressInSector(
 	uint32_t pageIndex = StorageSector::getPageIndexByAddress(this->startSearchAddress);
 	this->foundInSector = false;
 
-	for (; pageIndex < Header::PAGE_HEADERS_COUNT; pageIndex++) {
+	for (; pageIndex < Header::PAGES_COUNT; pageIndex++) {
 		if (!header->isSetHeaderStatus(pageIndex, Header::PAGE_OK)) {
 			continue;
 		}
@@ -130,7 +130,7 @@ StorageStatus StorageSearchEmpty::searchPageAddressInSector(
 	const uint32_t id
 ) {
 	uint32_t pageIndex = StorageSector::getPageIndexByAddress(this->startSearchAddress);
-	for (; pageIndex < Header::PAGE_HEADERS_COUNT; pageIndex++) {
+	for (; pageIndex < Header::PAGES_COUNT; pageIndex++) {
 		if (header->isSetHeaderStatus(pageIndex, Header::PAGE_BLOCKED)) {
 			continue;
 		}

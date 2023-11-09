@@ -8,10 +8,8 @@
 
 #ifdef __GNUC__
 #define PACK( __Type__, __Declaration__ )  __Type__ __attribute__((__packed__)) __Declaration__
-#endif
-
-#ifdef _MSC_VER
-#define PACK( __Type__, __Declaration__ ) __pragma( pack(push, 1) ) __Type__ __Declaration__ __pragma( pack(pop))
+#elif _MSC_VER
+#define PACK( __Type__, __Declaration__ ) __pragma(pack(push, 1) ) __Type__ __Declaration__ __pragma(pack(pop))
 #endif
 
 
