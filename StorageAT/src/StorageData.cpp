@@ -72,7 +72,7 @@ StorageStatus StorageData::save(
 	uint32_t curLen = 0;
 	uint32_t curAddr = m_startAddress;
 	uint32_t prevAddr = m_startAddress;
-	uint32_t sectorAddress = Page::STORAGE_PAGE_SIZE + 1;
+	uint32_t sectorAddress = Page::PAGE_SIZE + 1;
 	std::unique_ptr<Header> header;
 	std::unique_ptr<Page> page;
 	while (curLen < len) {
@@ -86,7 +86,7 @@ StorageStatus StorageData::save(
 		uint32_t nextAddr = 0;
 		status = STORAGE_OK;
 		if (!isEnd) {
-			status = (std::make_unique<StorageSearchEmpty>(/*startSearchAddress=*/curAddr + Page::STORAGE_PAGE_SIZE))
+			status = (std::make_unique<StorageSearchEmpty>(/*startSearchAddress=*/curAddr + Page::PAGE_SIZE))
 				->searchPageAddress(
 					page->page.header.prefix,
 					page->page.header.id,
@@ -188,7 +188,7 @@ StorageStatus StorageData::deleteData() // TODO: удалять записи и�
 	}
 
 	uint32_t curAddress = m_startAddress;
-	uint32_t sectorAddress = Page::STORAGE_PAGE_SIZE + 1;
+	uint32_t sectorAddress = Page::PAGE_SIZE + 1;
 	std::unique_ptr<Page> page;
 	std::unique_ptr<Header> header;
 

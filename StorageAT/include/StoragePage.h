@@ -12,7 +12,7 @@ class Page
 {
 public:
 	/* Data storage page size in bytes */
-	static const uint16_t STORAGE_PAGE_SIZE       = 256;
+	static const uint16_t PAGE_SIZE               = 256;
 
 	/* Page structure validator */
 	static const uint32_t STORAGE_MAGIC           = 0xBEDAC0DE;
@@ -36,15 +36,15 @@ public:
 
 
 	/* Available payload bytes in page structure */
-	static const uint16_t STORAGE_PAGE_PAYLOAD_SIZE =
-		STORAGE_PAGE_SIZE -
+	static const uint16_t PAYLOAD_SIZE =
+		PAGE_SIZE -
 		sizeof(struct _PageMeta) -
 		sizeof(uint16_t);
 
 	/* Page structure */
 	PACK(typedef struct, _PageStruct {
 		PageMeta header;
-		uint8_t  payload[STORAGE_PAGE_PAYLOAD_SIZE];
+		uint8_t  payload[PAYLOAD_SIZE];
 		uint16_t crc;
 	} PageStruct);
 
@@ -95,10 +95,10 @@ public:
 	} PageHeader);
 
 	/* Pages in block that header page contains */
-	static const uint32_t PAGE_HEADERS_COUNT = STORAGE_PAGE_PAYLOAD_SIZE / sizeof(struct _PageHeader);
+	static const uint32_t PAGES_COUNT = PAYLOAD_SIZE / sizeof(struct _PageHeader);
 
 	PACK(typedef struct, _HeaderPageStruct {
-		PageHeader pages[PAGE_HEADERS_COUNT];
+		PageHeader pages[PAGES_COUNT];
 	} HeaderPageStruct);
 
 	HeaderPageStruct* data;
