@@ -16,22 +16,22 @@ typedef StorageAT AT;
 
 uint32_t StorageSector::getSectorAddress(uint32_t sectorIndex)
 {
-	return SECTOR_PAGES_COUNT * sectorIndex * Page::STORAGE_PAGE_SIZE;
+	return PAGES_COUNT * sectorIndex * Page::PAGE_SIZE;
 }
 
 uint32_t StorageSector::getSectorIndex(uint32_t address)
 {
-	return address / Page::STORAGE_PAGE_SIZE / SECTOR_PAGES_COUNT;
+	return address / Page::PAGE_SIZE / PAGES_COUNT;
 }
 
 uint32_t StorageSector::getSectorsCount()
 {
-	return AT::getStoragePagesCount() / SECTOR_PAGES_COUNT;
+	return AT::getStoragePagesCount() / PAGES_COUNT;
 }
 
 uint32_t StorageSector::getPageAddressByIndex(uint32_t sectorIndex, uint32_t pageIndex)
 {
-	return getSectorAddress(sectorIndex) + (SECTOR_RESERVED_PAGES_COUNT + pageIndex) * Page::STORAGE_PAGE_SIZE;
+	return getSectorAddress(sectorIndex) + (RESERVED_PAGES_COUNT + pageIndex) * Page::PAGE_SIZE;
 }
 
 uint32_t StorageSector::getPageIndexByAddress(uint32_t address)
@@ -39,12 +39,12 @@ uint32_t StorageSector::getPageIndexByAddress(uint32_t address)
 	if (StorageSector::isSectorAddress(address)) {
 		return 0;
 	}
-    return ((address / Page::STORAGE_PAGE_SIZE) % (SECTOR_PAGES_COUNT)) - SECTOR_RESERVED_PAGES_COUNT;
+    return ((address / Page::PAGE_SIZE) % (PAGES_COUNT)) - RESERVED_PAGES_COUNT;
 }
 
 bool StorageSector::isSectorAddress(uint32_t address)
 {
-	return ((address / Page::STORAGE_PAGE_SIZE) % (SECTOR_PAGES_COUNT)) < SECTOR_RESERVED_PAGES_COUNT;
+	return ((address / Page::PAGE_SIZE) % (PAGES_COUNT)) < RESERVED_PAGES_COUNT;
 }
 
 StorageStatus StorageSector::formatSector(uint32_t sectorIndex)
@@ -55,7 +55,7 @@ StorageStatus StorageSector::formatSector(uint32_t sectorIndex)
 		return status;
 	}
 
-	memset(reinterpret_cast<void*>(header.data), 0, Page::STORAGE_PAGE_PAYLOAD_SIZE);
+	memset(reinterpret_cast<void*>(header.data), 0, Page::PAYLOAD_SIZE);
 	status = header.save();
 	return status;
 }

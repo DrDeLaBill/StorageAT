@@ -259,13 +259,13 @@ bool Header::isAddressEmpty(uint32_t targetAddress)
 
 uint32_t Header::getSectorStartAddress(uint32_t address)
 {
-	return (address / (StorageSector::SECTOR_PAGES_COUNT * Page::STORAGE_PAGE_SIZE)) * (StorageSector::SECTOR_PAGES_COUNT * Page::STORAGE_PAGE_SIZE);
+	return (address / (StorageSector::PAGES_COUNT * Page::PAGE_SIZE)) * (StorageSector::PAGES_COUNT * Page::PAGE_SIZE);
 }
 
 StorageStatus Header::create()
 {
 	Header dumpHeader(this->address);
-	for (uint16_t i = 0; i < PAGE_HEADERS_COUNT; i++) {
+	for (uint16_t i = 0; i < PAGES_COUNT; i++) {
 		Page tmpPage(StorageSector::getPageAddressByIndex(this->m_sectorIndex, i));
 
 		StorageStatus status = tmpPage.load();
@@ -315,8 +315,8 @@ StorageStatus Header::load()
 	uint32_t startAddress = StorageSector::getSectorAddress(this->m_sectorIndex);
 
 	StorageStatus status = STORAGE_ERROR;
-	for (uint8_t i = 0; i < StorageSector::SECTOR_RESERVED_PAGES_COUNT; i++) {
-		this->address = startAddress + static_cast<uint32_t>(i * Page::STORAGE_PAGE_SIZE);
+	for (uint8_t i = 0; i < StorageSector::RESERVED_PAGES_COUNT; i++) {
+		this->address = startAddress + static_cast<uint32_t>(i * Page::PAGE_SIZE);
 
 		status = Page::load();
 		if (status == STORAGE_BUSY) {
@@ -334,8 +334,8 @@ StorageStatus Header::save()
 	uint32_t startAddress = StorageSector::getSectorAddress(this->m_sectorIndex);
 
 	StorageStatus status = STORAGE_ERROR;
-	for (uint8_t i = 0; i < StorageSector::SECTOR_RESERVED_PAGES_COUNT; i++) {
-		this->address = startAddress + static_cast<uint32_t>(i * Page::STORAGE_PAGE_SIZE);
+	for (uint8_t i = 0; i < StorageSector::RESERVED_PAGES_COUNT; i++) {
+		this->address = startAddress + static_cast<uint32_t>(i * Page::PAGE_SIZE);
 
 		status = Page::save();
 		if (status == STORAGE_BUSY) {
@@ -355,7 +355,7 @@ bool Header::validate()
 		return false;
 	}
 
-	for (unsigned i = 0; i < PAGE_HEADERS_COUNT; i++) {
+	for (unsigned i = 0; i < PAGES_COUNT; i++) {
 		if (!data->pages[i].status) {
 			return false;
 		}

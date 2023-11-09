@@ -9,7 +9,7 @@
 
 
 const int SECTORS_COUNT = 20;
-const int PAGES_COUNT   = StorageSector::SECTOR_PAGES_COUNT * SECTORS_COUNT;
+const int PAGES_COUNT   = StorageSector::PAGES_COUNT * SECTORS_COUNT;
 const int PAGE_LEN      = 256;
 
 
@@ -212,7 +212,7 @@ TEST_F(StorageFixture, StorageBusy)
     EXPECT_EQ(sat->find(FIND_MODE_MIN, &address, const_cast<uint8_t*>(reinterpret_cast<const uint8_t*>("")), 0), STORAGE_BUSY);
     EXPECT_EQ(sat->find(FIND_MODE_NEXT, &address, const_cast<uint8_t*>(reinterpret_cast<const uint8_t*>("")), 0), STORAGE_BUSY);
 
-    address = StorageSector::SECTOR_RESERVED_PAGES_COUNT * Page::STORAGE_PAGE_SIZE;
+    address = StorageSector::RESERVED_PAGES_COUNT * Page::PAGE_SIZE;
     EXPECT_EQ(sat->load(address, (new uint8_t[PAGE_LEN]), PAGE_LEN), STORAGE_BUSY);
     EXPECT_EQ(sat->save(address, const_cast<uint8_t*>(shortPrefix), 1, (new uint8_t[PAGE_LEN]), PAGE_LEN), STORAGE_BUSY);
 }
@@ -220,8 +220,6 @@ TEST_F(StorageFixture, StorageBusy)
 
 TEST_F(StorageFixture, FindEmptyAddress)
 {
-    uint32_t nextAddress = 0;
-
     EXPECT_EQ(sat->find(FIND_MODE_EMPTY, &address), STORAGE_OK);
 }
 
@@ -248,16 +246,16 @@ TEST_F(StorageFixture, WriteAllPayloadBytes)
 
 TEST_F(StorageFixture, ReadUnacceptableAddress)
 {
-    address = StorageAT::getStorageSize() + Page::STORAGE_PAGE_SIZE;
+    address = StorageAT::getStorageSize() + Page::PAGE_SIZE;
 
-    EXPECT_EQ(sat->load(address, (new uint8_t[Page::STORAGE_PAGE_SIZE]), Page::STORAGE_PAGE_SIZE), STORAGE_OOM);
+    EXPECT_EQ(sat->load(address, (new uint8_t[Page::PAGE_SIZE]), Page::PAGE_SIZE), STORAGE_OOM);
 }
 
 TEST_F(StorageFixture, WriteUnacceptableAddress)
 {
-    address = StorageAT::getStorageSize() + Page::STORAGE_PAGE_SIZE;
+    address = StorageAT::getStorageSize() + Page::PAGE_SIZE;
 
-    EXPECT_EQ(sat->save(address, const_cast<uint8_t*>(shortPrefix), 1, (new uint8_t[Page::STORAGE_PAGE_SIZE]), Page::STORAGE_PAGE_SIZE), STORAGE_OOM);
+    EXPECT_EQ(sat->save(address, const_cast<uint8_t*>(shortPrefix), 1, (new uint8_t[Page::PAGE_SIZE]), Page::PAGE_SIZE), STORAGE_OOM);
 }
 
 TEST_F(StorageFixture, WriteInLastSector)
@@ -267,7 +265,7 @@ TEST_F(StorageFixture, WriteInLastSector)
 
 TEST_F(StorageFixture, LoadEmptyPage)
 {
-    uint8_t data[Page::STORAGE_PAGE_PAYLOAD_SIZE] = {};
+    uint8_t data[Page::PAYLOAD_SIZE] = {};
 
     EXPECT_EQ(sat->load(0, data, 0), STORAGE_ERROR);
     EXPECT_EQ(sat->load(0, data, sizeof(data)), STORAGE_ERROR);
@@ -275,7 +273,7 @@ TEST_F(StorageFixture, LoadEmptyPage)
 
 TEST_F(StorageFixture, SavePageInHeader)
 {
-    uint8_t data[Page::STORAGE_PAGE_PAYLOAD_SIZE] = {};
+    uint8_t data[Page::PAYLOAD_SIZE] = {};
 
     EXPECT_EQ(sat->save(0, const_cast<uint8_t*>(shortPrefix), 1, data, sizeof(data)), STORAGE_ERROR);
     EXPECT_EQ(sat->load(0, data, sizeof(data)), STORAGE_ERROR);
@@ -284,11 +282,11 @@ TEST_F(StorageFixture, SavePageInHeader)
 
 TEST_F(StorageFixture, SavePageWithFindEmptyAddress)
 {
-    uint8_t wdata[Page::STORAGE_PAGE_PAYLOAD_SIZE] = { 1, 2, 3, 4, 5 };
-    uint8_t rdata[Page::STORAGE_PAGE_PAYLOAD_SIZE] = {};
+    uint8_t wdata[Page::PAYLOAD_SIZE] = { 1, 2, 3, 4, 5 };
+    uint8_t rdata[Page::PAYLOAD_SIZE] = {};
 
     EXPECT_EQ(sat->find(FIND_MODE_EMPTY, &address), STORAGE_OK);
-    EXPECT_EQ(address, StorageSector::SECTOR_RESERVED_PAGES_COUNT * Page::STORAGE_PAGE_SIZE);
+    EXPECT_EQ(address, StorageSector::RESERVED_PAGES_COUNT * Page::PAGE_SIZE);
     EXPECT_EQ(sat->save(address, const_cast<uint8_t*>(shortPrefix), 1, wdata, sizeof(wdata)), STORAGE_OK);
     EXPECT_EQ(sat->load(address, rdata, sizeof(rdata)), STORAGE_OK);
     EXPECT_FALSE(memcmp(wdata, rdata, sizeof(wdata)));
@@ -297,7 +295,7 @@ TEST_F(StorageFixture, SavePageWithFindEmptyAddress)
 
 TEST_F(StorageFixture, SavePageWithFindEmptyAddressWithOverwrite)
 {
-    uint8_t wdata[Page::STORAGE_PAGE_PAYLOAD_SIZE] = { 1, 2, 3, 4, 5 };
+    uint8_t wdata[Page::PAYLOAD_SIZE] = { 1, 2, 3, 4, 5 };
 
     EXPECT_EQ(sat->find(FIND_MODE_EMPTY, &address), STORAGE_OK);
     EXPECT_EQ(sat->save(address, const_cast<uint8_t*>(shortPrefix), 1, wdata, sizeof(wdata)), STORAGE_OK);
@@ -318,7 +316,7 @@ TEST_F(StorageFixture, SaveMultiPageWithFindEmptyAddress)
     uint8_t rdata[1000] = {};
 
     EXPECT_EQ(sat->find(FIND_MODE_EMPTY, &address), STORAGE_OK);
-    EXPECT_EQ(address, StorageSector::SECTOR_RESERVED_PAGES_COUNT * Page::STORAGE_PAGE_SIZE);
+    EXPECT_EQ(address, StorageSector::RESERVED_PAGES_COUNT * Page::PAGE_SIZE);
     EXPECT_EQ(sat->save(address, const_cast<uint8_t*>(shortPrefix), 1, wdata, sizeof(wdata)), STORAGE_OK);
     EXPECT_EQ(sat->load(address, rdata, sizeof(rdata)), STORAGE_OK);
     EXPECT_FALSE(memcmp(wdata, rdata, sizeof(wdata)));
@@ -336,7 +334,7 @@ TEST_F(StorageFixture, SaveMultiPageWithFindEmptyAddressWithOverwrite)
 TEST_F(StorageFixture, SaveDataInBusyPages)
 {
     uint8_t wdata1[1000] = { 1, 2, 3, 4, 5 };
-    uint8_t wdata2[Page::STORAGE_PAGE_PAYLOAD_SIZE] = { 6, 7, 8, 9, 10 };
+    uint8_t wdata2[Page::PAYLOAD_SIZE] = { 6, 7, 8, 9, 10 };
     uint8_t rdata1[1000] = {};
 
     EXPECT_EQ(sat->find(FIND_MODE_EMPTY, &address), STORAGE_OK);
@@ -349,7 +347,7 @@ TEST_F(StorageFixture, SaveDataInBusyPages)
 
 TEST_F(StorageFixture, LoadNotAlignedAddress)
 {
-    uint8_t rdata[Page::STORAGE_PAGE_PAYLOAD_SIZE] = {};
+    uint8_t rdata[Page::PAYLOAD_SIZE] = {};
 
     EXPECT_EQ(sat->find(FIND_MODE_EMPTY, &address), STORAGE_OK);
     EXPECT_EQ(sat->load(address + 1, rdata, sizeof(rdata)), STORAGE_ERROR);
@@ -357,7 +355,7 @@ TEST_F(StorageFixture, LoadNotAlignedAddress)
 
 TEST_F(StorageFixture, SaveNotAlignedAddress)
 {
-    uint8_t wdata[Page::STORAGE_PAGE_PAYLOAD_SIZE] = {};
+    uint8_t wdata[Page::PAYLOAD_SIZE] = {};
 
     EXPECT_EQ(sat->find(FIND_MODE_EMPTY, &address), STORAGE_OK);
     EXPECT_EQ(sat->save(address + 1, const_cast<uint8_t*>(shortPrefix), 1, wdata, sizeof(wdata)), STORAGE_ERROR);
@@ -365,8 +363,8 @@ TEST_F(StorageFixture, SaveNotAlignedAddress)
 
 TEST_F(StorageFixture, FindEqual)
 {
-    uint8_t wdata[Page::STORAGE_PAGE_PAYLOAD_SIZE] = { 1, 2, 3, 4, 5 };
-    uint8_t rdata[Page::STORAGE_PAGE_PAYLOAD_SIZE] = {};
+    uint8_t wdata[Page::PAYLOAD_SIZE] = { 1, 2, 3, 4, 5 };
+    uint8_t rdata[Page::PAYLOAD_SIZE] = {};
     uint32_t emptyAddress = 0;
 
     EXPECT_EQ(sat->find(FIND_MODE_EMPTY, &emptyAddress), STORAGE_OK);
@@ -387,9 +385,9 @@ TEST_F(StorageFixture, FindMods)
 TEST_F(StorageFixture, SaveFindLoadPartitionedData)
 {
     uint32_t nextAddress = 0;
-    uint8_t wdata1[Page::STORAGE_PAGE_PAYLOAD_SIZE] = {};
+    uint8_t wdata1[Page::PAYLOAD_SIZE] = {};
     uint8_t wdata2[1000] = {};
-    uint8_t rdata1[Page::STORAGE_PAGE_PAYLOAD_SIZE] = {};
+    uint8_t rdata1[Page::PAYLOAD_SIZE] = {};
     uint8_t rdata2[1000] = {};
 
 
@@ -397,7 +395,7 @@ TEST_F(StorageFixture, SaveFindLoadPartitionedData)
     memset(wdata2, 0xF0, sizeof(wdata2));
 
     EXPECT_EQ(sat->find(FIND_MODE_EMPTY, &address), STORAGE_OK);
-    nextAddress = address + Page::STORAGE_PAGE_SIZE;
+    nextAddress = address + Page::PAGE_SIZE;
     EXPECT_EQ(sat->save(nextAddress, const_cast<uint8_t*>(shortPrefix), 1, wdata1, sizeof(wdata1)), STORAGE_OK);
     EXPECT_EQ(sat->save(address, const_cast<uint8_t*>(shortPrefix), 2, wdata2, sizeof(wdata2)), STORAGE_OK);
     address = 0;

@@ -14,10 +14,10 @@ class StorageSector
 {
 public:
 	/* Sector pages count that reserved for header page at the beginning of the sector */
-	static const uint32_t SECTOR_RESERVED_PAGES_COUNT = 8;
+	static const uint32_t RESERVED_PAGES_COUNT = 8;
 
 	/* Sector pages count */
-	static const uint32_t SECTOR_PAGES_COUNT = SECTOR_RESERVED_PAGES_COUNT + Header::PAGE_HEADERS_COUNT;
+	static const uint32_t PAGES_COUNT = RESERVED_PAGES_COUNT + Header::PAGES_COUNT;
 
 
 	/*
