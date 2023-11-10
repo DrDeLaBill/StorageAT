@@ -192,18 +192,13 @@ StorageStatus StorageData::deleteData() // TODO: удалять записи и�
 	std::unique_ptr<Page> page = std::make_unique<Page>(curAddress);
 	std::unique_ptr<Header> header;
 
-	do {
-		// Find target page
-		if (page->isStart()) {
-			status = page->load();
-		} else {
-			status = page->loadNext();
-		}
-		if (status != STORAGE_OK) {
-			break;
-		}
+	// Load first page
+	status = page->load();
+	if (status != STORAGE_OK) {
+		return status;
+	}
 
-		
+	do {
 		// Check header (and save)
 		uint32_t curSectorAddress = Header::getSectorStartAddress(curAddress);	
 		if (header && sectorAddress != curSectorAddress) {
@@ -226,6 +221,13 @@ StorageStatus StorageData::deleteData() // TODO: удалять записи и�
 		header->data->pages[pageIndex].id     = 0;
 		header->data->pages[pageIndex].status = Header::PAGE_EMPTY;
 		memcpy(header->data->pages[pageIndex].prefix, 0, Page::STORAGE_PAGE_PREFIX_SIZE);
+
+		// Load next page
+		status = page->loadNext();
+		if (status != STORAGE_OK) {
+			break;
+		}
+		curAddress = page->getAddress();
 	} while (page->validateNextAddress());
 	
 	// Save last header
