@@ -9,7 +9,7 @@
 
 
 StorageStatus StorageSearchBase::searchPageAddress(
-	const uint8_t  prefix[Page::STORAGE_PAGE_PREFIX_SIZE],
+	const uint8_t  prefix[Page::PREFIX_SIZE],
 	const uint32_t id,
 	uint32_t*      resAddress
 ) {
@@ -51,7 +51,7 @@ StorageStatus StorageSearchBase::searchPageAddress(
 
 StorageStatus StorageSearchBase::searchPageAddressInSector(
 	Header*    header,
-	const uint8_t  prefix[Page::STORAGE_PAGE_PREFIX_SIZE],
+	const uint8_t  prefix[Page::PREFIX_SIZE],
 	const uint32_t id
 ) {
 	uint32_t pageIndex = StorageSector::getPageIndexByAddress(this->startSearchAddress);
@@ -66,7 +66,7 @@ StorageStatus StorageSearchBase::searchPageAddressInSector(
 			break;
 		}
 
-		if (memcmp(header->data->pages[pageIndex].prefix, prefix, Page::STORAGE_PAGE_PREFIX_SIZE)) {
+		if (memcmp(header->data->pages[pageIndex].prefix, prefix, Page::PREFIX_SIZE)) {
 			continue;
 		}
 
@@ -126,7 +126,7 @@ bool StorageSearchMax::isIdFound(
 
 StorageStatus StorageSearchEmpty::searchPageAddressInSector(
 	Header*        header,
-	const uint8_t  prefix[Page::STORAGE_PAGE_PREFIX_SIZE],
+	const uint8_t  prefix[Page::PREFIX_SIZE],
 	const uint32_t id
 ) {
 	uint32_t pageIndex = StorageSector::getPageIndexByAddress(this->startSearchAddress);

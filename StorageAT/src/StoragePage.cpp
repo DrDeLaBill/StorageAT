@@ -31,24 +31,6 @@ Page& Page::operator=(Page* other)
 	return *this;
 }
 
-StorageStatus Page::load(bool startPage)
-{
-	StorageStatus status = AT::driverCallback()->read(address, reinterpret_cast<uint8_t*>(&page), sizeof(page));
-	if (status != STORAGE_OK) {
-		return status;
-	}
-
-	if (!this->validate()) {
-		return STORAGE_ERROR;
-	}
-
-	if (startPage && !this->isStart()) {
-		return STORAGE_ERROR;
-	}
-
-	return STORAGE_OK;
-}
-
 StorageStatus Page::loadPrev()
 {
 	if (!this->validatePrevAddress()) {
@@ -57,7 +39,7 @@ StorageStatus Page::loadPrev()
 
 	this->address = this->page.header.prev_addr;
 
-	uint8_t prefix[STORAGE_PAGE_PREFIX_SIZE] = {};
+	uint8_t prefix[PREFIX_SIZE] = {};
 	memcpy(prefix, this->page.header.prefix, sizeof(prefix));
 	uint32_t id = this->page.header.id;
 
@@ -83,7 +65,7 @@ StorageStatus Page::loadNext() {
 
 	this->address = this->page.header.next_addr;
 
-	uint8_t prefix[STORAGE_PAGE_PREFIX_SIZE] = {};
+	uint8_t prefix[PREFIX_SIZE] = {};
 	memcpy(prefix, this->page.header.prefix, sizeof(prefix));
 	uint32_t id = this->page.header.id;
 
@@ -102,22 +84,41 @@ StorageStatus Page::loadNext() {
 	return STORAGE_OK;
 }
 
+StorageStatus Page::load(bool startPage)
+{
+	StorageStatus status = AT::driverCallback()->read(address, reinterpret_cast<uint8_t*>(&page), sizeof(page));
+	if (status != STORAGE_OK) {
+		return status;
+	}
+
+	if (!this->validate()) {
+		return STORAGE_ERROR;
+	}
+
+	if (startPage && !this->isStart()) {
+		return STORAGE_ERROR;
+	}
+
+	return STORAGE_OK;
+}
+
 StorageStatus Page::save()
 {
 	// TODO: if page in memory equal new page -> return OK
 	page.crc = this->getCRC16(reinterpret_cast<uint8_t*>(&page), sizeof(page) - sizeof(page.crc));
 
-	StorageStatus status = AT::driverCallback()->write(address, reinterpret_cast<uint8_t*>(&page), sizeof(page));
+	Page checkPage(this->address);
+	StorageStatus status = checkPage.load();
+	if (status == STORAGE_OK && !memcmp(reinterpret_cast<void*>(&(this->page)), reinterpret_cast<void*>(&(checkPage.page)), sizeof(this->page))) {
+		return this->load();
+	}
+
+	status = AT::driverCallback()->write(address, reinterpret_cast<uint8_t*>(&page), sizeof(page));
 	if (status != STORAGE_OK) {
 		return status;
 	}
 
-	status = this->load();
-	if (status != STORAGE_OK) {
-		return status;
-	}
-
-	return STORAGE_OK;
+	return this->load();
 }
 
 StorageStatus Page::deletePage()
@@ -133,7 +134,7 @@ StorageStatus Page::deletePage()
 	}
 
 	Header::PageHeader* pageHeader = &(header.data->pages[StorageSector::getPageIndexByAddress(this->address)]);
-	memset(pageHeader->prefix, 0, Page::STORAGE_PAGE_PREFIX_SIZE);
+	memset(pageHeader->prefix, 0, Page::PREFIX_SIZE);
 	pageHeader->id = 0;
 	pageHeader->status = Header::PAGE_EMPTY;
 
@@ -257,6 +258,11 @@ bool Header::isAddressEmpty(uint32_t targetAddress)
 	return this->isSetHeaderStatus(StorageSector::getPageIndexByAddress(targetAddress), Header::PAGE_EMPTY);
 }
 
+bool Header::isSameMeta(uint32_t pageIndex, uint8_t prefix[Page::PREFIX_SIZE], uint32_t id)
+{
+	return !memcmp(data->pages[pageIndex].prefix, prefix, Page::PREFIX_SIZE) && data->pages[pageIndex].id == id;
+}
+
 uint32_t Header::getSectorStartAddress(uint32_t address)
 {
 	return (address / (StorageSector::PAGES_COUNT * Page::PAGE_SIZE)) * (StorageSector::PAGES_COUNT * Page::PAGE_SIZE);
@@ -273,6 +279,8 @@ StorageStatus Header::create()
 			return STORAGE_BUSY;
 		}
 
+		memset(dumpHeader.data->pages[i].prefix, 0, sizeof(tmpPage.page.header.prefix));
+		dumpHeader.data->pages[i].id     = 0;
 		dumpHeader.data->pages[i].status = Header::PAGE_EMPTY;
 		
 		if (status != STORAGE_OK) {

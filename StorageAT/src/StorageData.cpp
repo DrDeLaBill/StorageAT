@@ -53,7 +53,7 @@ StorageStatus StorageData::load(uint8_t* data, uint32_t len)
 }
 
 StorageStatus StorageData::save(
-	uint8_t  prefix[Page::STORAGE_PAGE_PREFIX_SIZE],
+	uint8_t  prefix[Page::PREFIX_SIZE],
 	uint32_t id,
 	uint8_t* data,
 	uint32_t len
@@ -64,14 +64,25 @@ StorageStatus StorageData::save(
 		return STORAGE_ERROR;
 	}
 
-	StorageStatus status = this->isEmptyAddress(pageAddress);
+	uint32_t checkAddress = pageAddress;
+	Header checkHeader(checkAddress);
+	StorageStatus status = StorageSector::loadHeader(&checkHeader);
 	if (status != STORAGE_OK) {
 		return status;
 	}
+	if (!checkHeader.isAddressEmpty(checkAddress) && !checkHeader.isSameMeta(StorageSector::getPageIndexByAddress(checkAddress), prefix, id)) {
+		return STORAGE_DATA_EXISTS;
+	}
+	if (checkHeader.isSameMeta(StorageSector::getPageIndexByAddress(checkAddress), prefix, id)) {
+		status = StorageData::findStartAddress(&checkAddress);
+	}
+	if (status == STORAGE_OK) {
+		pageAddress = checkAddress;
+	}
 
 	uint32_t curLen = 0;
-	uint32_t curAddr = m_startAddress;
-	uint32_t prevAddr = m_startAddress;
+	uint32_t curAddr = pageAddress;
+	uint32_t prevAddr = pageAddress;
 	uint32_t sectorAddress = Page::PAGE_SIZE + 1;
 	std::unique_ptr<Header> header;
 	std::unique_ptr<Page> page;
@@ -84,18 +95,12 @@ StorageStatus StorageData::save(
 
 		// Search
 		uint32_t nextAddr = 0;
-		status = STORAGE_OK;
-		if (!isEnd) {
-			status = (std::make_unique<StorageSearchEmpty>(/*startSearchAddress=*/curAddr + Page::PAGE_SIZE))
-				->searchPageAddress(
-					page->page.header.prefix,
-					page->page.header.id,
-					&nextAddr
-				);
-		}
-		if (status != STORAGE_OK) {
+		status = (std::make_unique<StorageSearchEmpty>(/*startSearchAddress=*/curAddr + Page::PAGE_SIZE))
+			->searchPageAddress(prefix, id, &nextAddr);
+		if (!isEnd && status != STORAGE_OK) {
 			break;
 		}
+		status = STORAGE_OK;
 
 		// Set prev and next pages
 		page->setPrevAddress(prevAddr);
@@ -128,14 +133,10 @@ StorageStatus StorageData::save(
 			curAddr = nextAddr;
 			continue;
 		}
-		if (!header->isAddressEmpty(curAddr)) {
-			curAddr = nextAddr;
-			continue;
-		}
 
 
 		// Save page
-		memcpy(page->page.header.prefix, prefix, Page::STORAGE_PAGE_PREFIX_SIZE);
+		memcpy(page->page.header.prefix, prefix, Page::PREFIX_SIZE);
 		page->page.header.id = id;
 		memcpy(page->page.payload, data + curLen, neededLen);
 		status = page->save();
@@ -150,9 +151,9 @@ StorageStatus StorageData::save(
 
 		// Registrate page in header
 		uint32_t pageIndex = StorageSector::getPageIndexByAddress(curAddr);
-		header->data->pages[pageIndex].id     = page->page.header.id;
+		header->data->pages[pageIndex].id     = id;
 		header->data->pages[pageIndex].status = Header::PAGE_OK;
-		memcpy(header->data->pages[pageIndex].prefix, page->page.header.prefix, Page::STORAGE_PAGE_PREFIX_SIZE);
+		memcpy(header->data->pages[pageIndex].prefix, prefix, Page::PREFIX_SIZE);
 
 
 		// Update current values
@@ -220,7 +221,7 @@ StorageStatus StorageData::deleteData() // TODO: удалять записи и�
 		uint32_t pageIndex = StorageSector::getPageIndexByAddress(page->getAddress());
 		header->data->pages[pageIndex].id     = 0;
 		header->data->pages[pageIndex].status = Header::PAGE_EMPTY;
-		memcpy(header->data->pages[pageIndex].prefix, 0, Page::STORAGE_PAGE_PREFIX_SIZE);
+		memcpy(header->data->pages[pageIndex].prefix, 0, Page::PREFIX_SIZE);
 
 		// Load next page
 		status = page->loadNext();
@@ -304,7 +305,7 @@ StorageStatus StorageData::isEmptyAddress(uint32_t address)
 	if (status != STORAGE_OK) {
 		return status;
 	}
-	if (header.isSetHeaderStatus(StorageSector::getPageIndexByAddress(address), Header::PAGE_EMPTY)) {
+	if (header.isAddressEmpty(address)) {
 		return STORAGE_OK;
 	}
 	return STORAGE_ERROR;

@@ -18,7 +18,7 @@ public:
 	virtual ~StorageSearchBase() { foundOnce = false; }
 
 	virtual StorageStatus searchPageAddress(
-		const uint8_t  prefix[Page::STORAGE_PAGE_PREFIX_SIZE],
+		const uint8_t  prefix[Page::PREFIX_SIZE],
 		const uint32_t id,
 		uint32_t*      resAddress
 	);
@@ -36,7 +36,7 @@ protected:
 
 	virtual StorageStatus searchPageAddressInSector(
 		Header*        header,
-		const uint8_t  prefix[Page::STORAGE_PAGE_PREFIX_SIZE],
+		const uint8_t  prefix[Page::PREFIX_SIZE],
 		const uint32_t id
 	);
 
@@ -111,7 +111,7 @@ protected:
 	
 	StorageStatus searchPageAddressInSector(
 		Header*       header,
-		const uint8_t prefix[Page::STORAGE_PAGE_PREFIX_SIZE],
+		const uint8_t prefix[Page::PREFIX_SIZE],
 		const uint32_t id
 	) override;
 };

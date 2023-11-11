@@ -3,6 +3,7 @@
 #include "StorageAT.h"
 
 #include <memory>
+#include <utility>
 #include <string.h>
 #include <stdint.h>
 #include <stddef.h>
@@ -28,7 +29,7 @@ StorageAT::StorageAT(
 StorageStatus StorageAT::find(
 	StorageFindMode mode,
 	uint32_t*       address,
-	uint8_t         prefix[Page::STORAGE_PAGE_PREFIX_SIZE],
+	const char*     prefix,
 	uint32_t        id
 ) {
 	if (!address) {
@@ -61,7 +62,10 @@ StorageStatus StorageAT::find(
 		return STORAGE_ERROR;
 	}
 
-	return search->searchPageAddress(prefix, id, address);
+	uint8_t tmpPrefix[Page::PREFIX_SIZE] = {};
+	memcpy(tmpPrefix, prefix, std::min(static_cast<size_t>(Page::PREFIX_SIZE), strlen(prefix)));
+
+	return search->searchPageAddress(tmpPrefix, id, address);
 }
 
 StorageStatus StorageAT::load(uint32_t address, uint8_t* data, uint32_t len)
@@ -75,13 +79,14 @@ StorageStatus StorageAT::load(uint32_t address, uint8_t* data, uint32_t len)
 	if (len > StorageAT::getOffsetPayloadSize(address)) {
 		return STORAGE_OOM;
 	}
+
 	StorageData storageData(address);
 	return storageData.load(data, len);
 }
 
 StorageStatus StorageAT::save(
 	uint32_t address,
-	uint8_t  prefix[Page::STORAGE_PAGE_PREFIX_SIZE],
+	const char* prefix,
 	uint32_t id,
 	uint8_t* data,
 	uint32_t len
@@ -98,8 +103,12 @@ StorageStatus StorageAT::save(
 	if (len > StorageAT::getOffsetPayloadSize(address)) {
 		return STORAGE_OOM;
 	}
+
+	uint8_t tmpPrefix[Page::PREFIX_SIZE] = {};
+	memcpy(tmpPrefix, prefix, std::min(static_cast<size_t>(Page::PREFIX_SIZE), strlen(prefix)));
+
 	StorageData storageData(address);
-	return storageData.save(prefix, id, data, len);
+	return storageData.save(tmpPrefix, id, data, len);
 }
 
 StorageStatus StorageAT::format()
