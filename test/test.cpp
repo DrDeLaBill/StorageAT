@@ -71,6 +71,7 @@ class StorageFixture: public testing::Test
 protected:
     static constexpr char shortPrefix[] = "tst";
     static constexpr char longPrefix [] = "longstringprefix";
+    static constexpr char wrongPrefix[5] = { 't', 'e', 's', 't', 's' };
 
 public:
     uint32_t address = 0;
@@ -200,6 +201,18 @@ TEST_F(StorageFixture, BadLoadRequest)
     EXPECT_EQ(sat->load(address, nullptr, 0), STORAGE_ERROR);
     EXPECT_EQ(sat->load(address, nullptr, 1000), STORAGE_ERROR);
     EXPECT_EQ(sat->load(address, nullptr, 1000000), STORAGE_ERROR);
+}
+
+TEST_F(StorageFixture, UseWrongPrefix)
+{
+    uint8_t wdata[100] = {};
+    uint8_t rdata[100] = {};
+
+    EXPECT_EQ(sat->find(FIND_MODE_EMPTY, &address), STORAGE_OK);
+    EXPECT_EQ(sat->save(address, wrongPrefix, 1, wdata, sizeof(wdata)), STORAGE_OK);
+    EXPECT_EQ(sat->find(FIND_MODE_EQUAL, &address, wrongPrefix, 1), STORAGE_OK);
+    EXPECT_EQ(sat->load(address, rdata, sizeof(rdata)), STORAGE_OK);
+    EXPECT_FALSE(memcmp(wdata, rdata, sizeof(wdata)));
 }
 
 TEST_F(StorageFixture, StorageBusy)
