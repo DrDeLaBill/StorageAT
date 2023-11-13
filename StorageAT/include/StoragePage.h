@@ -25,7 +25,7 @@ public:
 
 
 	/* Page header meta data structure */
-	PACK(typedef struct, _PageMeta {
+	STORAGE_PACK(typedef struct, _PageMeta {
 		uint32_t magic;
 		uint8_t  version;
 		uint32_t prev_addr;
@@ -42,7 +42,7 @@ public:
 		sizeof(uint16_t);
 
 	/* Page structure */
-	PACK(typedef struct, _PageStruct {
+	STORAGE_PACK(typedef struct, _PageStruct {
 		PageMeta header;
 		uint8_t  payload[PAYLOAD_SIZE];
 		uint16_t crc;
@@ -88,7 +88,7 @@ public:
 		PAGE_BLOCKED = static_cast<uint8_t>(0b00000100),
 	} PageHeaderStatus;
 
-	PACK(typedef struct, _PageHeader {
+	STORAGE_PACK(typedef struct, _PageHeader {
 		uint8_t  prefix[PREFIX_SIZE];
 		uint32_t id;
 		uint8_t  status;
@@ -97,7 +97,7 @@ public:
 	/* Pages in block that header page contains */
 	static const uint32_t PAGES_COUNT = PAYLOAD_SIZE / sizeof(struct _PageHeader);
 
-	PACK(typedef struct, _HeaderPageStruct {
+	STORAGE_PACK(typedef struct, _HeaderPageStruct {
 		PageHeader pages[PAGES_COUNT];
 	} HeaderPageStruct);
 

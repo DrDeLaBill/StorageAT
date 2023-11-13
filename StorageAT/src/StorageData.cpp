@@ -221,7 +221,7 @@ StorageStatus StorageData::deleteData() // TODO: удалять записи и�
 		uint32_t pageIndex = StorageSector::getPageIndexByAddress(page->getAddress());
 		header->data->pages[pageIndex].id     = 0;
 		header->data->pages[pageIndex].status = Header::PAGE_EMPTY;
-		memcpy(header->data->pages[pageIndex].prefix, 0, Page::PREFIX_SIZE);
+		memset(header->data->pages[pageIndex].prefix, 0, Page::PREFIX_SIZE);
 
 		// Load next page
 		status = page->loadNext();
