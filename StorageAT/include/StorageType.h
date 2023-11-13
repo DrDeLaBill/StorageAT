@@ -6,10 +6,12 @@
 #include <stdint.h>
 
 
+#ifndef STORAGE_PACK
 #ifdef __GNUC__
-#define PACK( __Type__, __Declaration__ )  __Type__ __attribute__((__packed__)) __Declaration__
+#define STORAGE_PACK( __Type__, __Declaration__ )  __Type__ __attribute__((__packed__)) __Declaration__
 #elif _MSC_VER
-#define PACK( __Type__, __Declaration__ ) __pragma(pack(push, 1) ) __Type__ __Declaration__ __pragma(pack(pop))
+#define STORAGE_PACK( __Type__, __Declaration__ ) __pragma(pack(push, 1) ) __Type__ __Declaration__ __pragma(pack(pop))
+#endif
 #endif
 
 
