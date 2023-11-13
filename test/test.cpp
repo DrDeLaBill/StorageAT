@@ -69,8 +69,9 @@ public:
 class StorageFixture: public testing::Test
 {
 protected:
-    static const constexpr uint8_t shortPrefix[] = "tst";
-    static const constexpr uint8_t longPrefix[] = "longstringprefix";
+    static constexpr char shortPrefix[] = "tst";
+    static constexpr char longPrefix [] = "longstringprefix";
+    static constexpr char wrongPrefix[5] = { 't', 'e', 's', 't', 's' };
 
 public:
     uint32_t address = 0;
@@ -164,7 +165,6 @@ TEST(StorageDriver, RequestExists)
 TEST_F(StorageFixture, BadFindRequest)
 {
     EXPECT_EQ(sat->find(static_cast<StorageFindMode>(0), &address, nullptr, 0), STORAGE_ERROR);
-    EXPECT_EQ(sat->find(FIND_MODE_EMPTY, &address), STORAGE_OK);
     EXPECT_EQ(sat->find(FIND_MODE_EQUAL, &address, nullptr, 0), STORAGE_ERROR);
     EXPECT_EQ(sat->find(FIND_MODE_MAX, &address, nullptr, 0), STORAGE_ERROR);
     EXPECT_EQ(sat->find(FIND_MODE_MIN, &address, nullptr, 0), STORAGE_ERROR);
@@ -174,19 +174,19 @@ TEST_F(StorageFixture, BadFindRequest)
     EXPECT_EQ(sat->find(FIND_MODE_MAX, nullptr, nullptr, 0), STORAGE_ERROR);
     EXPECT_EQ(sat->find(FIND_MODE_MIN, nullptr, nullptr, 0), STORAGE_ERROR);
     EXPECT_EQ(sat->find(FIND_MODE_NEXT, nullptr, nullptr, 0), STORAGE_ERROR);
-    EXPECT_EQ(sat->find(FIND_MODE_EQUAL, nullptr, const_cast<uint8_t*>(longPrefix), 0), STORAGE_ERROR);
-    EXPECT_EQ(sat->find(FIND_MODE_MAX, nullptr, const_cast<uint8_t*>(longPrefix), 0), STORAGE_ERROR);
-    EXPECT_EQ(sat->find(FIND_MODE_MIN, nullptr, const_cast<uint8_t*>(longPrefix), 0), STORAGE_ERROR);
-    EXPECT_EQ(sat->find(FIND_MODE_NEXT, nullptr, const_cast<uint8_t*>(longPrefix), 0), STORAGE_ERROR);
-    EXPECT_EQ(sat->find(FIND_MODE_EQUAL, nullptr, const_cast<uint8_t*>(longPrefix), 0), STORAGE_ERROR);
-    EXPECT_EQ(sat->find(FIND_MODE_MAX, nullptr, const_cast<uint8_t*>(shortPrefix), 0), STORAGE_ERROR);
-    EXPECT_EQ(sat->find(FIND_MODE_MIN, nullptr, const_cast<uint8_t*>(shortPrefix), 0), STORAGE_ERROR);
-    EXPECT_EQ(sat->find(FIND_MODE_NEXT, nullptr, const_cast<uint8_t*>(shortPrefix), 0), STORAGE_ERROR);
+    EXPECT_EQ(sat->find(FIND_MODE_EQUAL, nullptr, longPrefix, 0), STORAGE_ERROR);
+    EXPECT_EQ(sat->find(FIND_MODE_MAX, nullptr, longPrefix, 0), STORAGE_ERROR);
+    EXPECT_EQ(sat->find(FIND_MODE_MIN, nullptr, longPrefix, 0), STORAGE_ERROR);
+    EXPECT_EQ(sat->find(FIND_MODE_NEXT, nullptr, longPrefix, 0), STORAGE_ERROR);
+    EXPECT_EQ(sat->find(FIND_MODE_EQUAL, nullptr, longPrefix, 0), STORAGE_ERROR);
+    EXPECT_EQ(sat->find(FIND_MODE_MAX, nullptr, shortPrefix, 0), STORAGE_ERROR);
+    EXPECT_EQ(sat->find(FIND_MODE_MIN, nullptr, shortPrefix, 0), STORAGE_ERROR);
+    EXPECT_EQ(sat->find(FIND_MODE_NEXT, nullptr, shortPrefix, 0), STORAGE_ERROR);
 }
 
 TEST_F(StorageFixture, BadSaveRequest)
 {
-    uint8_t emptyStr[] = "";
+    char emptyStr[] = "";
 
     EXPECT_EQ(sat->save(address, emptyStr, 0, nullptr, 0), STORAGE_ERROR);
     EXPECT_EQ(sat->save(address, emptyStr, 0, nullptr, 1000), STORAGE_ERROR);
@@ -203,18 +203,30 @@ TEST_F(StorageFixture, BadLoadRequest)
     EXPECT_EQ(sat->load(address, nullptr, 1000000), STORAGE_ERROR);
 }
 
+TEST_F(StorageFixture, UseWrongPrefix)
+{
+    uint8_t wdata[100] = {};
+    uint8_t rdata[100] = {};
+
+    EXPECT_EQ(sat->find(FIND_MODE_EMPTY, &address), STORAGE_OK);
+    EXPECT_EQ(sat->save(address, wrongPrefix, 1, wdata, sizeof(wdata)), STORAGE_OK);
+    EXPECT_EQ(sat->find(FIND_MODE_EQUAL, &address, wrongPrefix, 1), STORAGE_OK);
+    EXPECT_EQ(sat->load(address, rdata, sizeof(rdata)), STORAGE_OK);
+    EXPECT_FALSE(memcmp(wdata, rdata, sizeof(wdata)));
+}
+
 TEST_F(StorageFixture, StorageBusy)
 {
     storage.setBusy(true);
 
-    EXPECT_EQ(sat->find(FIND_MODE_EQUAL, &address, const_cast<uint8_t*>(reinterpret_cast<const uint8_t*>("")), 0), STORAGE_BUSY);
-    EXPECT_EQ(sat->find(FIND_MODE_MAX, &address, const_cast<uint8_t*>(reinterpret_cast<const uint8_t*>("")), 0), STORAGE_BUSY);
-    EXPECT_EQ(sat->find(FIND_MODE_MIN, &address, const_cast<uint8_t*>(reinterpret_cast<const uint8_t*>("")), 0), STORAGE_BUSY);
-    EXPECT_EQ(sat->find(FIND_MODE_NEXT, &address, const_cast<uint8_t*>(reinterpret_cast<const uint8_t*>("")), 0), STORAGE_BUSY);
+    EXPECT_EQ(sat->find(FIND_MODE_EQUAL, &address, "", 0), STORAGE_BUSY);
+    EXPECT_EQ(sat->find(FIND_MODE_MAX, &address, "", 0), STORAGE_BUSY);
+    EXPECT_EQ(sat->find(FIND_MODE_MIN, &address, "", 0), STORAGE_BUSY);
+    EXPECT_EQ(sat->find(FIND_MODE_NEXT, &address, "", 0), STORAGE_BUSY);
 
     address = StorageSector::RESERVED_PAGES_COUNT * Page::PAGE_SIZE;
     EXPECT_EQ(sat->load(address, (new uint8_t[PAGE_LEN]), PAGE_LEN), STORAGE_BUSY);
-    EXPECT_EQ(sat->save(address, const_cast<uint8_t*>(shortPrefix), 1, (new uint8_t[PAGE_LEN]), PAGE_LEN), STORAGE_BUSY);
+    EXPECT_EQ(sat->save(address, shortPrefix, 1, (new uint8_t[PAGE_LEN]), PAGE_LEN), STORAGE_BUSY);
 }
 
 
@@ -233,7 +245,7 @@ TEST_F(StorageFixture, WriteAllStorageBytes)
     uint32_t storageSize = StorageAT::getStorageSize();
 
     EXPECT_EQ(sat->find(FIND_MODE_EMPTY, &address), STORAGE_OK);
-    EXPECT_EQ(sat->save(address, const_cast<uint8_t*>(shortPrefix), 0, (new uint8_t[storageSize]), storageSize), STORAGE_OOM);
+    EXPECT_EQ(sat->save(address, shortPrefix, 0, (new uint8_t[storageSize]), storageSize), STORAGE_OOM);
 }
 
 TEST_F(StorageFixture, WriteAllPayloadBytes)
@@ -241,7 +253,7 @@ TEST_F(StorageFixture, WriteAllPayloadBytes)
     uint32_t payloadSize = StorageAT::getPayloadSize();
 
     EXPECT_EQ(sat->find(FIND_MODE_EMPTY, &address), STORAGE_OK);
-    EXPECT_EQ(sat->save(address, const_cast<uint8_t*>(shortPrefix), 0, (new uint8_t[payloadSize]), payloadSize), STORAGE_OK);
+    EXPECT_EQ(sat->save(address, shortPrefix, 0, (new uint8_t[payloadSize]), payloadSize), STORAGE_OK);
 }
 
 TEST_F(StorageFixture, ReadUnacceptableAddress)
@@ -255,7 +267,7 @@ TEST_F(StorageFixture, WriteUnacceptableAddress)
 {
     address = StorageAT::getStorageSize() + Page::PAGE_SIZE;
 
-    EXPECT_EQ(sat->save(address, const_cast<uint8_t*>(shortPrefix), 1, (new uint8_t[Page::PAGE_SIZE]), Page::PAGE_SIZE), STORAGE_OOM);
+    EXPECT_EQ(sat->save(address, shortPrefix, 1, (new uint8_t[Page::PAGE_SIZE]), Page::PAGE_SIZE), STORAGE_OOM);
 }
 
 TEST_F(StorageFixture, WriteInLastSector)
@@ -275,7 +287,7 @@ TEST_F(StorageFixture, SavePageInHeader)
 {
     uint8_t data[Page::PAYLOAD_SIZE] = {};
 
-    EXPECT_EQ(sat->save(0, const_cast<uint8_t*>(shortPrefix), 1, data, sizeof(data)), STORAGE_ERROR);
+    EXPECT_EQ(sat->save(0, shortPrefix, 1, data, sizeof(data)), STORAGE_ERROR);
     EXPECT_EQ(sat->load(0, data, sizeof(data)), STORAGE_ERROR);
 }
 
@@ -287,7 +299,7 @@ TEST_F(StorageFixture, SavePageWithFindEmptyAddress)
 
     EXPECT_EQ(sat->find(FIND_MODE_EMPTY, &address), STORAGE_OK);
     EXPECT_EQ(address, StorageSector::RESERVED_PAGES_COUNT * Page::PAGE_SIZE);
-    EXPECT_EQ(sat->save(address, const_cast<uint8_t*>(shortPrefix), 1, wdata, sizeof(wdata)), STORAGE_OK);
+    EXPECT_EQ(sat->save(address, shortPrefix, 1, wdata, sizeof(wdata)), STORAGE_OK);
     EXPECT_EQ(sat->load(address, rdata, sizeof(rdata)), STORAGE_OK);
     EXPECT_FALSE(memcmp(wdata, rdata, sizeof(wdata)));
 }
@@ -298,15 +310,16 @@ TEST_F(StorageFixture, SavePageWithFindEmptyAddressWithOverwrite)
     uint8_t wdata[Page::PAYLOAD_SIZE] = { 1, 2, 3, 4, 5 };
 
     EXPECT_EQ(sat->find(FIND_MODE_EMPTY, &address), STORAGE_OK);
-    EXPECT_EQ(sat->save(address, const_cast<uint8_t*>(shortPrefix), 1, wdata, sizeof(wdata)), STORAGE_OK);
-    EXPECT_EQ(sat->save(address, const_cast<uint8_t*>(shortPrefix), 1, wdata, sizeof(wdata)), STORAGE_ERROR);
+    EXPECT_EQ(sat->save(address, shortPrefix, 1, wdata, sizeof(wdata)), STORAGE_OK);
+    EXPECT_EQ(sat->save(address, shortPrefix, 1, wdata, sizeof(wdata)), STORAGE_OK);
+    EXPECT_EQ(sat->save(address, shortPrefix, 2, wdata, sizeof(wdata)), STORAGE_DATA_EXISTS);
 }
 
 TEST_F(StorageFixture, SaveMultiPageInHeader)
 {
     uint8_t data[1000] = {};
 
-    EXPECT_EQ(sat->save(0, const_cast<uint8_t*>(shortPrefix), 1, data, sizeof(data)), STORAGE_ERROR);
+    EXPECT_EQ(sat->save(0, shortPrefix, 1, data, sizeof(data)), STORAGE_ERROR);
     EXPECT_EQ(sat->load(0, data, sizeof(data)), STORAGE_ERROR);
 }
 
@@ -317,7 +330,7 @@ TEST_F(StorageFixture, SaveMultiPageWithFindEmptyAddress)
 
     EXPECT_EQ(sat->find(FIND_MODE_EMPTY, &address), STORAGE_OK);
     EXPECT_EQ(address, StorageSector::RESERVED_PAGES_COUNT * Page::PAGE_SIZE);
-    EXPECT_EQ(sat->save(address, const_cast<uint8_t*>(shortPrefix), 1, wdata, sizeof(wdata)), STORAGE_OK);
+    EXPECT_EQ(sat->save(address, shortPrefix, 1, wdata, sizeof(wdata)), STORAGE_OK);
     EXPECT_EQ(sat->load(address, rdata, sizeof(rdata)), STORAGE_OK);
     EXPECT_FALSE(memcmp(wdata, rdata, sizeof(wdata)));
 }
@@ -327,8 +340,9 @@ TEST_F(StorageFixture, SaveMultiPageWithFindEmptyAddressWithOverwrite)
     uint8_t wdata[1000] = { 1, 2, 3, 4, 5 };
 
     EXPECT_EQ(sat->find(FIND_MODE_EMPTY, &address), STORAGE_OK);
-    EXPECT_EQ(sat->save(address, const_cast<uint8_t*>(shortPrefix), 1, wdata, sizeof(wdata)), STORAGE_OK);
-    EXPECT_EQ(sat->save(address, const_cast<uint8_t*>(shortPrefix), 1, wdata, sizeof(wdata)), STORAGE_ERROR);
+    EXPECT_EQ(sat->save(address, shortPrefix, 1, wdata, sizeof(wdata)), STORAGE_OK);
+    EXPECT_EQ(sat->save(address, shortPrefix, 1, wdata, sizeof(wdata)), STORAGE_OK);
+    EXPECT_EQ(sat->save(address, shortPrefix, 2, wdata, sizeof(wdata)), STORAGE_DATA_EXISTS);
 }
 
 TEST_F(StorageFixture, SaveDataInBusyPages)
@@ -338,9 +352,9 @@ TEST_F(StorageFixture, SaveDataInBusyPages)
     uint8_t rdata1[1000] = {};
 
     EXPECT_EQ(sat->find(FIND_MODE_EMPTY, &address), STORAGE_OK);
-    EXPECT_EQ(sat->save(address, const_cast<uint8_t*>(shortPrefix), 1, wdata1, sizeof(wdata1)), STORAGE_OK);
-    EXPECT_EQ(sat->save(address, const_cast<uint8_t*>(shortPrefix), 2, wdata2, sizeof(wdata2)), STORAGE_ERROR);
-    EXPECT_EQ(sat->save(address + PAGE_LEN, const_cast<uint8_t*>(shortPrefix), 2, wdata2, sizeof(wdata2)), STORAGE_ERROR);
+    EXPECT_EQ(sat->save(address, shortPrefix, 1, wdata1, sizeof(wdata1)), STORAGE_OK);
+    EXPECT_EQ(sat->save(address, shortPrefix, 2, wdata2, sizeof(wdata2)), STORAGE_DATA_EXISTS);
+    EXPECT_EQ(sat->save(address + PAGE_LEN, shortPrefix, 2, wdata2, sizeof(wdata2)), STORAGE_DATA_EXISTS);
     EXPECT_EQ(sat->load(address, rdata1, sizeof(rdata1)), STORAGE_OK);
     EXPECT_FALSE(memcmp(wdata1, rdata1, sizeof(wdata1)));
 }
@@ -358,7 +372,12 @@ TEST_F(StorageFixture, SaveNotAlignedAddress)
     uint8_t wdata[Page::PAYLOAD_SIZE] = {};
 
     EXPECT_EQ(sat->find(FIND_MODE_EMPTY, &address), STORAGE_OK);
-    EXPECT_EQ(sat->save(address + 1, const_cast<uint8_t*>(shortPrefix), 1, wdata, sizeof(wdata)), STORAGE_ERROR);
+    EXPECT_EQ(sat->save(address + 1, shortPrefix, 1, wdata, sizeof(wdata)), STORAGE_ERROR);
+}
+
+TEST_F(StorageFixture, DeleteData)
+{
+    // TODO: при попытке сохранения данных должна возникнуть ошибка, и StorageATб должна попытаться удалить уже записанные данные
 }
 
 TEST_F(StorageFixture, FindEqual)
@@ -368,9 +387,9 @@ TEST_F(StorageFixture, FindEqual)
     uint32_t emptyAddress = 0;
 
     EXPECT_EQ(sat->find(FIND_MODE_EMPTY, &emptyAddress), STORAGE_OK);
-    EXPECT_EQ(sat->save(emptyAddress, const_cast<uint8_t*>(shortPrefix), 1, wdata, sizeof(wdata)), STORAGE_OK);
+    EXPECT_EQ(sat->save(emptyAddress, shortPrefix, 1, wdata, sizeof(wdata)), STORAGE_OK);
 
-    EXPECT_EQ(sat->find(FIND_MODE_EQUAL, &address, const_cast<uint8_t*>(shortPrefix), 1), STORAGE_OK);
+    EXPECT_EQ(sat->find(FIND_MODE_EQUAL, &address, shortPrefix, 1), STORAGE_OK);
     EXPECT_EQ(address, emptyAddress);
     EXPECT_EQ(sat->load(address, rdata, sizeof(rdata)), STORAGE_OK);
     EXPECT_FALSE(memcmp(wdata, rdata, sizeof(wdata)));
@@ -396,14 +415,14 @@ TEST_F(StorageFixture, SaveFindLoadPartitionedData)
 
     EXPECT_EQ(sat->find(FIND_MODE_EMPTY, &address), STORAGE_OK);
     nextAddress = address + Page::PAGE_SIZE;
-    EXPECT_EQ(sat->save(nextAddress, const_cast<uint8_t*>(shortPrefix), 1, wdata1, sizeof(wdata1)), STORAGE_OK);
-    EXPECT_EQ(sat->save(address, const_cast<uint8_t*>(shortPrefix), 2, wdata2, sizeof(wdata2)), STORAGE_OK);
+    EXPECT_EQ(sat->save(nextAddress, shortPrefix, 1, wdata1, sizeof(wdata1)), STORAGE_OK);
+    EXPECT_EQ(sat->save(address, shortPrefix, 2, wdata2, sizeof(wdata2)), STORAGE_OK);
     address = 0;
-    EXPECT_EQ(sat->find(FIND_MODE_EQUAL, &address, const_cast<uint8_t*>(shortPrefix), 1), STORAGE_OK);
+    EXPECT_EQ(sat->find(FIND_MODE_EQUAL, &address, shortPrefix, 1), STORAGE_OK);
     EXPECT_EQ(sat->load(address, rdata1, sizeof(rdata1)), STORAGE_OK);
     EXPECT_FALSE(memcmp(wdata1, rdata1, sizeof(wdata1)));
     address = 0;
-    EXPECT_EQ(sat->find(FIND_MODE_EQUAL, &address, const_cast<uint8_t*>(shortPrefix), 2), STORAGE_OK);
+    EXPECT_EQ(sat->find(FIND_MODE_EQUAL, &address, shortPrefix, 2), STORAGE_OK);
     EXPECT_EQ(sat->load(address, rdata2, sizeof(rdata2)), STORAGE_OK);
     EXPECT_FALSE(memcmp(wdata2, rdata2, sizeof(wdata2)));
 }

@@ -14,11 +14,12 @@
 
 
 typedef enum _StorageStatus {
-	STORAGE_OK        = static_cast<uint8_t>(0x00),
-	STORAGE_ERROR     = static_cast<uint8_t>(0x01),
-	STORAGE_BUSY      = static_cast<uint8_t>(0x02),
-	STORAGE_OOM       = static_cast<uint8_t>(0x03),
-	STORAGE_NOT_FOUND = static_cast<uint8_t>(0x04),
+	STORAGE_OK          = static_cast<uint8_t>(0x00),
+	STORAGE_ERROR       = static_cast<uint8_t>(0x01),
+	STORAGE_BUSY        = static_cast<uint8_t>(0x02),
+	STORAGE_OOM         = static_cast<uint8_t>(0x03),
+	STORAGE_NOT_FOUND   = static_cast<uint8_t>(0x04),
+	STORAGE_DATA_EXISTS = static_cast<uint8_t>(0x05),
 } StorageStatus;
 
 
