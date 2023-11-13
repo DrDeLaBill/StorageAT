@@ -12,16 +12,16 @@ class Page
 {
 public:
 	/* Data storage page size in bytes */
-	static const uint16_t PAGE_SIZE               = 256;
+	static const uint16_t PAGE_SIZE      = 256;
 
 	/* Page structure validator */
-	static const uint32_t STORAGE_MAGIC           = 0xBEDAC0DE;
+	static const uint32_t STORAGE_MAGIC  = 0xBEDAC0DE;
 
 	/* Current page structure version */
-	static const uint8_t STORAGE_VERSION          = 0x05;
+	static const uint8_t STORAGE_VERSION = 0x05;
 
 	/* Available page title bytes in block header */
-	static const uint8_t STORAGE_PAGE_PREFIX_SIZE = 4;
+	static const uint8_t PREFIX_SIZE     = 4;
 
 
 	/* Page header meta data structure */
@@ -30,7 +30,7 @@ public:
 		uint8_t  version;
 		uint32_t prev_addr;
 		uint32_t next_addr;
-		uint8_t  prefix[STORAGE_PAGE_PREFIX_SIZE];
+		uint8_t  prefix[PREFIX_SIZE];
 		uint32_t id;
 	} PageMeta);
 
@@ -89,7 +89,7 @@ public:
 	} PageHeaderStatus;
 
 	PACK(typedef struct, _PageHeader {
-		uint8_t  prefix[STORAGE_PAGE_PREFIX_SIZE];
+		uint8_t  prefix[PREFIX_SIZE];
 		uint32_t id;
 		uint8_t  status;
 	} PageHeader);
@@ -118,6 +118,7 @@ public:
 	void setPageBlocked(uint32_t pageIndex);
 	uint32_t getSectorIndex();
 	bool isAddressEmpty(uint32_t targetAddress);
+	bool isSameMeta(uint32_t pageIndex, uint8_t prefix[Page::PREFIX_SIZE], uint32_t id);
 
 	static uint32_t getSectorStartAddress(uint32_t address);
 

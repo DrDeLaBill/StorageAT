@@ -60,7 +60,7 @@ public:
 	StorageStatus find(
 		StorageFindMode mode,
 		uint32_t*       address,
-		uint8_t         prefix[Page::STORAGE_PAGE_PREFIX_SIZE] = {},
+		const char*     prefix = "",
 		uint32_t        id = 0
 	);
 
@@ -85,11 +85,11 @@ public:
 	 * @return        Returns STORAGE_OK if the data was saved successfully
 	 */
 	StorageStatus save(
-		uint32_t address,
-		uint8_t  prefix[Page::STORAGE_PAGE_PREFIX_SIZE],
-		uint32_t id,
-		uint8_t* data,
-		uint32_t len
+		uint32_t    address,
+		const char* prefix,
+		uint32_t    id,
+		uint8_t*    data,
+		uint32_t    len
 	);
 
 	// TODO: rewrite - find start, check prefix and id, save, din't update headers
