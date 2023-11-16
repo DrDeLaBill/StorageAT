@@ -9,7 +9,8 @@
 enum StorageEmulatorStatus {
     EMULATOR_OK    = 0x00,
     EMULATOR_BUSY  = 0x01,
-    EMULATOR_ERROR = 0x02
+    EMULATOR_ERROR = 0x02,
+    EMULATOR_OOM   = 0x03
 };
 
 
@@ -17,6 +18,7 @@ class StorageEmulator
 {
 private:
     uint32_t pagesCount;
+    uint32_t size;
     std::unique_ptr<uint8_t[]> memory;
 
     bool isBusy;
@@ -35,6 +37,7 @@ public:
     StorageEmulatorStatus readPage(uint32_t address, uint8_t* data, uint32_t len);
 
     uint32_t getSize();
+    uint32_t getPayloadSize();
     uint32_t getPagesCount();
 
     void setBusy(bool busy);

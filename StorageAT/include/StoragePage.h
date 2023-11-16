@@ -21,7 +21,7 @@ public:
 	static const uint8_t STORAGE_VERSION = 0x05;
 
 	/* Available page title bytes in block header */
-	static const uint8_t PREFIX_SIZE     = 4;
+	static const uint8_t PREFIX_SIZE     = 3;
 
 
 	/* Page header meta data structure */
@@ -56,7 +56,6 @@ public:
 
 	virtual StorageStatus load(bool startPage = false);
 	virtual StorageStatus save();
-	virtual StorageStatus deletePage();
 	StorageStatus loadPrev();
 	StorageStatus loadNext();
 
@@ -65,7 +64,6 @@ public:
 	bool isEnd();
 	bool validatePrevAddress();
 	bool validateNextAddress();
-	bool isEmpty();
 	uint32_t getAddress();
 
 	void setPrevAddress(uint32_t address);
@@ -74,7 +72,6 @@ public:
 protected:
 	uint32_t address;
 
-protected:
 	virtual bool validate();
 	uint16_t getCRC16(uint8_t* buf, uint16_t len);
 };
@@ -111,16 +108,16 @@ public:
 	StorageStatus load(bool) override { return this->load(); };
 	StorageStatus save() override;
 	StorageStatus create();
-	StorageStatus deletePage() override { return STORAGE_ERROR; }
+	StorageStatus deletePage(uint32_t targetAddress);
 
 	void setHeaderStatus(uint32_t pageIndex, uint8_t status);
 	bool isSetHeaderStatus(uint32_t pageIndex, uint8_t status);
 	void setPageBlocked(uint32_t pageIndex);
-	uint32_t getSectorIndex();
 	bool isAddressEmpty(uint32_t targetAddress);
-	bool isSameMeta(uint32_t pageIndex, uint8_t prefix[Page::PREFIX_SIZE], uint32_t id);
+	bool isSameMeta(uint32_t pageIndex, const uint8_t* prefix, uint32_t id);
 
 	static uint32_t getSectorStartAddress(uint32_t address);
+	uint32_t getSectorIndex();
 
 protected:
 	bool validate() override;
