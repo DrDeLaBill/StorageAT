@@ -3,11 +3,12 @@
 #include <memory>
 #include <iostream>
 #include <string.h>
+#include <String>
 
 #include "StorageAT.h"
 
 
-StorageEmulator::StorageEmulator(uint32_t pagesCount): pagesCount(pagesCount) 
+StorageEmulator::StorageEmulator(uint32_t pagesCount): pagesCount(pagesCount), size(pagesCount * Page::PAGE_SIZE)
 {
     this->memory = std::make_unique<uint8_t[]>(this->getSize());
     this->requestsCount = std::make_unique<RequestsCount[]>(this->pagesCount);
@@ -18,6 +19,15 @@ StorageEmulator::StorageEmulator(uint32_t pagesCount): pagesCount(pagesCount)
 uint32_t StorageEmulator::getSize()
 {
     return this->getPagesCount() * Page::PAGE_SIZE;
+}
+
+uint32_t  StorageEmulator::getPayloadSize()
+{
+    uint32_t payloadPages = (getPagesCount() / StorageSector::PAGES_COUNT) * Header::PAGES_COUNT;
+    if (getPagesCount() % StorageSector::PAGES_COUNT > StorageSector::RESERVED_PAGES_COUNT) {
+        payloadPages += (getPagesCount() % StorageSector::PAGES_COUNT) - StorageSector::RESERVED_PAGES_COUNT;
+    }
+    return payloadPages * Page::PAYLOAD_SIZE;
 }
 
 uint32_t StorageEmulator::getPagesCount()
@@ -32,6 +42,9 @@ void StorageEmulator::setBusy(bool busy)
 
 StorageEmulatorStatus StorageEmulator::readPage(uint32_t address, uint8_t* data, uint32_t len)
 {
+    if (address + len > this->size) {
+        return EMULATOR_OOM;
+    }
     requestsCount[address / Page::PAGE_SIZE].read++;
     if (this->isBusy) {
         return EMULATOR_BUSY;
@@ -52,6 +65,9 @@ StorageEmulatorStatus StorageEmulator::readPage(uint32_t address, uint8_t* data,
 
 StorageEmulatorStatus StorageEmulator::writePage(uint32_t address, uint8_t* data, uint32_t len)
 {
+    if (address + len > this->size) {
+        return EMULATOR_OOM;
+    }
     requestsCount[address / Page::PAGE_SIZE].write++;
     if (this->isBusy) {
         return EMULATOR_BUSY;
@@ -78,13 +94,18 @@ void StorageEmulator::clear()
 void StorageEmulator::showReadWrite()
 {
     std::cout << "Requests to memory count (Pages count: " << this->pagesCount << ")." << std::endl;
+    std::cout << "Payload size: " << (getPayloadSize() * 100 / getSize()) << "% (" << this->getPayloadSize() << " byte(s) of " << this->getSize() << " byte(s))" << std::endl;
     for (unsigned i = 0; i < this->pagesCount; i++) {
         if (i % StorageSector::PAGES_COUNT == 0) {
-            std::cout << "|===============================|" << std::endl;
+            unsigned sectorIndex = i / StorageSector::PAGES_COUNT;
+            std::cout << "|============ " << sectorIndex << " ";
+            for (unsigned j = 0; j < 17 - std::to_string(sectorIndex).length(); j++)
+                std::cout << "=";
+            std::cout << "|" << std::endl;
         } else if (i % StorageSector::PAGES_COUNT == StorageSector::RESERVED_PAGES_COUNT) {
             std::cout << "|-------------------------------|" << std::endl;
         }
-        std::cout << "| " << i << "\tpage:\tr-" << requestsCount[i].read << "\tw-" << requestsCount[i].write << "\t|" <<std::endl;
+        std::cout << "| " << (i % StorageSector::PAGES_COUNT) << "\tpage:\tr-" << requestsCount[i].read << "\tw-" << requestsCount[i].write << "\t|" <<std::endl;
     }
     std::cout << "|===============================|" << std::endl;
 }

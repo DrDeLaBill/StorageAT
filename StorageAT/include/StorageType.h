@@ -32,6 +32,3 @@ typedef enum _StorageFindMode {
 	FIND_MODE_MAX     = static_cast<uint8_t>(0x04),
 	FIND_MODE_EMPTY   = static_cast<uint8_t>(0x05),
 } StorageFindMode;
-
-
-typedef StorageStatus (*StorageDriverCallback) (uint32_t, uint8_t*, uint32_t);

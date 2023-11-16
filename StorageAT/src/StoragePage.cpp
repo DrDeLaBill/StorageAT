@@ -86,6 +86,9 @@ StorageStatus Page::loadNext() {
 
 StorageStatus Page::load(bool startPage)
 {
+	if (this->address + sizeof(page) > StorageAT::getStorageSize()) {
+		return STORAGE_OOM;
+	}
 	StorageStatus status = AT::driverCallback()->read(address, reinterpret_cast<uint8_t*>(&page), sizeof(page));
 	if (status != STORAGE_OK) {
 		return status;
@@ -104,7 +107,11 @@ StorageStatus Page::load(bool startPage)
 
 StorageStatus Page::save()
 {
-	// TODO: if page in memory equal new page -> return OK
+	if (this->address + sizeof(page) > StorageAT::getStorageSize()) {
+		return STORAGE_OOM;
+	}
+	page.header.magic = STORAGE_MAGIC;
+	page.header.version = STORAGE_VERSION;
 	page.crc = this->getCRC16(reinterpret_cast<uint8_t*>(&page), sizeof(page) - sizeof(page.crc));
 
 	Page checkPage(this->address);
@@ -121,13 +128,13 @@ StorageStatus Page::save()
 	return this->load();
 }
 
-StorageStatus Page::deletePage()
+StorageStatus Header::deletePage(uint32_t targetAddress)
 {
-	if (StorageSector::isSectorAddress(this->address)) {
+	if (StorageSector::isSectorAddress(targetAddress)) {
 		return STORAGE_ERROR;
 	}
 
-	Header header(this->address);
+	Header header(targetAddress);
 	StorageStatus status = StorageSector::loadHeader(&header);
 	if (status != STORAGE_OK) {
 		return status;
@@ -135,15 +142,10 @@ StorageStatus Page::deletePage()
 
 	Header::PageHeader* pageHeader = &(header.data->pages[StorageSector::getPageIndexByAddress(this->address)]);
 	memset(pageHeader->prefix, 0, Page::PREFIX_SIZE);
-	pageHeader->id = 0;
 	pageHeader->status = Header::PAGE_EMPTY;
+	pageHeader->id = 0;
 
 	return header.save();
-}
-
-bool Page::isEmpty()
-{
-	return !this->validate();
 }
 
 bool Page::validate()
@@ -193,12 +195,12 @@ bool Page::isEnd()
 
 bool Page::validatePrevAddress()
 {
-	return !this->isStart() && this->page.header.prev_addr > 0;
+	return !this->isStart(); // && (this->isMiddle() || this->isEnd());
 }
 
 bool Page::validateNextAddress()
 {
-	return !this->isEnd() && this->page.header.next_addr > 0;
+	return !this->isEnd();// && (this->isStart() || this->isMiddle());
 }
 
 uint32_t Page::getAddress()
@@ -258,7 +260,7 @@ bool Header::isAddressEmpty(uint32_t targetAddress)
 	return this->isSetHeaderStatus(StorageSector::getPageIndexByAddress(targetAddress), Header::PAGE_EMPTY);
 }
 
-bool Header::isSameMeta(uint32_t pageIndex, uint8_t prefix[Page::PREFIX_SIZE], uint32_t id)
+bool Header::isSameMeta(uint32_t pageIndex, const uint8_t* prefix, uint32_t id)
 {
 	return !memcmp(data->pages[pageIndex].prefix, prefix, Page::PREFIX_SIZE) && data->pages[pageIndex].id == id;
 }
@@ -283,11 +285,14 @@ StorageStatus Header::create()
 		dumpHeader.data->pages[i].id     = 0;
 		dumpHeader.data->pages[i].status = Header::PAGE_EMPTY;
 		
+		if (status == STORAGE_OOM) {
+			dumpHeader.data->pages[i].status = Header::PAGE_BLOCKED;
+		}
 		if (status != STORAGE_OK) {
 			continue;
 		}
 
-		uint32_t tmpAddress = 0;
+		uint32_t tmpAddress = tmpPage.getAddress();
 		status = StorageData::findStartAddress(&tmpAddress);
 		if (status == STORAGE_BUSY) {
 			return STORAGE_BUSY;
