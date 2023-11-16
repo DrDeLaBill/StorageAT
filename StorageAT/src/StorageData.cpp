@@ -201,7 +201,7 @@ StorageStatus StorageData::deleteData() // TODO: удалять записи и�
 
 	do {
 		// Check header (and save)
-		uint32_t curSectorAddress = Header::getSectorStartAddress(curAddress);	
+		uint32_t curSectorAddress = Header::getSectorStartAddress(curAddress);
 		if (header && sectorAddress != curSectorAddress) {
 			status = header->save();
 		}

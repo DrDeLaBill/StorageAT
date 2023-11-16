@@ -32,10 +32,6 @@ private:
 	// TODO: docs
 	static IStorageDriver* m_driver;
 
-	static uint32_t getOffsetPayloadSize(uint32_t offsetAddress);
-
-	static uint32_t getOffsetPayloadPages(uint32_t offsetAddress);
-
 public:
 	/* Max available address for StorageFS */
 	static const uint32_t STORAGE_MAX_ADDRESS = 0xFFFFFFFF;
