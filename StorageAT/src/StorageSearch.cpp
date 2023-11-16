@@ -50,7 +50,7 @@ StorageStatus StorageSearchBase::searchPageAddress(
 }
 
 StorageStatus StorageSearchBase::searchPageAddressInSector(
-	Header*    header,
+	Header*        header,
 	const uint8_t  prefix[Page::PREFIX_SIZE],
 	const uint32_t id
 ) {
@@ -104,7 +104,7 @@ bool StorageSearchNext::isIdFound(
 	const uint32_t headerId,
 	const uint32_t targetId
 ) {
-	if (targetId > headerId) {
+	if (targetId >= headerId) {
 		return false;
 	}
 	return targetId < prevId && headerId < prevId;
