@@ -17,7 +17,7 @@ StorageStatus StorageData::load(uint8_t* data, uint32_t len)
 {
 	Page page(m_startAddress);
 	
-	if (StorageSector::isSectorAddress(m_startAddress)) {
+	if (StorageMacroblock::isMacroblockAddress(m_startAddress)) {
 		return STORAGE_ERROR;
 	}
 
@@ -47,136 +47,228 @@ StorageStatus StorageData::load(uint8_t* data, uint32_t len)
 		return STORAGE_OK;
 	}
 
+	if (status != STORAGE_OK) {
+		this->deleteData();
+	}
+
 	return status;
 }
 
 StorageStatus StorageData::save(
-	uint8_t  prefix[Page::STORAGE_PAGE_PREFIX_SIZE],
+	uint8_t  prefix[Page::PREFIX_SIZE],
 	uint32_t id,
 	uint8_t* data,
 	uint32_t len
 ) {
 	uint32_t pageAddress = m_startAddress;
 	
-	if (StorageSector::isSectorAddress(pageAddress)) {
+	if (StorageMacroblock::isMacroblockAddress(pageAddress)) {
 		return STORAGE_ERROR;
 	}
 
-	StorageStatus status = this->isEmptyAddress(pageAddress);
-	if (status != STORAGE_OK) {
+	uint32_t checkAddress = pageAddress;
+	Header checkHeader(checkAddress);
+	StorageStatus status = StorageMacroblock::loadHeader(&checkHeader);
+	if (status == STORAGE_BUSY || status == STORAGE_OOM) {
 		return status;
+	}
+	if (!checkHeader.isAddressEmpty(checkAddress) && 
+		!checkHeader.isSameMeta(StorageMacroblock::getPageIndexByAddress(checkAddress), prefix, id)
+	) {
+		return STORAGE_DATA_EXISTS;
+	}
+	if (checkHeader.isSameMeta(StorageMacroblock::getPageIndexByAddress(checkAddress), prefix, id)) {
+		status = StorageData::findStartAddress(&checkAddress);
+	}
+
+	return this->rewrite(prefix, id, data, len);
+}
+
+StorageStatus StorageData::rewrite(
+	uint8_t  prefix[Page::PREFIX_SIZE],
+	uint32_t id,
+	uint8_t* data,
+	uint32_t len
+) {
+	uint32_t pageAddress = m_startAddress;
+	
+	if (StorageMacroblock::isMacroblockAddress(pageAddress)) {
+		return STORAGE_ERROR;
+	}
+
+	uint32_t checkAddress = pageAddress;
+	Header checkHeader(checkAddress);
+	StorageStatus status = StorageMacroblock::loadHeader(&checkHeader);
+	if (status == STORAGE_BUSY || status == STORAGE_OOM) {
+		return status;
+	}
+	if (!checkHeader.isAddressEmpty(checkAddress)) {
+		status = StorageData::findStartAddress(&checkAddress);
+	}
+	if (status == STORAGE_OK) {
+		pageAddress = checkAddress;
 	}
 
 	uint32_t curLen = 0;
-	uint32_t curAddr = m_startAddress;
-	std::unique_ptr<Page> page = std::make_unique<Page>(curAddr);
+	uint32_t curAddr = pageAddress;
+	uint32_t prevAddr = pageAddress;
+	uint32_t macroblockAddress = Page::PAGE_SIZE + 1;
+	std::unique_ptr<Header> header;
+	std::unique_ptr<Page> page;
 	while (curLen < len) {
-		uint32_t neededLen = std::min(static_cast<uint32_t>(len - curLen), static_cast<uint32_t>(sizeof(page->page.payload)));
+		if (curAddr - 1 + Page::PAGE_SIZE > StorageAT::getStorageSize()) {
+			return STORAGE_OOM;
+		}
 
-		page->page.header.status = 0;
+		// Initialize page
+		page = std::make_unique<Page>(curAddr);
+		uint32_t neededLen = std::min(static_cast<uint32_t>(len - curLen), static_cast<uint32_t>(sizeof(page->page.payload)));
 		bool isStart = curLen == 0;
 		bool isEnd   = curLen + neededLen >= len;
-		if (isStart) {
-			page->setPageStatus(Page::PAGE_STATUS_START);
-		}
-		if (isEnd) {
-			page->setPageStatus(Page::PAGE_STATUS_END);
-		}
-		if (!isStart && !isEnd) {
-			page->setPageStatus(Page::PAGE_STATUS_MID);
-		}
 
-		uint32_t nextAddress = 0;
+		// Search
+		uint32_t nextAddr = 0;
+		status = (std::make_unique<StorageSearchEmpty>(/*startSearchAddress=*/curAddr + Page::PAGE_SIZE))
+			->searchPageAddress(prefix, id, &nextAddr);
+		if (status != STORAGE_OK) {
+			nextAddr = curAddr + Page::PAGE_SIZE;
+		}
+		if (!isEnd && status != STORAGE_OK) {
+			break;
+		}
 		status = STORAGE_OK;
-		if (!isEnd) {
-			status = (std::make_unique<StorageSearchEmpty>(/*startSearchAddress=*/curAddr + Page::STORAGE_PAGE_SIZE))
-				->searchPageAddress(
-					page->page.header.prefix,
-					page->page.header.id,
-					&nextAddress
-				);
+
+		// Set prev and next pages
+		page->setPrevAddress(prevAddr);
+		page->setNextAddress(nextAddr);
+		if (isStart) {
+			page->setPrevAddress(curAddr);
 		}
-		if (status != STORAGE_OK) {
-			return status;
-		}
-		page->page.header.next_addr = nextAddress;
-
-		memcpy(page->page.header.prefix, prefix, Page::STORAGE_PAGE_PREFIX_SIZE);
-		page->page.header.id = id;
-
-		memcpy(page->page.payload, data + curLen, neededLen);
-
-		status = page->save(); // TODO: добавить блокировку страницы через header, если сохранение неудачное
-		if (status != STORAGE_OK) {
-			this->deleteData();
-			return status;
-		}
-
-		Header header(curAddr);
-		status = header.load();
-		if (status != STORAGE_OK) {
-			this->deleteData();
-			return status;
-		}
-
-		uint32_t pageIndex = StorageSector::getPageIndexByAddress(curAddr);
-		header.data->pages[pageIndex].id     = page->page.header.id;
-		header.data->pages[pageIndex].status = Header::PAGE_OK;
-		memcpy(header.data->pages[pageIndex].prefix, page->page.header.prefix, Page::STORAGE_PAGE_PREFIX_SIZE);
-		status = header.save();
-		if (status != STORAGE_OK) {
-			this->deleteData();
-			return status;
-		}
-
-
 		if (isEnd) {
+			page->setNextAddress(curAddr);
+		}
+
+
+		// Check header (and save)
+		uint32_t curMacroblockAddress = Header::getMacroblockStartAddress(curAddr);
+		if (header && macroblockAddress != curMacroblockAddress) {
+			status = header->save();
+		}
+		if (status == STORAGE_BUSY) {
+			break;
+		}
+		if (macroblockAddress != curMacroblockAddress) {
+			header = std::make_unique<Header>(curAddr);
+			status = StorageMacroblock::loadHeader(header.get());
+			macroblockAddress = curMacroblockAddress;
+		}
+		if (status == STORAGE_BUSY || status == STORAGE_OOM) {
 			break;
 		}
 
-		curAddr = nextAddress;
-		curLen += neededLen;
-		page    = std::make_unique<Page>(curAddr);
-	} // TODO: сохранение header вне цикла
+		// Save page
+		memcpy(page->page.header.prefix, prefix, Page::PREFIX_SIZE);
+		page->page.header.id = id;
+		memcpy(page->page.payload, data + curLen, neededLen);
+		status = page->save();
+		if (status == STORAGE_BUSY) {
+			break;
+		}
+		if (status != STORAGE_OK) {
+			header->setPageBlocked(StorageMacroblock::getPageIndexByAddress(page->getAddress()));
+			curAddr = nextAddr;
+			continue;
+		}
 
-    return STORAGE_OK;
+
+		// Registrate page in header
+		uint32_t pageIndex = StorageMacroblock::getPageIndexByAddress(curAddr);
+		header->data->pages[pageIndex].id     = id;
+		header->data->pages[pageIndex].status = Header::PAGE_OK;
+		memcpy(header->data->pages[pageIndex].prefix, prefix, Page::PREFIX_SIZE);
+
+
+		// Update current values
+		prevAddr = curAddr;
+		curAddr = nextAddr;
+		curLen += neededLen;
+	} 
+
+	if (status != STORAGE_OK) {
+		this->deleteData();
+		return status;
+	}
+
+	// Save last header
+	header->save();
+	return STORAGE_OK;
 }
 
-StorageStatus StorageData::deleteData() // TODO: удалять записи из header
-{
-	uint32_t address = 0;
 
-	if (StorageSector::isSectorAddress(address)) {
+StorageStatus StorageData::deleteData()
+{
+	uint32_t address = this->m_startAddress;
+
+	if (StorageMacroblock::isMacroblockAddress(address)) {
 		return STORAGE_ERROR;
 	}
 
-	StorageStatus status = this->findStartAddress(&address);
-	if (status == STORAGE_BUSY) {
-		return STORAGE_BUSY;
+	StorageStatus status = StorageData::findStartAddress(&address);
+	if (status == STORAGE_BUSY || status == STORAGE_OOM) {
+		return status;
 	}
 	if (status == STORAGE_OK) {
 		m_startAddress = address;
 	}
 
 	uint32_t curAddress = m_startAddress;
-	std::unique_ptr<Page> page;
+	uint32_t macroblockAddress = Page::PAGE_SIZE + 1;
+	std::unique_ptr<Page> page = std::make_unique<Page>(curAddress);
+	std::unique_ptr<Header> header;
+
+	// Load first page
+	status = page->load();
+	if (status != STORAGE_OK) {
+		return status;
+	}
 
 	do {
-		page = std::make_unique<Page>(curAddress);
-		curAddress = page->page.header.next_addr;
-
-		status = page->load();
+		// Check header (and save)
+		uint32_t curMacroblockAddress = Header::getMacroblockStartAddress(curAddress);
+		if (header && macroblockAddress != curMacroblockAddress) {
+			status = header->save();
+		}
 		if (status != STORAGE_OK) {
+			continue;
+		}
+		if (macroblockAddress != curMacroblockAddress) {
+			header = std::make_unique<Header>(curMacroblockAddress);
+			status = StorageMacroblock::loadHeader(header.get());
+			macroblockAddress = curMacroblockAddress;
+		}
+		if (status == STORAGE_BUSY || status == STORAGE_OOM) {
 			return status;
 		}
-
-		status = page->deletePage();
 		if (status != STORAGE_OK) {
-			return status;
+			continue;
 		}
+
+		// Delete page from header
+		uint32_t pageIndex = StorageMacroblock::getPageIndexByAddress(page->getAddress());
+		header->data->pages[pageIndex].id     = 0;
+		header->data->pages[pageIndex].status = Header::PAGE_EMPTY;
+		memset(header->data->pages[pageIndex].prefix, 0, Page::PREFIX_SIZE);
+
+		// Load next page
+		status = page->loadNext();
+		if (status != STORAGE_OK) {
+			break;
+		}
+		curAddress = page->getAddress();
 	} while (page->validateNextAddress());
-
-	return STORAGE_OK;
+	
+	// Save last header
+	return header->save();
 }
 
 
@@ -188,35 +280,80 @@ StorageStatus StorageData::findStartAddress(uint32_t* address)
 		return status;
 	}
 
-	uint32_t tmpAddress = 0;
-	status = (std::make_unique<StorageSearchEqual>(/*startSearchAddress=*/0))->searchPageAddress(
-		page->page.header.prefix,
-		page->page.header.id,
-		&tmpAddress
-	);
+	while (!page->isStart()) {
+		status = page->loadPrev();
+		if (status != STORAGE_OK) {
+			break;
+		}
+	}
+
 	if (status != STORAGE_OK) {
 		return status;
 	}
 
-	page = std::make_unique<Page>(tmpAddress);
 	status = page->load(/*startPage=*/true);
 	if (status != STORAGE_OK) {
 		return status;
 	}
 
-	*address = tmpAddress;
+	if (!page->isStart()) {
+		return STORAGE_NOT_FOUND;
+	}
+
+	*address = page->getAddress();
+
+	return STORAGE_OK;
+}
+
+StorageStatus StorageData::findEndAddress(uint32_t* address)
+{
+	std::unique_ptr<Page> page = std::make_unique<Page>(*address);
+	StorageStatus status = page->load();
+	if (status != STORAGE_OK) {
+		return status;
+	}
+
+	while (!page->isEnd()) {
+		status = page->loadNext();
+		if (status != STORAGE_OK) {
+			break;
+		}
+	}
+
+	if (status != STORAGE_OK) {
+		return status;
+	}
+
+	status = page->load(/*startPage=*/true);
+	if (status != STORAGE_OK) {
+		return status;
+	}
+
+	*address = page->getAddress();
 
 	return STORAGE_OK;
 }
 
 StorageStatus StorageData::isEmptyAddress(uint32_t address)
 {
-	StorageStatus status = this->findStartAddress(&address);
+	Header header(address);
+	StorageStatus status = StorageMacroblock::loadHeader(&header);
 	if (status == STORAGE_BUSY || status == STORAGE_OOM) {
 		return status;
+	}
+	if (status == STORAGE_OK && header.isAddressEmpty(address)) {
+		return STORAGE_OK;
+	}
+	Page page(address);
+	status = page.load();
+	if (status == STORAGE_BUSY) {
+		return STORAGE_BUSY;
+	}
+	if (status == STORAGE_OOM) {
+		return STORAGE_DATA_EXISTS;
 	}
 	if (status != STORAGE_OK) {
 		return STORAGE_OK;
 	}
-	return STORAGE_ERROR;
+	return STORAGE_DATA_EXISTS;
 }

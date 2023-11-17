@@ -3,6 +3,7 @@
 #include "StorageAT.h"
 
 #include <memory>
+#include <utility>
 #include <string.h>
 #include <stdint.h>
 #include <stddef.h>
@@ -10,28 +11,25 @@
 #include "StorageData.h"
 #include "StorageType.h"
 #include "StorageSearch.h"
-#include "StorageSector.h"
+#include "StorageMacroblock.h"
 
 
 uint32_t StorageAT::m_pagesCount = 0;
-StorageDriverCallback StorageAT::m_readDriver  = NULL;
-StorageDriverCallback StorageAT::m_writeDriver = NULL;
+IStorageDriver* StorageAT::m_driver = nullptr;
 
 
 StorageAT::StorageAT(
 	uint32_t pagesCount,
-	StorageDriverCallback read_driver,
-	StorageDriverCallback write_driver
+	IStorageDriver* driver
 ) {
-	StorageAT::m_pagesCount   = pagesCount;
-	StorageAT::m_readDriver  = read_driver;
-	StorageAT::m_writeDriver = write_driver;
+	StorageAT::m_pagesCount = pagesCount;
+	StorageAT::m_driver = driver;
 }
 
 StorageStatus StorageAT::find(
 	StorageFindMode mode,
 	uint32_t*       address,
-	uint8_t         prefix[Page::STORAGE_PAGE_PREFIX_SIZE],
+	const char*     prefix,
 	uint32_t        id
 ) {
 	if (!address) {
@@ -64,32 +62,36 @@ StorageStatus StorageAT::find(
 		return STORAGE_ERROR;
 	}
 
-	return search->searchPageAddress(prefix, id, address);
+	uint8_t tmpPrefix[Page::PREFIX_SIZE] = {};
+	memcpy(tmpPrefix, prefix, std::min(static_cast<size_t>(Page::PREFIX_SIZE), strlen(prefix)));
+
+	return search->searchPageAddress(tmpPrefix, id, address);
 }
 
 StorageStatus StorageAT::load(uint32_t address, uint8_t* data, uint32_t len)
 {
-	if (address % Page::STORAGE_PAGE_SIZE > 0) {
+	if (address % Page::PAGE_SIZE > 0) {
 		return STORAGE_ERROR;
 	}
 	if (!data) {
 		return STORAGE_ERROR;
 	}
-	if (address + len > getBytesSize()) {
+	if (address + len >= StorageAT::getStorageSize()) {
 		return STORAGE_OOM;
 	}
+
 	StorageData storageData(address);
 	return storageData.load(data, len);
 }
 
 StorageStatus StorageAT::save(
 	uint32_t address,
-	uint8_t  prefix[Page::STORAGE_PAGE_PREFIX_SIZE],
+	const char* prefix,
 	uint32_t id,
 	uint8_t* data,
 	uint32_t len
 ) {
-	if (address % Page::STORAGE_PAGE_SIZE > 0) {
+	if (address % Page::PAGE_SIZE > 0) {
 		return STORAGE_ERROR;
 	}
 	if (!data) {
@@ -98,17 +100,50 @@ StorageStatus StorageAT::save(
 	if (!prefix) {
 		return STORAGE_ERROR;
 	}
-	if (address + len > getBytesSize()) {
+	if (address + len >= StorageAT::getStorageSize()) {
 		return STORAGE_OOM;
 	}
+
+	uint8_t tmpPrefix[Page::PREFIX_SIZE] = {};
+	memcpy(tmpPrefix, prefix, std::min(static_cast<size_t>(Page::PREFIX_SIZE), strlen(prefix)));
+
 	StorageData storageData(address);
-	return storageData.save(prefix, id, data, len);
+	return storageData.save(tmpPrefix, id, data, len);
+}
+
+
+
+StorageStatus StorageAT::rewrite(
+	uint32_t address,
+	const char* prefix,
+	uint32_t id,
+	uint8_t* data,
+	uint32_t len
+) {
+	if (address % Page::PAGE_SIZE > 0) {
+		return STORAGE_ERROR;
+	}
+	if (!data) {
+		return STORAGE_ERROR;
+	}
+	if (!prefix) {
+		return STORAGE_ERROR;
+	}
+	if (address + len >= StorageAT::getStorageSize()) {
+		return STORAGE_OOM;
+	}
+
+	uint8_t tmpPrefix[Page::PREFIX_SIZE] = {};
+	memcpy(tmpPrefix, prefix, std::min(static_cast<size_t>(Page::PREFIX_SIZE), strlen(prefix)));
+
+	StorageData storageData(address);
+	return storageData.rewrite(tmpPrefix, id, data, len);
 }
 
 StorageStatus StorageAT::format()
 {
-	for (unsigned i = 0; i < StorageSector::getSectorsCount(); i++) {
-		StorageStatus status = StorageSector::formatSector(i);
+	for (unsigned i = 0; i < StorageMacroblock::getMacroblocksCount(); i++) {
+		StorageStatus status = StorageMacroblock::formatMacroblock(i);
 		if (status == STORAGE_BUSY) {
 			return STORAGE_BUSY;
 		}
@@ -118,29 +153,39 @@ StorageStatus StorageAT::format()
 
 StorageStatus StorageAT::deleteData(uint32_t address)
 {
-	if (address > getBytesSize()) {
+	if (address > StorageAT::getStorageSize()) {
 		return STORAGE_OOM;
 	}
 	StorageData storageData(address);
 	return storageData.deleteData();
 }
 
-uint32_t StorageAT::getPagesCount()
+uint32_t StorageAT::getStoragePagesCount()
 {
 	return m_pagesCount;
 }
 
-uint32_t StorageAT::getBytesSize()
+uint32_t StorageAT::getPayloadPagesCount()
 {
-	return StorageAT::getPagesCount() * Page::STORAGE_PAGE_SIZE;
+	uint32_t pagesCount = (getStoragePagesCount() / StorageMacroblock::PAGES_COUNT) * Header::PAGES_COUNT;
+	uint32_t lastPagesCount = getStoragePagesCount() % StorageMacroblock::PAGES_COUNT;
+	if (lastPagesCount > StorageMacroblock::RESERVED_PAGES_COUNT) {
+		pagesCount += (lastPagesCount - StorageMacroblock::RESERVED_PAGES_COUNT);
+	}
+	return pagesCount;
 }
 
-StorageDriverCallback StorageAT::readCallback()
+uint32_t StorageAT::getStorageSize()
 {
-	return StorageAT::m_readDriver;
+	return StorageAT::getStoragePagesCount() * Page::PAGE_SIZE;
 }
 
-StorageDriverCallback StorageAT::writeCallback()
+uint32_t StorageAT::getPayloadSize()
 {
-	return StorageAT::m_writeDriver;
+	return StorageAT::getPayloadPagesCount() * Page::PAYLOAD_SIZE;
+}
+
+IStorageDriver* StorageAT::driverCallback()
+{
+	return StorageAT::m_driver;
 }
