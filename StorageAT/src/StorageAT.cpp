@@ -111,6 +111,35 @@ StorageStatus StorageAT::save(
 	return storageData.save(tmpPrefix, id, data, len);
 }
 
+
+
+StorageStatus StorageAT::rewrite(
+	uint32_t address,
+	const char* prefix,
+	uint32_t id,
+	uint8_t* data,
+	uint32_t len
+) {
+	if (address % Page::PAGE_SIZE > 0) {
+		return STORAGE_ERROR;
+	}
+	if (!data) {
+		return STORAGE_ERROR;
+	}
+	if (!prefix) {
+		return STORAGE_ERROR;
+	}
+	if (address + len >= StorageAT::getStorageSize()) {
+		return STORAGE_OOM;
+	}
+
+	uint8_t tmpPrefix[Page::PREFIX_SIZE] = {};
+	memcpy(tmpPrefix, prefix, std::min(static_cast<size_t>(Page::PREFIX_SIZE), strlen(prefix)));
+
+	StorageData storageData(address);
+	return storageData.rewrite(tmpPrefix, id, data, len);
+}
+
 StorageStatus StorageAT::format()
 {
 	for (unsigned i = 0; i < StorageSector::getSectorsCount(); i++) {

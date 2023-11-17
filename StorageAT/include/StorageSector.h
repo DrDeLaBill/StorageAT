@@ -64,5 +64,5 @@ public:
 
 	static StorageStatus formatSector(uint32_t sectorIndex);
 
-	static StorageStatus loadHeader(Header *header); // TODO: do operator= for Page class
+	static StorageStatus loadHeader(Header *header);
 };

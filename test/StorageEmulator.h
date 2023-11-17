@@ -20,6 +20,7 @@ private:
     uint32_t pagesCount;
     uint32_t size;
     std::unique_ptr<uint8_t[]> memory;
+    std::unique_ptr<bool[]> blocked;
 
     bool isBusy;
 
@@ -41,6 +42,7 @@ public:
     uint32_t getPagesCount();
 
     void setBusy(bool busy);
+    void setBlocked(uint32_t idx, bool blocked);
 
     void clear();
 

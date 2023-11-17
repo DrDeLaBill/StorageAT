@@ -21,11 +21,8 @@ StorageStatus StorageSearchBase::searchPageAddress(
 		Header header(StorageSector::getSectorAddress(sectorIndex));
 
 		StorageStatus status = StorageSector::loadHeader(&header);
-		if (status == STORAGE_BUSY) {
-			return STORAGE_BUSY;
-		}
-		if (status != STORAGE_OK) {
-			continue;
+		if (status == STORAGE_BUSY || status == STORAGE_OOM) {
+			return status;
 		}
 
 		status = this->searchPageAddressInSector(&header, prefix, id);
@@ -143,19 +140,6 @@ StorageStatus StorageSearchEmpty::searchPageAddressInSector(
 			this->foundInSector = true;
 			this->prevAddress   = address;
 			break;
-		}
-
-		Page page(address);
-
-		StorageStatus status = page.load();
-		if (status == STORAGE_BUSY) {
-			return STORAGE_BUSY;
-		}
-		if (status != STORAGE_OK) {
-			this->foundOnce     = true;
-			this->foundInSector = true;
-			this->prevAddress   = page.getAddress();
-			return STORAGE_OK;
 		}
 	}
 

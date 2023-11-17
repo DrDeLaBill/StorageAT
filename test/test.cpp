@@ -264,7 +264,7 @@ TEST(StorageDriver, RequestExists)
     EXPECT_CALL(mockDriver, write)
         .Times(::testing::AtLeast(1));
 
-    EXPECT_EQ(sat.find(FIND_MODE_EMPTY, &address), STORAGE_NOT_FOUND);
+    EXPECT_EQ(sat.find(FIND_MODE_EMPTY, &address), STORAGE_OK);
 }
 
 TEST_F(StorageFixture, BadFindRequest)
@@ -294,18 +294,18 @@ TEST_F(StorageFixture, BadSaveRequest)
     char emptyStr[] = "";
 
     EXPECT_EQ(sat->save(address, emptyStr, 0, nullptr, 0), STORAGE_ERROR);
-    EXPECT_EQ(sat->save(address, emptyStr, 0, nullptr, 1000), STORAGE_ERROR);
-    EXPECT_EQ(sat->save(address, emptyStr, 0, nullptr, 1000000), STORAGE_ERROR);
+    EXPECT_EQ(sat->save(address, emptyStr, 0, nullptr, Page::PAGE_SIZE * 4), STORAGE_ERROR);
+    EXPECT_EQ(sat->save(address, emptyStr, 0, nullptr, Page::PAGE_SIZE * 4000), STORAGE_ERROR);
     EXPECT_EQ(sat->save(address, nullptr, 0, nullptr, 0), STORAGE_ERROR);
-    EXPECT_EQ(sat->save(address, nullptr, 0, nullptr, 1000), STORAGE_ERROR);
-    EXPECT_EQ(sat->save(address, nullptr, 0, nullptr, 1000000), STORAGE_ERROR);
+    EXPECT_EQ(sat->save(address, nullptr, 0, nullptr, Page::PAGE_SIZE * 4), STORAGE_ERROR);
+    EXPECT_EQ(sat->save(address, nullptr, 0, nullptr, Page::PAGE_SIZE * 4000), STORAGE_ERROR);
 }
 
 TEST_F(StorageFixture, BadLoadRequest)
 {
     EXPECT_EQ(sat->load(address, nullptr, 0), STORAGE_ERROR);
-    EXPECT_EQ(sat->load(address, nullptr, 1000), STORAGE_ERROR);
-    EXPECT_EQ(sat->load(address, nullptr, 1000000), STORAGE_ERROR);
+    EXPECT_EQ(sat->load(address, nullptr, Page::PAGE_SIZE * 4), STORAGE_ERROR);
+    EXPECT_EQ(sat->load(address, nullptr, Page::PAGE_SIZE * 4000), STORAGE_ERROR);
 }
 
 TEST_F(StorageFixture, UseWrongPrefix)
@@ -651,6 +651,22 @@ TEST_F(StorageFixture, RewritePageWithSameData)
     EXPECT_FALSE(memcmp(wdata2, rdata2, sizeof(wdata2)));
 }
 
+TEST_F(StorageFixture, RewriteSaveDataByAnotherData)
+{
+    uint8_t wdata1[Page::PAYLOAD_SIZE] = { 1, 2, 3, 4, 5 };
+    uint8_t wdata2[Page::PAYLOAD_SIZE] = { 6, 7, 8, 9, 10 };
+    uint8_t rdata1[Page::PAYLOAD_SIZE] = { 0 };
+    uint8_t rdata2[Page::PAYLOAD_SIZE] = { 0 };
+
+    EXPECT_EQ(sat->find(FIND_MODE_EMPTY, &address), STORAGE_OK);
+    EXPECT_EQ(sat->save(address, shortPrefix, 1, wdata1, sizeof(wdata1)), STORAGE_OK);
+    EXPECT_EQ(sat->load(address, rdata1, sizeof(rdata1)), STORAGE_OK);
+    EXPECT_FALSE(memcmp(wdata1, rdata1, sizeof(wdata1)));
+    EXPECT_EQ(sat->rewrite(address, shortPrefix, 2, wdata2, sizeof(wdata2)), STORAGE_OK);
+    EXPECT_EQ(sat->load(address, rdata2, sizeof(rdata2)), STORAGE_OK);
+    EXPECT_FALSE(memcmp(wdata2, rdata2, sizeof(wdata2)));
+}
+
 TEST_F(StorageFixture, WriteAllStorageBytes)
 {
     uint32_t storageSize = StorageAT::getStorageSize();
@@ -679,9 +695,6 @@ TEST_F(StorageFixture, FindAllData)
         EXPECT_FALSE(memcmp(wdata, rdata, sizeof(wdata)));
 
         pagesCount++;
-        if (pagesCount == 528) {
-            continue;
-        }
     }
 
     EXPECT_EQ(pagesCount, StorageAT::getPayloadPagesCount());
@@ -704,9 +717,20 @@ TEST_F(StorageFixture, WriteAllPayloadBytes)
     EXPECT_EQ(sat->save(address, shortPrefix, 0, (new uint8_t[payloadSize]), payloadSize), STORAGE_OK);
 }
 
+TEST_F(StorageFixture, DeleteData)
+{
+    uint8_t wdata[Page::PAYLOAD_SIZE] = { 1, 2, 3, 4, 5 };
+
+    EXPECT_EQ(sat->find(FIND_MODE_EMPTY, &address), STORAGE_OK);
+    EXPECT_EQ(sat->save(address, shortPrefix, 0, wdata, sizeof(wdata)), STORAGE_OK);
+    EXPECT_EQ(sat->find(FIND_MODE_EQUAL, &address, shortPrefix, 0), STORAGE_OK);
+    EXPECT_EQ(sat->deleteData(address), STORAGE_OK);
+    EXPECT_EQ(sat->find(FIND_MODE_EQUAL, &address, shortPrefix, 0), STORAGE_NOT_FOUND);
+}
+
 TEST_F(StorageFixture, ReadUnacceptableAddress)
 {
-    address = StorageAT::getStorageSize() + Page::PAGE_SIZE;
+    address = StorageAT::getStorageSize();
 
     EXPECT_EQ(sat->load(address, (new uint8_t[Page::PAGE_SIZE]), Page::PAGE_SIZE), STORAGE_OOM);
 }
@@ -718,11 +742,6 @@ TEST_F(StorageFixture, WriteUnacceptableAddress)
     EXPECT_EQ(sat->save(address, shortPrefix, 1, (new uint8_t[Page::PAGE_SIZE]), Page::PAGE_SIZE), STORAGE_OOM);
 }
 
-TEST_F(StorageFixture, WriteInLastSector)
-{
-    // TODO: проверка записи в последний сектор, если он не выровненный по концу памяти
-}
-
 TEST_F(StorageFixture, LoadEmptyPage)
 {
     uint8_t data[Page::PAYLOAD_SIZE] = {};
@@ -731,14 +750,13 @@ TEST_F(StorageFixture, LoadEmptyPage)
     EXPECT_EQ(sat->load(0, data, sizeof(data)), STORAGE_ERROR);
 }
 
-TEST_F(StorageFixture, SavePageInHeader)
+TEST_F(StorageFixture, SaveSimplePageInSectorHeader)
 {
     uint8_t data[Page::PAYLOAD_SIZE] = {};
 
     EXPECT_EQ(sat->save(0, shortPrefix, 1, data, sizeof(data)), STORAGE_ERROR);
     EXPECT_EQ(sat->load(0, data, sizeof(data)), STORAGE_ERROR);
 }
-
 
 TEST_F(StorageFixture, SavePageWithFindEmptyAddress)
 {
@@ -765,7 +783,7 @@ TEST_F(StorageFixture, SavePageWithFindEmptyAddressWithOverwrite)
 
 TEST_F(StorageFixture, SaveMultiPageInHeader)
 {
-    uint8_t data[1000] = {};
+    uint8_t data[Page::PAGE_SIZE * 4] = {};
 
     EXPECT_EQ(sat->save(0, shortPrefix, 1, data, sizeof(data)), STORAGE_ERROR);
     EXPECT_EQ(sat->load(0, data, sizeof(data)), STORAGE_ERROR);
@@ -773,8 +791,8 @@ TEST_F(StorageFixture, SaveMultiPageInHeader)
 
 TEST_F(StorageFixture, SaveMultiPageWithFindEmptyAddress)
 {
-    uint8_t wdata[1000] = { 1, 2, 3, 4, 5 };
-    uint8_t rdata[1000] = {};
+    uint8_t wdata[Page::PAGE_SIZE * 4] = { 1, 2, 3, 4, 5 };
+    uint8_t rdata[Page::PAGE_SIZE * 4] = {};
 
     EXPECT_EQ(sat->find(FIND_MODE_EMPTY, &address), STORAGE_OK);
     EXPECT_EQ(address, StorageSector::RESERVED_PAGES_COUNT * Page::PAGE_SIZE);
@@ -785,7 +803,7 @@ TEST_F(StorageFixture, SaveMultiPageWithFindEmptyAddress)
 
 TEST_F(StorageFixture, SaveMultiPageWithFindEmptyAddressWithOverwrite)
 {
-    uint8_t wdata[1000] = { 1, 2, 3, 4, 5 };
+    uint8_t wdata[Page::PAGE_SIZE * 4] = { 1, 2, 3, 4, 5 };
 
     EXPECT_EQ(sat->find(FIND_MODE_EMPTY, &address), STORAGE_OK);
     EXPECT_EQ(sat->save(address, shortPrefix, 1, wdata, sizeof(wdata)), STORAGE_OK);
@@ -795,9 +813,9 @@ TEST_F(StorageFixture, SaveMultiPageWithFindEmptyAddressWithOverwrite)
 
 TEST_F(StorageFixture, SaveDataInBusyPages)
 {
-    uint8_t wdata1[1000] = { 1, 2, 3, 4, 5 };
+    uint8_t wdata1[Page::PAGE_SIZE * 4] = { 1, 2, 3, 4, 5 };
     uint8_t wdata2[Page::PAYLOAD_SIZE] = { 6, 7, 8, 9, 10 };
-    uint8_t rdata1[1000] = {};
+    uint8_t rdata1[Page::PAGE_SIZE * 4] = {};
 
     EXPECT_EQ(sat->find(FIND_MODE_EMPTY, &address), STORAGE_OK);
     EXPECT_EQ(sat->save(address, shortPrefix, 1, wdata1, sizeof(wdata1)), STORAGE_OK);
@@ -823,9 +841,96 @@ TEST_F(StorageFixture, SaveNotAlignedAddress)
     EXPECT_EQ(sat->save(address + 1, shortPrefix, 1, wdata, sizeof(wdata)), STORAGE_ERROR);
 }
 
-TEST_F(StorageFixture, DeleteData)
+TEST_F(StorageFixture, SaveDataOnBlockedPage)
 {
-    // TODO: при попытке сохранения данных должна возникнуть ошибка, и StorageATб должна попытаться удалить уже записанные данные
+    address = StorageSector::RESERVED_PAGES_COUNT * Page::PAGE_SIZE;
+    uint8_t wdata[Page::PAYLOAD_SIZE] = { 1, 2, 3, 4, 5 };
+    Header header(address);
+    uint32_t tmpAddress = 0;
+
+    storage.setBlocked(address, true);
+
+    EXPECT_EQ(sat->save(address, shortPrefix, 1, wdata, sizeof(wdata)), STORAGE_OK);
+    EXPECT_EQ(StorageSector::loadHeader(&header), STORAGE_OK);
+    EXPECT_TRUE(header.isSetHeaderStatus(StorageSector::getPageIndexByAddress(address), Header::PAGE_BLOCKED));
+    EXPECT_EQ(sat->find(FIND_MODE_EQUAL, &tmpAddress, shortPrefix, 1), STORAGE_OK);
+    EXPECT_NE(address, tmpAddress);
+    EXPECT_EQ(header.load(), STORAGE_OK);
+    EXPECT_TRUE(header.isSetHeaderStatus(StorageSector::getPageIndexByAddress(address), Header::PAGE_BLOCKED));
+}
+
+TEST_F(StorageFixture, SaveDataOnBlockedSector)
+{
+    address = StorageSector::RESERVED_PAGES_COUNT * Page::PAGE_SIZE;
+    uint8_t wdata[Page::PAYLOAD_SIZE] = { 1, 2, 3, 4, 5 };
+    Header header(address);
+    uint32_t tmpAddress = 0;
+
+    for (unsigned i = 0; i < StorageSector::PAGES_COUNT * Page::PAGE_SIZE; i++) {
+        storage.setBlocked(address + i, true);
+    }
+
+    EXPECT_EQ(sat->save(address, shortPrefix, 1, wdata, sizeof(wdata)), STORAGE_OK);
+    EXPECT_EQ(StorageSector::loadHeader(&header), STORAGE_OK);
+    for (unsigned i = 0; i < Header::PAGES_COUNT; i++) {
+        EXPECT_TRUE(header.isSetHeaderStatus(i, Header::PAGE_BLOCKED));
+    }
+    EXPECT_EQ(sat->find(FIND_MODE_EQUAL, &tmpAddress, shortPrefix, 1), STORAGE_OK);
+    EXPECT_NE(address, tmpAddress);
+    EXPECT_EQ(header.load(), STORAGE_OK);
+    EXPECT_TRUE(header.isSetHeaderStatus(StorageSector::getPageIndexByAddress(address), Header::PAGE_BLOCKED));
+}
+
+TEST_F(StorageFixture, BlockAllMemory)
+{
+    uint8_t wdata[Page::PAYLOAD_SIZE] = { 1, 2, 3, 4, 5 };
+    address = StorageSector::RESERVED_PAGES_COUNT * Page::PAGE_SIZE;
+    
+    for (unsigned i = 0; i < storage.getSize(); i++) {
+        storage.setBlocked(i, true);
+    }
+
+    EXPECT_EQ(sat->save(address, shortPrefix, 1, wdata, sizeof(wdata)), STORAGE_OOM);
+    EXPECT_EQ(sat->find(FIND_MODE_EQUAL, &address, shortPrefix, 1), STORAGE_NOT_FOUND);
+}
+
+TEST_F(StorageFixture, SetHeaderBlocked)
+{
+    address = 0;
+    Header header(address);
+
+    storage.setBlocked(address, true);
+
+    EXPECT_EQ(StorageSector::loadHeader(&header), STORAGE_OK);
+    EXPECT_NE(header.getAddress(), address);
+}
+
+TEST_F(StorageFixture, SetAllHeadersBlocked)
+{
+    Header header(0);
+
+    for (unsigned i = 0; i < StorageSector::RESERVED_PAGES_COUNT; i++) {
+        storage.setBlocked(address + Page::PAGE_SIZE * i, true);
+    }
+
+    EXPECT_EQ(StorageSector::loadHeader(&header), STORAGE_ERROR);
+}
+
+TEST_F(StorageFixture, SaveAndFindDataWithBlockedAllHeaders)
+{
+    uint8_t wdata[Page::PAYLOAD_SIZE] = { 1, 2, 3, 4, 5 };
+    uint8_t rdata[Page::PAYLOAD_SIZE] = { 0 };
+
+    for (unsigned i = 0; i < StorageSector::RESERVED_PAGES_COUNT; i++) {
+        storage.setBlocked(address + Page::PAGE_SIZE * i, true);
+    }
+
+    EXPECT_EQ(sat->find(FIND_MODE_EMPTY, &address), STORAGE_OK);
+    EXPECT_EQ(address, StorageSector::RESERVED_PAGES_COUNT * Page::PAGE_SIZE);
+    EXPECT_EQ(sat->save(address, shortPrefix, 1, wdata, sizeof(wdata)), STORAGE_OK);
+    EXPECT_EQ(sat->find(FIND_MODE_EQUAL, &address, shortPrefix, 1), STORAGE_OK);
+    EXPECT_EQ(sat->load(address, rdata, sizeof(rdata)), STORAGE_OK);
+    EXPECT_FALSE(memcmp(wdata, rdata, sizeof(wdata)));
 }
 
 TEST_F(StorageFixture, FindEqual)
@@ -843,19 +948,13 @@ TEST_F(StorageFixture, FindEqual)
     EXPECT_FALSE(memcmp(wdata, rdata, sizeof(wdata)));
 }
 
-TEST_F(StorageFixture, FindMods)
-{
-    // TODO: all find mods
-}
-
-
 TEST_F(StorageFixture, SaveFindLoadPartitionedData)
 {
     uint32_t nextAddress = 0;
     uint8_t wdata1[Page::PAYLOAD_SIZE] = {};
-    uint8_t wdata2[1000] = {};
+    uint8_t wdata2[Page::PAGE_SIZE * 4] = {};
     uint8_t rdata1[Page::PAYLOAD_SIZE] = {};
-    uint8_t rdata2[1000] = {};
+    uint8_t rdata2[Page::PAGE_SIZE * 4] = {};
 
 
     memset(wdata1, 0xF0, sizeof(wdata1));
@@ -873,12 +972,6 @@ TEST_F(StorageFixture, SaveFindLoadPartitionedData)
     EXPECT_EQ(sat->find(FIND_MODE_EQUAL, &address, shortPrefix, 2), STORAGE_OK);
     EXPECT_EQ(sat->load(address, rdata2, sizeof(rdata2)), STORAGE_OK);
     EXPECT_FALSE(memcmp(wdata2, rdata2, sizeof(wdata2)));
-}
-
-
-TEST_F(StorageFixture, BlockedPagesWrite)
-{
-    // TODO: тест с заблокированными страницами в headers, а также недоступными в памяти
 }
 
 int main(int args, char** argv)

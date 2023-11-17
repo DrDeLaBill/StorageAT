@@ -34,7 +34,7 @@ private:
 
 public:
 	/* Max available address for StorageFS */
-	static const uint32_t STORAGE_MAX_ADDRESS = 0xFFFFFFFF;
+	static const uint32_t MAX_ADDRESS = 0xFFFFFFFF;
 
 	/*
 	 * Storage File System constructor
@@ -87,8 +87,22 @@ public:
 		uint8_t*    data,
 		uint32_t    len
 	);
-
-	// TODO: rewrite - find start, check prefix and id, save, din't update headers
+	
+	/*
+	 * Rewrite the data contained in storage
+	 *
+	 * @param address Storage page address to save
+	 * @param data    Pointer to data array for save data
+	 * @param len     Array size
+	 * @return        Returns STORAGE_OK if the data was saved successfully
+	 */
+	StorageStatus rewrite(
+		uint32_t    address,
+		const char* prefix,
+		uint32_t    id,
+		uint8_t*    data,
+		uint32_t    len
+	);
 
 	/*
 	 * Format FLASH memory

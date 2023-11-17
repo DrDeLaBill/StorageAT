@@ -55,9 +55,14 @@ StorageStatus StorageSector::formatSector(uint32_t sectorIndex)
 		return status;
 	}
 
-	memset(reinterpret_cast<void*>(header.data), 0, Page::PAYLOAD_SIZE);
-	status = header.save();
-	return status;
+	for (unsigned i = 0; i < Header::PAGES_COUNT; i++) {
+		memset(reinterpret_cast<void*>(header.data->pages[i].prefix), 0, Page::PREFIX_SIZE);
+		header.data->pages[i].id = 0;
+		if (!header.isSetHeaderStatus(i, Header::PAGE_BLOCKED)) {
+			header.setHeaderStatus(i, Header::PAGE_EMPTY);
+		}
+	}
+	return header.save();
 }
 
 StorageStatus StorageSector::loadHeader(Header *header)
@@ -67,21 +72,20 @@ StorageStatus StorageSector::loadHeader(Header *header)
 	}
 
 	StorageStatus status = header->load();
-	if (status == STORAGE_BUSY) {
-		return STORAGE_BUSY;
+	if (status == STORAGE_BUSY || status == STORAGE_OOM) {
+		return status;
 	}
 	if (status == STORAGE_OK) {
 		return STORAGE_OK;
 	}
 
 	status = header->create();
-	// TODO: if data has broken -> remove from headers
-	if (status == STORAGE_BUSY) {
-		return STORAGE_BUSY;
+	if (status == STORAGE_BUSY || status == STORAGE_OOM) {
+		return status;
 	}
 	if (status == STORAGE_OK) {
 		return STORAGE_OK;
 	}
 
-	return STORAGE_ERROR;
+	return status;
 }
