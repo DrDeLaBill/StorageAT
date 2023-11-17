@@ -5,6 +5,7 @@
 #include <memory>
 #include <iostream>
 #include <string>
+#include <cstring>
 
 #include "StorageAT.h"
 
