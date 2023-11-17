@@ -5,7 +5,7 @@
 #include <stdbool.h>
 
 #include "StoragePage.h"
-#include "StorageSector.h"
+#include "StorageMacroblock.h"
 
 
 StorageStatus StorageSearchBase::searchPageAddress(
@@ -13,22 +13,19 @@ StorageStatus StorageSearchBase::searchPageAddress(
 	const uint32_t id,
 	uint32_t*      resAddress
 ) {
-	uint32_t sectorIndex = StorageSector::getSectorIndex(this->startSearchAddress);
+	uint32_t macroblockIndex = StorageMacroblock::getMacroblockIndex(this->startSearchAddress);
 	this->prevId = getStartCmpId();
 	this->foundOnce = false;
 
-	for (; sectorIndex < StorageSector::getSectorsCount(); sectorIndex++) {
-		Header header(StorageSector::getSectorAddress(sectorIndex));
+	for (; macroblockIndex < StorageMacroblock::getMacroblocksCount(); macroblockIndex++) {
+		Header header(StorageMacroblock::getMacroblockAddress(macroblockIndex));
 
-		StorageStatus status = StorageSector::loadHeader(&header);
-		if (status == STORAGE_BUSY) {
-			return STORAGE_BUSY;
-		}
-		if (status != STORAGE_OK) {
-			continue;
+		StorageStatus status = StorageMacroblock::loadHeader(&header);
+		if (status == STORAGE_BUSY || status == STORAGE_OOM) {
+			return status;
 		}
 
-		status = this->searchPageAddressInSector(&header, prefix, id);
+		status = this->searchPageAddressInMacroblock(&header, prefix, id);
 		if (status == STORAGE_BUSY) {
 			return STORAGE_BUSY;
 		}
@@ -49,13 +46,13 @@ StorageStatus StorageSearchBase::searchPageAddress(
 	return STORAGE_NOT_FOUND;
 }
 
-StorageStatus StorageSearchBase::searchPageAddressInSector(
+StorageStatus StorageSearchBase::searchPageAddressInMacroblock(
 	Header*        header,
 	const uint8_t  prefix[Page::PREFIX_SIZE],
 	const uint32_t id
 ) {
-	uint32_t pageIndex = StorageSector::getPageIndexByAddress(this->startSearchAddress);
-	this->foundInSector = false;
+	uint32_t pageIndex = StorageMacroblock::getPageIndexByAddress(this->startSearchAddress);
+	this->foundInMacroblock = false;
 
 	for (; pageIndex < Header::PAGES_COUNT; pageIndex++) {
 		if (!header->isSetHeaderStatus(pageIndex, Header::PAGE_OK)) {
@@ -74,23 +71,23 @@ StorageStatus StorageSearchBase::searchPageAddressInSector(
 			continue;
 		}
 
-		Page page(StorageSector::getPageAddressByIndex(header->getSectorIndex(), pageIndex));
+		Page page(StorageMacroblock::getPageAddressByIndex(header->getMacroblockIndex(), pageIndex));
 		StorageStatus status = page.load(/*startPage=*/true);
 		if (status != STORAGE_OK) {
 			continue;
 		}
 
 		this->foundOnce     = true;
-		this->foundInSector = true;
+		this->foundInMacroblock = true;
 		this->prevId        = header->data->pages[pageIndex].id;
-		this->prevAddress   = StorageSector::getPageAddressByIndex(header->getSectorIndex(), pageIndex);
+		this->prevAddress   = StorageMacroblock::getPageAddressByIndex(header->getMacroblockIndex(), pageIndex);
 
 		if (isNeededFirstResult()) {
 			break;
 		}
 	}
 
-	return this->foundInSector ? STORAGE_OK : STORAGE_NOT_FOUND;
+	return this->foundInMacroblock ? STORAGE_OK : STORAGE_NOT_FOUND;
 }
 
 bool StorageSearchEqual::isIdFound(
@@ -124,40 +121,27 @@ bool StorageSearchMax::isIdFound(
 	return prevId < headerId;
 }
 
-StorageStatus StorageSearchEmpty::searchPageAddressInSector(
+StorageStatus StorageSearchEmpty::searchPageAddressInMacroblock(
 	Header*        header,
 	const uint8_t  prefix[Page::PREFIX_SIZE],
 	const uint32_t id
 ) {
-	uint32_t pageIndex = StorageSector::getPageIndexByAddress(this->startSearchAddress);
-	this->foundInSector = false;
+	uint32_t pageIndex = StorageMacroblock::getPageIndexByAddress(this->startSearchAddress);
+	this->foundInMacroblock = false;
 	for (; pageIndex < Header::PAGES_COUNT; pageIndex++) {
 		if (header->isSetHeaderStatus(pageIndex, Header::PAGE_BLOCKED)) {
 			continue;
 		}
 
-		uint32_t address = StorageSector::getPageAddressByIndex(header->getSectorIndex(), pageIndex);
+		uint32_t address = StorageMacroblock::getPageAddressByIndex(header->getMacroblockIndex(), pageIndex);
 
 		if (header->isSetHeaderStatus(pageIndex, Header::PAGE_EMPTY)) {
 			this->foundOnce     = true;
-			this->foundInSector = true;
+			this->foundInMacroblock = true;
 			this->prevAddress   = address;
 			break;
 		}
-
-		Page page(address);
-
-		StorageStatus status = page.load();
-		if (status == STORAGE_BUSY) {
-			return STORAGE_BUSY;
-		}
-		if (status != STORAGE_OK) {
-			this->foundOnce     = true;
-			this->foundInSector = true;
-			this->prevAddress   = page.getAddress();
-			return STORAGE_OK;
-		}
 	}
 
-	return this->foundInSector ? STORAGE_OK : STORAGE_NOT_FOUND;
+	return this->foundInMacroblock ? STORAGE_OK : STORAGE_NOT_FOUND;
 }
