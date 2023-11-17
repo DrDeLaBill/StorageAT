@@ -4,8 +4,8 @@
 
 #include <memory>
 #include <iostream>
-#include <string.h>
-#include <String>
+#include <string>
+#include <cstring>
 
 #include "StorageAT.h"
 
