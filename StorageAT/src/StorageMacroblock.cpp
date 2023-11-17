@@ -1,6 +1,6 @@
 /* Copyright © 2023 Georgy E. All rights reserved. */
 
-#include "StorageSector.h"
+#include "StorageMacroblock.h"
 
 #include <string.h>
 #include <stdint.h>
@@ -14,43 +14,43 @@
 typedef StorageAT AT;
 
 
-uint32_t StorageSector::getSectorAddress(uint32_t sectorIndex)
+uint32_t StorageMacroblock::getMacroblockAddress(uint32_t macroblockIndex)
 {
-	return PAGES_COUNT * sectorIndex * Page::PAGE_SIZE;
+	return PAGES_COUNT * macroblockIndex * Page::PAGE_SIZE;
 }
 
-uint32_t StorageSector::getSectorIndex(uint32_t address)
+uint32_t StorageMacroblock::getMacroblockIndex(uint32_t address)
 {
 	return address / Page::PAGE_SIZE / PAGES_COUNT;
 }
 
-uint32_t StorageSector::getSectorsCount()
+uint32_t StorageMacroblock::getMacroblocksCount()
 {
 	return AT::getStoragePagesCount() / PAGES_COUNT;
 }
 
-uint32_t StorageSector::getPageAddressByIndex(uint32_t sectorIndex, uint32_t pageIndex)
+uint32_t StorageMacroblock::getPageAddressByIndex(uint32_t macroblockIndex, uint32_t pageIndex)
 {
-	return getSectorAddress(sectorIndex) + (RESERVED_PAGES_COUNT + pageIndex) * Page::PAGE_SIZE;
+	return getMacroblockAddress(macroblockIndex) + (RESERVED_PAGES_COUNT + pageIndex) * Page::PAGE_SIZE;
 }
 
-uint32_t StorageSector::getPageIndexByAddress(uint32_t address)
+uint32_t StorageMacroblock::getPageIndexByAddress(uint32_t address)
 {
-	if (StorageSector::isSectorAddress(address)) {
+	if (StorageMacroblock::isMacroblockAddress(address)) {
 		return 0;
 	}
     return ((address / Page::PAGE_SIZE) % (PAGES_COUNT)) - RESERVED_PAGES_COUNT;
 }
 
-bool StorageSector::isSectorAddress(uint32_t address)
+bool StorageMacroblock::isMacroblockAddress(uint32_t address)
 {
 	return ((address / Page::PAGE_SIZE) % (PAGES_COUNT)) < RESERVED_PAGES_COUNT;
 }
 
-StorageStatus StorageSector::formatSector(uint32_t sectorIndex)
+StorageStatus StorageMacroblock::formatMacroblock(uint32_t macroblockIndex)
 {
-	Header header(StorageSector::getSectorAddress(sectorIndex));
-	StorageStatus status = StorageSector::loadHeader(&header);
+	Header header(StorageMacroblock::getMacroblockAddress(macroblockIndex));
+	StorageStatus status = StorageMacroblock::loadHeader(&header);
 	if (status != STORAGE_OK) {
 		return status;
 	}
@@ -65,7 +65,7 @@ StorageStatus StorageSector::formatSector(uint32_t sectorIndex)
 	return header.save();
 }
 
-StorageStatus StorageSector::loadHeader(Header *header)
+StorageStatus StorageMacroblock::loadHeader(Header *header)
 {
 	if (header->getAddress() > AT::getStorageSize()) {
 		return STORAGE_OOM;

@@ -9,7 +9,7 @@
 #include "StorageAT.h"
 #include "StorageData.h"
 #include "StoragePage.h"
-#include "StorageSector.h"
+#include "StorageMacroblock.h"
 
 
 typedef StorageAT AT;
@@ -138,17 +138,17 @@ StorageStatus Page::save()
 
 StorageStatus Header::deletePage(uint32_t targetAddress)
 {
-	if (StorageSector::isSectorAddress(targetAddress)) {
+	if (StorageMacroblock::isMacroblockAddress(targetAddress)) {
 		return STORAGE_ERROR;
 	}
 
 	Header header(targetAddress);
-	StorageStatus status = StorageSector::loadHeader(&header);
+	StorageStatus status = StorageMacroblock::loadHeader(&header);
 	if (status == STORAGE_BUSY || status == STORAGE_OOM) {
 		return status;
 	}
 	if (status == STORAGE_OK) {
-		Header::PageHeader* pageHeader = &(header.data->pages[StorageSector::getPageIndexByAddress(this->address)]);
+		Header::PageHeader* pageHeader = &(header.data->pages[StorageMacroblock::getPageIndexByAddress(this->address)]);
 		memset(pageHeader->prefix, 0, Page::PREFIX_SIZE);
 		pageHeader->status = Header::PAGE_EMPTY;
 		pageHeader->id = 0;
@@ -242,9 +242,9 @@ void Page::setNextAddress(uint32_t nextAddress)
 
 Header::Header(uint32_t address): Page(address)
 {
-	this->address       = Header::getSectorStartAddress(address);
+	this->address       = Header::getMacroblockStartAddress(address);
 	this->data          = reinterpret_cast<HeaderPageStruct*>(page.payload);
-	this->m_sectorIndex = StorageSector::getSectorIndex(address);
+	this->m_macroblockIndex = StorageMacroblock::getMacroblockIndex(address);
 
 	this->page.header.prev_addr = 0;
 	this->page.header.next_addr = 0;
@@ -253,7 +253,7 @@ Header::Header(uint32_t address): Page(address)
 Header& Header::operator=(Header* other)
 {
 	Page::operator=(other);
-	this->m_sectorIndex = other->m_sectorIndex;
+	this->m_macroblockIndex = other->m_macroblockIndex;
  	return *this;
 }
 
@@ -272,14 +272,14 @@ void Header::setPageBlocked(uint32_t pageIndex)
 	this->setHeaderStatus(pageIndex, Header::PAGE_BLOCKED);
 }
 
-uint32_t Header::getSectorIndex()
+uint32_t Header::getMacroblockIndex()
 {
-	return this->m_sectorIndex;
+	return this->m_macroblockIndex;
 }
 
 bool Header::isAddressEmpty(uint32_t targetAddress)
 {
-	return this->isSetHeaderStatus(StorageSector::getPageIndexByAddress(targetAddress), Header::PAGE_EMPTY);
+	return this->isSetHeaderStatus(StorageMacroblock::getPageIndexByAddress(targetAddress), Header::PAGE_EMPTY);
 }
 
 bool Header::isSameMeta(uint32_t pageIndex, const uint8_t* prefix, uint32_t id)
@@ -287,15 +287,15 @@ bool Header::isSameMeta(uint32_t pageIndex, const uint8_t* prefix, uint32_t id)
 	return !memcmp(data->pages[pageIndex].prefix, prefix, Page::PREFIX_SIZE) && data->pages[pageIndex].id == id;
 }
 
-uint32_t Header::getSectorStartAddress(uint32_t address)
+uint32_t Header::getMacroblockStartAddress(uint32_t address)
 {
-	return (address / (StorageSector::PAGES_COUNT * Page::PAGE_SIZE)) * (StorageSector::PAGES_COUNT * Page::PAGE_SIZE);
+	return (address / (StorageMacroblock::PAGES_COUNT * Page::PAGE_SIZE)) * (StorageMacroblock::PAGES_COUNT * Page::PAGE_SIZE);
 }
 
 StorageStatus Header::create()
 {
 	for (uint16_t i = 0; i < PAGES_COUNT; i++) {
-		Page tmpPage(StorageSector::getPageAddressByIndex(this->m_sectorIndex, i));
+		Page tmpPage(StorageMacroblock::getPageAddressByIndex(this->m_macroblockIndex, i));
 
 		StorageStatus status = tmpPage.load();
 		if (status == STORAGE_BUSY) {
@@ -341,10 +341,10 @@ StorageStatus Header::create()
 
 StorageStatus Header::load()
 {
-	uint32_t startAddress = StorageSector::getSectorAddress(this->m_sectorIndex);
+	uint32_t startAddress = StorageMacroblock::getMacroblockAddress(this->m_macroblockIndex);
 
 	StorageStatus status = STORAGE_ERROR;
-	for (uint8_t i = 0; i < StorageSector::RESERVED_PAGES_COUNT; i++) {
+	for (uint8_t i = 0; i < StorageMacroblock::RESERVED_PAGES_COUNT; i++) {
 		this->address = startAddress + static_cast<uint32_t>(i * Page::PAGE_SIZE);
 
 		status = Page::load();
@@ -360,10 +360,10 @@ StorageStatus Header::load()
 
 StorageStatus Header::save()
 {
-	uint32_t startAddress = StorageSector::getSectorAddress(this->m_sectorIndex);
+	uint32_t startAddress = StorageMacroblock::getMacroblockAddress(this->m_macroblockIndex);
 
 	StorageStatus status = STORAGE_ERROR;
-	for (uint8_t i = 0; i < StorageSector::RESERVED_PAGES_COUNT; i++) {
+	for (uint8_t i = 0; i < StorageMacroblock::RESERVED_PAGES_COUNT; i++) {
 		this->address = startAddress + static_cast<uint32_t>(i * Page::PAGE_SIZE);
 
 		status = Page::save();

@@ -1,3 +1,5 @@
+/* Copyright © 2023 Georgy E. All rights reserved. */
+
 #include <iostream>
 #include <string>
 
@@ -9,7 +11,7 @@
 
 
 const int SECTORS_COUNT = 20;
-const int PAGES_COUNT   = StorageSector::PAGES_COUNT * SECTORS_COUNT;
+const int PAGES_COUNT   = StorageMacroblock::PAGES_COUNT * SECTORS_COUNT;
 const int PAGE_LEN      = 256;
 
 
@@ -121,12 +123,12 @@ TEST(Header, Struct)
     EXPECT_EQ(sizeof(struct Header::_PageHeader), 8);
 }
 
-TEST(StorageSector, Struct)
+TEST(StorageMacroblock, Struct)
 {
-    EXPECT_EQ(StorageSector::PAGES_COUNT, (Page::PAYLOAD_SIZE / sizeof(struct Header::_PageHeader)) + StorageSector::RESERVED_PAGES_COUNT);
+    EXPECT_EQ(StorageMacroblock::PAGES_COUNT, (Page::PAYLOAD_SIZE / sizeof(struct Header::_PageHeader)) + StorageMacroblock::RESERVED_PAGES_COUNT);
 }
 
-TEST(StorageSector, CheckSectorAddresses)
+TEST(StorageMacroblock, CheckSectorAddresses)
 {
     struct SectorAddressIndex {
         uint32_t address;
@@ -134,7 +136,7 @@ TEST(StorageSector, CheckSectorAddresses)
         uint32_t sectorIndex;
         uint32_t pageIndex;
         uint32_t pageAddress;
-        bool isSectorAddress;
+        bool isMacroblockAddress;
     };
 
     SectorAddressIndex addrIndex[] = {
@@ -143,108 +145,108 @@ TEST(StorageSector, CheckSectorAddresses)
             /*.sectorAddress   = */0,
             /*.sectorIndex     = */0,
             /*.pageIndex       = */0,
-            /*.pageAddress     = */Page::PAGE_SIZE * StorageSector::RESERVED_PAGES_COUNT,
-            /*.isSectorAddress = */true
+            /*.pageAddress     = */Page::PAGE_SIZE * StorageMacroblock::RESERVED_PAGES_COUNT,
+            /*.isMacroblockAddress = */true
         },
         {
             /*.address         = */1,
             /*.sectorAddress   = */0,
             /*.sectorIndex     = */0,
             /*.pageIndex       = */0,
-            /*.pageAddress     = */Page::PAGE_SIZE * StorageSector::RESERVED_PAGES_COUNT,
-            /*.isSectorAddress = */true
+            /*.pageAddress     = */Page::PAGE_SIZE * StorageMacroblock::RESERVED_PAGES_COUNT,
+            /*.isMacroblockAddress = */true
         },
         {
             /*.address         = */Page::PAGE_SIZE - 1,
             /*.sectorAddress   = */0,
             /*.sectorIndex     = */0,
             /*.pageIndex       = */0,
-            /*.pageAddress     = */Page::PAGE_SIZE * StorageSector::RESERVED_PAGES_COUNT,
-            /*.isSectorAddress = */true
+            /*.pageAddress     = */Page::PAGE_SIZE * StorageMacroblock::RESERVED_PAGES_COUNT,
+            /*.isMacroblockAddress = */true
         },
         {
             /*.address         = */Page::PAGE_SIZE,
             /*.sectorAddress   = */0,
             /*.sectorIndex     = */0,
             /*.pageIndex       = */0,
-            /*.pageAddress     = */Page::PAGE_SIZE * StorageSector::RESERVED_PAGES_COUNT,
-            /*.isSectorAddress = */true
+            /*.pageAddress     = */Page::PAGE_SIZE * StorageMacroblock::RESERVED_PAGES_COUNT,
+            /*.isMacroblockAddress = */true
         },
         {
-            /*.address         = */Page::PAGE_SIZE * StorageSector::RESERVED_PAGES_COUNT,
+            /*.address         = */Page::PAGE_SIZE * StorageMacroblock::RESERVED_PAGES_COUNT,
             /*.sectorAddress   = */0,
             /*.sectorIndex     = */0,
             /*.pageIndex       = */0,
-            /*.pageAddress     = */Page::PAGE_SIZE * StorageSector::RESERVED_PAGES_COUNT,
-            /*.isSectorAddress = */false
+            /*.pageAddress     = */Page::PAGE_SIZE * StorageMacroblock::RESERVED_PAGES_COUNT,
+            /*.isMacroblockAddress = */false
         },
         {
-            /*.address         = */Page::PAGE_SIZE * StorageSector::RESERVED_PAGES_COUNT + 1,
+            /*.address         = */Page::PAGE_SIZE * StorageMacroblock::RESERVED_PAGES_COUNT + 1,
             /*.sectorAddress   = */0,
             /*.sectorIndex     = */0,
             /*.pageIndex       = */0,
-            /*.pageAddress     = */Page::PAGE_SIZE * StorageSector::RESERVED_PAGES_COUNT,
-            /*.isSectorAddress = */false
+            /*.pageAddress     = */Page::PAGE_SIZE * StorageMacroblock::RESERVED_PAGES_COUNT,
+            /*.isMacroblockAddress = */false
         },
         {
-            /*.address         = */StorageSector::getSectorAddress(1) - 1,
+            /*.address         = */StorageMacroblock::getMacroblockAddress(1) - 1,
             /*.sectorAddress   = */0,
             /*.sectorIndex     = */0,
             /*.pageIndex       = */Header::PAGES_COUNT - 1,
-            /*.pageAddress     = */Page::PAGE_SIZE * StorageSector::PAGES_COUNT - Page::PAGE_SIZE,
-            /*.isSectorAddress = */false
+            /*.pageAddress     = */Page::PAGE_SIZE * StorageMacroblock::PAGES_COUNT - Page::PAGE_SIZE,
+            /*.isMacroblockAddress = */false
         },
         {
-            /*.address         = */StorageSector::getSectorAddress(1),
-            /*.sectorAddress   = */StorageSector::getSectorAddress(1),
+            /*.address         = */StorageMacroblock::getMacroblockAddress(1),
+            /*.sectorAddress   = */StorageMacroblock::getMacroblockAddress(1),
             /*.sectorIndex     = */1,
             /*.pageIndex       = */0,
-            /*.pageAddress     = */StorageSector::getSectorAddress(1) + Page::PAGE_SIZE * StorageSector::RESERVED_PAGES_COUNT,
-            /*.isSectorAddress = */true
+            /*.pageAddress     = */StorageMacroblock::getMacroblockAddress(1) + Page::PAGE_SIZE * StorageMacroblock::RESERVED_PAGES_COUNT,
+            /*.isMacroblockAddress = */true
         },
         {
-            /*.address         = */StorageSector::getSectorAddress(1),
-            /*.sectorAddress   = */StorageSector::getSectorAddress(1),
+            /*.address         = */StorageMacroblock::getMacroblockAddress(1),
+            /*.sectorAddress   = */StorageMacroblock::getMacroblockAddress(1),
             /*.sectorIndex     = */1,
             /*.pageIndex       = */0,
-            /*.pageAddress     = */StorageSector::getSectorAddress(1) + Page::PAGE_SIZE * StorageSector::RESERVED_PAGES_COUNT,
-            /*.isSectorAddress = */true
+            /*.pageAddress     = */StorageMacroblock::getMacroblockAddress(1) + Page::PAGE_SIZE * StorageMacroblock::RESERVED_PAGES_COUNT,
+            /*.isMacroblockAddress = */true
         },
         {
-            /*.address         = */StorageSector::getSectorAddress(1) + Page::PAGE_SIZE / 2,
-            /*.sectorAddress   = */StorageSector::getSectorAddress(1),
+            /*.address         = */StorageMacroblock::getMacroblockAddress(1) + Page::PAGE_SIZE / 2,
+            /*.sectorAddress   = */StorageMacroblock::getMacroblockAddress(1),
             /*.sectorIndex     = */1,
             /*.pageIndex       = */0,
-            /*.pageAddress     = */StorageSector::getSectorAddress(1) + Page::PAGE_SIZE * StorageSector::RESERVED_PAGES_COUNT,
-            /*.isSectorAddress = */true
+            /*.pageAddress     = */StorageMacroblock::getMacroblockAddress(1) + Page::PAGE_SIZE * StorageMacroblock::RESERVED_PAGES_COUNT,
+            /*.isMacroblockAddress = */true
         },
         {
-            /*.address         = */StorageSector::getSectorAddress(1) + Page::PAGE_SIZE * StorageSector::RESERVED_PAGES_COUNT - 1,
-            /*.sectorAddress   = */StorageSector::getSectorAddress(1),
+            /*.address         = */StorageMacroblock::getMacroblockAddress(1) + Page::PAGE_SIZE * StorageMacroblock::RESERVED_PAGES_COUNT - 1,
+            /*.sectorAddress   = */StorageMacroblock::getMacroblockAddress(1),
             /*.sectorIndex     = */1,
             /*.pageIndex       = */0,
-            /*.pageAddress     = */StorageSector::getSectorAddress(1) + Page::PAGE_SIZE * StorageSector::RESERVED_PAGES_COUNT,
-            /*.isSectorAddress = */true
+            /*.pageAddress     = */StorageMacroblock::getMacroblockAddress(1) + Page::PAGE_SIZE * StorageMacroblock::RESERVED_PAGES_COUNT,
+            /*.isMacroblockAddress = */true
         },
         {
-            /*.address         = */StorageSector::getSectorAddress(1) + Page::PAGE_SIZE * (StorageSector::RESERVED_PAGES_COUNT + 1),
-            /*.sectorAddress   = */StorageSector::getSectorAddress(1),
+            /*.address         = */StorageMacroblock::getMacroblockAddress(1) + Page::PAGE_SIZE * (StorageMacroblock::RESERVED_PAGES_COUNT + 1),
+            /*.sectorAddress   = */StorageMacroblock::getMacroblockAddress(1),
             /*.sectorIndex     = */1,
             /*.pageIndex       = */1,
-            /*.pageAddress     = */StorageSector::getSectorAddress(1) + Page::PAGE_SIZE * (StorageSector::RESERVED_PAGES_COUNT + 1),
-            /*.isSectorAddress = */false
+            /*.pageAddress     = */StorageMacroblock::getMacroblockAddress(1) + Page::PAGE_SIZE * (StorageMacroblock::RESERVED_PAGES_COUNT + 1),
+            /*.isMacroblockAddress = */false
         },
     };
 
     for (unsigned i = 0; i < sizeof(addrIndex) / sizeof(*addrIndex); i++) {
         // std::cout << "addr=" << addrIndex[i].address << ",sectorIdx=" << addrIndex[i].sectorIndex << ",pageIdx=" << addrIndex[i].pageIndex << std::endl;
-        EXPECT_EQ(StorageSector::getSectorAddress(addrIndex[i].sectorIndex), addrIndex[i].sectorAddress);
-        EXPECT_EQ(StorageSector::getSectorIndex(addrIndex[i].sectorAddress), addrIndex[i].sectorIndex);
-        EXPECT_EQ(StorageSector::getSectorIndex(addrIndex[i].address), addrIndex[i].sectorIndex);
-        EXPECT_EQ(StorageSector::getPageAddressByIndex(addrIndex[i].sectorIndex, addrIndex[i].pageIndex), addrIndex[i].pageAddress);
-        EXPECT_EQ(StorageSector::getPageIndexByAddress(addrIndex[i].address), addrIndex[i].pageIndex);
-        EXPECT_EQ(StorageSector::isSectorAddress(addrIndex[i].address), addrIndex[i].isSectorAddress);
-        EXPECT_EQ(Header::getSectorStartAddress(addrIndex[i].address), addrIndex[i].sectorAddress);
+        EXPECT_EQ(StorageMacroblock::getMacroblockAddress(addrIndex[i].sectorIndex), addrIndex[i].sectorAddress);
+        EXPECT_EQ(StorageMacroblock::getMacroblockIndex(addrIndex[i].sectorAddress), addrIndex[i].sectorIndex);
+        EXPECT_EQ(StorageMacroblock::getMacroblockIndex(addrIndex[i].address), addrIndex[i].sectorIndex);
+        EXPECT_EQ(StorageMacroblock::getPageAddressByIndex(addrIndex[i].sectorIndex, addrIndex[i].pageIndex), addrIndex[i].pageAddress);
+        EXPECT_EQ(StorageMacroblock::getPageIndexByAddress(addrIndex[i].address), addrIndex[i].pageIndex);
+        EXPECT_EQ(StorageMacroblock::isMacroblockAddress(addrIndex[i].address), addrIndex[i].isMacroblockAddress);
+        EXPECT_EQ(Header::getMacroblockStartAddress(addrIndex[i].address), addrIndex[i].sectorAddress);
     }
 }
 
@@ -329,7 +331,7 @@ TEST_F(StorageFixture, StorageBusy)
     EXPECT_EQ(sat->find(FIND_MODE_MIN, &address, "", 0), STORAGE_BUSY);
     EXPECT_EQ(sat->find(FIND_MODE_NEXT, &address, "", 0), STORAGE_BUSY);
 
-    address = StorageSector::RESERVED_PAGES_COUNT * Page::PAGE_SIZE;
+    address = StorageMacroblock::RESERVED_PAGES_COUNT * Page::PAGE_SIZE;
     EXPECT_EQ(sat->load(address, (new uint8_t[PAGE_LEN]), PAGE_LEN), STORAGE_BUSY);
     EXPECT_EQ(sat->save(address, shortPrefix, 1, (new uint8_t[PAGE_LEN]), PAGE_LEN), STORAGE_BUSY);
 }
@@ -570,7 +572,7 @@ TEST_F(StorageFixture, IsSetStatusesInHeader)
     EXPECT_EQ(header.load(), STORAGE_OK);
     for (unsigned i = 0; i < Header::PAGES_COUNT; i++) {
         EXPECT_TRUE(header.isSetHeaderStatus(i, Header::PAGE_EMPTY));
-        EXPECT_TRUE(header.isAddressEmpty(StorageSector::getPageAddressByIndex(0, i)));
+        EXPECT_TRUE(header.isAddressEmpty(StorageMacroblock::getPageAddressByIndex(0, i)));
     }
 }
 
@@ -601,10 +603,10 @@ TEST_F(StorageFixture, SetBlockStatusesInHeader)
 TEST_F(StorageFixture, AutomaticHeadersCreation)
 {
     uint8_t wdata[Page::PAYLOAD_SIZE] = { 1, 2, 3, 4, 5 };
-    uint32_t pageAddress = StorageSector::RESERVED_PAGES_COUNT * Page::PAGE_SIZE;
+    uint32_t pageAddress = StorageMacroblock::RESERVED_PAGES_COUNT * Page::PAGE_SIZE;
     Page page(pageAddress);
 
-    memcpy(reinterpret_cast<void*>(&page.page), wdata, sizeof(page.page));
+    memcpy(reinterpret_cast<void*>(&page.page), wdata, Page::PAYLOAD_SIZE);
     memcpy(page.page.header.prefix, shortPrefix, sizeof(page.page.header.prefix));
     page.page.header.id = 1;
     page.page.header.prev_addr = pageAddress;
@@ -612,17 +614,17 @@ TEST_F(StorageFixture, AutomaticHeadersCreation)
     page.save();
 
     EXPECT_EQ(sat->find(FIND_MODE_EQUAL, &address, shortPrefix, 1), STORAGE_OK);
-    EXPECT_EQ(address, StorageSector::RESERVED_PAGES_COUNT * Page::PAGE_SIZE);
+    EXPECT_EQ(address, StorageMacroblock::RESERVED_PAGES_COUNT * Page::PAGE_SIZE);
 }
 
 TEST_F(StorageFixture, HeaderSameMeta)
 {
     uint8_t wdata[Page::PAYLOAD_SIZE] = { 1, 2, 3, 4, 5 };
-    uint32_t pageAddress = StorageSector::RESERVED_PAGES_COUNT * Page::PAGE_SIZE;
+    uint32_t pageAddress = StorageMacroblock::RESERVED_PAGES_COUNT * Page::PAGE_SIZE;
     Header header(0);
     Page page(pageAddress);
 
-    memcpy(reinterpret_cast<void*>(&page.page), wdata, sizeof(page.page));
+    memcpy(reinterpret_cast<void*>(&page.page), wdata, Page::PAYLOAD_SIZE);
     memcpy(page.page.header.prefix, shortPrefix, sizeof(page.page.header.prefix));
     page.page.header.id = 1;
     page.page.header.prev_addr = pageAddress;
@@ -632,7 +634,7 @@ TEST_F(StorageFixture, HeaderSameMeta)
     EXPECT_EQ(sat->find(FIND_MODE_EQUAL, &address, shortPrefix, 1), STORAGE_OK);
     EXPECT_EQ(header.load(), STORAGE_OK);
     uint8_t prefix[Page::PREFIX_SIZE];
-    EXPECT_TRUE(header.isSameMeta(StorageSector::getPageIndexByAddress(page.getAddress()), reinterpret_cast<const uint8_t*>(shortPrefix), 1));
+    EXPECT_TRUE(header.isSameMeta(StorageMacroblock::getPageIndexByAddress(page.getAddress()), reinterpret_cast<const uint8_t*>(shortPrefix), 1));
 }
 
 TEST_F(StorageFixture, RewritePageWithSameData)
@@ -702,11 +704,11 @@ TEST_F(StorageFixture, FindAllData)
         EXPECT_EQ(sat->find(FIND_MODE_EQUAL, &address, shortPrefix, i + 1), STORAGE_OK);
     }
     EXPECT_EQ(sat->find(FIND_MODE_MIN, &address, shortPrefix), STORAGE_OK);
-    EXPECT_EQ(address, Page::PAGE_SIZE * StorageSector::RESERVED_PAGES_COUNT);
+    EXPECT_EQ(address, Page::PAGE_SIZE * StorageMacroblock::RESERVED_PAGES_COUNT);
     EXPECT_EQ(sat->find(FIND_MODE_MAX, &address, shortPrefix), STORAGE_OK);
     EXPECT_EQ(address, Page::PAGE_SIZE * (StorageAT::getStoragePagesCount() - 1));
     EXPECT_EQ(sat->find(FIND_MODE_NEXT, &address, shortPrefix, 1), STORAGE_OK);
-    EXPECT_EQ(address, Page::PAGE_SIZE * (StorageSector::RESERVED_PAGES_COUNT + 1));
+    EXPECT_EQ(address, Page::PAGE_SIZE * (StorageMacroblock::RESERVED_PAGES_COUNT + 1));
 }
 
 TEST_F(StorageFixture, WriteAllPayloadBytes)
@@ -764,7 +766,7 @@ TEST_F(StorageFixture, SavePageWithFindEmptyAddress)
     uint8_t rdata[Page::PAYLOAD_SIZE] = {};
 
     EXPECT_EQ(sat->find(FIND_MODE_EMPTY, &address), STORAGE_OK);
-    EXPECT_EQ(address, StorageSector::RESERVED_PAGES_COUNT * Page::PAGE_SIZE);
+    EXPECT_EQ(address, StorageMacroblock::RESERVED_PAGES_COUNT * Page::PAGE_SIZE);
     EXPECT_EQ(sat->save(address, shortPrefix, 1, wdata, sizeof(wdata)), STORAGE_OK);
     EXPECT_EQ(sat->load(address, rdata, sizeof(rdata)), STORAGE_OK);
     EXPECT_FALSE(memcmp(wdata, rdata, sizeof(wdata)));
@@ -795,7 +797,7 @@ TEST_F(StorageFixture, SaveMultiPageWithFindEmptyAddress)
     uint8_t rdata[Page::PAGE_SIZE * 4] = {};
 
     EXPECT_EQ(sat->find(FIND_MODE_EMPTY, &address), STORAGE_OK);
-    EXPECT_EQ(address, StorageSector::RESERVED_PAGES_COUNT * Page::PAGE_SIZE);
+    EXPECT_EQ(address, StorageMacroblock::RESERVED_PAGES_COUNT * Page::PAGE_SIZE);
     EXPECT_EQ(sat->save(address, shortPrefix, 1, wdata, sizeof(wdata)), STORAGE_OK);
     EXPECT_EQ(sat->load(address, rdata, sizeof(rdata)), STORAGE_OK);
     EXPECT_FALSE(memcmp(wdata, rdata, sizeof(wdata)));
@@ -843,7 +845,7 @@ TEST_F(StorageFixture, SaveNotAlignedAddress)
 
 TEST_F(StorageFixture, SaveDataOnBlockedPage)
 {
-    address = StorageSector::RESERVED_PAGES_COUNT * Page::PAGE_SIZE;
+    address = StorageMacroblock::RESERVED_PAGES_COUNT * Page::PAGE_SIZE;
     uint8_t wdata[Page::PAYLOAD_SIZE] = { 1, 2, 3, 4, 5 };
     Header header(address);
     uint32_t tmpAddress = 0;
@@ -851,40 +853,40 @@ TEST_F(StorageFixture, SaveDataOnBlockedPage)
     storage.setBlocked(address, true);
 
     EXPECT_EQ(sat->save(address, shortPrefix, 1, wdata, sizeof(wdata)), STORAGE_OK);
-    EXPECT_EQ(StorageSector::loadHeader(&header), STORAGE_OK);
-    EXPECT_TRUE(header.isSetHeaderStatus(StorageSector::getPageIndexByAddress(address), Header::PAGE_BLOCKED));
+    EXPECT_EQ(StorageMacroblock::loadHeader(&header), STORAGE_OK);
+    EXPECT_TRUE(header.isSetHeaderStatus(StorageMacroblock::getPageIndexByAddress(address), Header::PAGE_BLOCKED));
     EXPECT_EQ(sat->find(FIND_MODE_EQUAL, &tmpAddress, shortPrefix, 1), STORAGE_OK);
     EXPECT_NE(address, tmpAddress);
     EXPECT_EQ(header.load(), STORAGE_OK);
-    EXPECT_TRUE(header.isSetHeaderStatus(StorageSector::getPageIndexByAddress(address), Header::PAGE_BLOCKED));
+    EXPECT_TRUE(header.isSetHeaderStatus(StorageMacroblock::getPageIndexByAddress(address), Header::PAGE_BLOCKED));
 }
 
 TEST_F(StorageFixture, SaveDataOnBlockedSector)
 {
-    address = StorageSector::RESERVED_PAGES_COUNT * Page::PAGE_SIZE;
+    address = StorageMacroblock::RESERVED_PAGES_COUNT * Page::PAGE_SIZE;
     uint8_t wdata[Page::PAYLOAD_SIZE] = { 1, 2, 3, 4, 5 };
     Header header(address);
     uint32_t tmpAddress = 0;
 
-    for (unsigned i = 0; i < StorageSector::PAGES_COUNT * Page::PAGE_SIZE; i++) {
+    for (unsigned i = 0; i < StorageMacroblock::PAGES_COUNT * Page::PAGE_SIZE; i++) {
         storage.setBlocked(address + i, true);
     }
 
     EXPECT_EQ(sat->save(address, shortPrefix, 1, wdata, sizeof(wdata)), STORAGE_OK);
-    EXPECT_EQ(StorageSector::loadHeader(&header), STORAGE_OK);
+    EXPECT_EQ(StorageMacroblock::loadHeader(&header), STORAGE_OK);
     for (unsigned i = 0; i < Header::PAGES_COUNT; i++) {
         EXPECT_TRUE(header.isSetHeaderStatus(i, Header::PAGE_BLOCKED));
     }
     EXPECT_EQ(sat->find(FIND_MODE_EQUAL, &tmpAddress, shortPrefix, 1), STORAGE_OK);
     EXPECT_NE(address, tmpAddress);
     EXPECT_EQ(header.load(), STORAGE_OK);
-    EXPECT_TRUE(header.isSetHeaderStatus(StorageSector::getPageIndexByAddress(address), Header::PAGE_BLOCKED));
+    EXPECT_TRUE(header.isSetHeaderStatus(StorageMacroblock::getPageIndexByAddress(address), Header::PAGE_BLOCKED));
 }
 
 TEST_F(StorageFixture, BlockAllMemory)
 {
     uint8_t wdata[Page::PAYLOAD_SIZE] = { 1, 2, 3, 4, 5 };
-    address = StorageSector::RESERVED_PAGES_COUNT * Page::PAGE_SIZE;
+    address = StorageMacroblock::RESERVED_PAGES_COUNT * Page::PAGE_SIZE;
     
     for (unsigned i = 0; i < storage.getSize(); i++) {
         storage.setBlocked(i, true);
@@ -901,7 +903,7 @@ TEST_F(StorageFixture, SetHeaderBlocked)
 
     storage.setBlocked(address, true);
 
-    EXPECT_EQ(StorageSector::loadHeader(&header), STORAGE_OK);
+    EXPECT_EQ(StorageMacroblock::loadHeader(&header), STORAGE_OK);
     EXPECT_NE(header.getAddress(), address);
 }
 
@@ -909,11 +911,11 @@ TEST_F(StorageFixture, SetAllHeadersBlocked)
 {
     Header header(0);
 
-    for (unsigned i = 0; i < StorageSector::RESERVED_PAGES_COUNT; i++) {
+    for (unsigned i = 0; i < StorageMacroblock::RESERVED_PAGES_COUNT; i++) {
         storage.setBlocked(address + Page::PAGE_SIZE * i, true);
     }
 
-    EXPECT_EQ(StorageSector::loadHeader(&header), STORAGE_ERROR);
+    EXPECT_EQ(StorageMacroblock::loadHeader(&header), STORAGE_ERROR);
 }
 
 TEST_F(StorageFixture, SaveAndFindDataWithBlockedAllHeaders)
@@ -921,12 +923,12 @@ TEST_F(StorageFixture, SaveAndFindDataWithBlockedAllHeaders)
     uint8_t wdata[Page::PAYLOAD_SIZE] = { 1, 2, 3, 4, 5 };
     uint8_t rdata[Page::PAYLOAD_SIZE] = { 0 };
 
-    for (unsigned i = 0; i < StorageSector::RESERVED_PAGES_COUNT; i++) {
+    for (unsigned i = 0; i < StorageMacroblock::RESERVED_PAGES_COUNT; i++) {
         storage.setBlocked(address + Page::PAGE_SIZE * i, true);
     }
 
     EXPECT_EQ(sat->find(FIND_MODE_EMPTY, &address), STORAGE_OK);
-    EXPECT_EQ(address, StorageSector::RESERVED_PAGES_COUNT * Page::PAGE_SIZE);
+    EXPECT_EQ(address, StorageMacroblock::RESERVED_PAGES_COUNT * Page::PAGE_SIZE);
     EXPECT_EQ(sat->save(address, shortPrefix, 1, wdata, sizeof(wdata)), STORAGE_OK);
     EXPECT_EQ(sat->find(FIND_MODE_EQUAL, &address, shortPrefix, 1), STORAGE_OK);
     EXPECT_EQ(sat->load(address, rdata, sizeof(rdata)), STORAGE_OK);

@@ -11,7 +11,7 @@
 #include "StorageData.h"
 #include "StorageType.h"
 #include "StorageSearch.h"
-#include "StorageSector.h"
+#include "StorageMacroblock.h"
 
 
 uint32_t StorageAT::m_pagesCount = 0;
@@ -142,8 +142,8 @@ StorageStatus StorageAT::rewrite(
 
 StorageStatus StorageAT::format()
 {
-	for (unsigned i = 0; i < StorageSector::getSectorsCount(); i++) {
-		StorageStatus status = StorageSector::formatSector(i);
+	for (unsigned i = 0; i < StorageMacroblock::getMacroblocksCount(); i++) {
+		StorageStatus status = StorageMacroblock::formatMacroblock(i);
 		if (status == STORAGE_BUSY) {
 			return STORAGE_BUSY;
 		}
@@ -167,10 +167,10 @@ uint32_t StorageAT::getStoragePagesCount()
 
 uint32_t StorageAT::getPayloadPagesCount()
 {
-	uint32_t pagesCount = (getStoragePagesCount() / StorageSector::PAGES_COUNT) * Header::PAGES_COUNT;
-	uint32_t lastPagesCount = getStoragePagesCount() % StorageSector::PAGES_COUNT;
-	if (lastPagesCount > StorageSector::RESERVED_PAGES_COUNT) {
-		pagesCount += (lastPagesCount - StorageSector::RESERVED_PAGES_COUNT);
+	uint32_t pagesCount = (getStoragePagesCount() / StorageMacroblock::PAGES_COUNT) * Header::PAGES_COUNT;
+	uint32_t lastPagesCount = getStoragePagesCount() % StorageMacroblock::PAGES_COUNT;
+	if (lastPagesCount > StorageMacroblock::RESERVED_PAGES_COUNT) {
+		pagesCount += (lastPagesCount - StorageMacroblock::RESERVED_PAGES_COUNT);
 	}
 	return pagesCount;
 }

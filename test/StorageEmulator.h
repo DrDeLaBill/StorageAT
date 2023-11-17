@@ -1,5 +1,6 @@
-#ifndef STORAGE_EMULATOR_H
-#define STORAGE_EMULATOR_H
+/* Copyright © 2023 Georgy E. All rights reserved. */
+
+#pragma once
 
 
 #include <memory>
@@ -49,6 +50,3 @@ public:
     void showReadWrite();
     void showPage(uint32_t address);
 };
-
-
-#endif
