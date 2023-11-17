@@ -28,7 +28,6 @@ jobs:
         sudo apt-get purge g++
         sudo apt-get install g++
         sudo apt-get install build-essential
-        sudo apt install libg++
 
     - name: Configure CMake
       # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
