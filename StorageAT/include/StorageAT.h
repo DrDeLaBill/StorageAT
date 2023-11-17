@@ -7,9 +7,15 @@
 
 #include "StoragePage.h"
 #include "StorageType.h"
-#include "StorageSector.h"
+#include "StorageMacroblock.h"
 
 
+/*
+ * class IStorageDriver
+ *
+ * IStorageDriver is an interface for memory adapter
+ * 
+ */
 class IStorageDriver
 {
 public:
@@ -29,17 +35,18 @@ private:
 	/* Storage pages count */
 	static uint32_t m_pagesCount;
 
-	// TODO: docs
+	/* Storage read/write driver */
 	static IStorageDriver* m_driver;
 
 public:
 	/* Max available address for StorageFS */
-	static const uint32_t STORAGE_MAX_ADDRESS = 0xFFFFFFFF;
+	static const uint32_t MAX_ADDRESS = 0xFFFFFFFF;
 
 	/*
-	 * Storage File System constructor
+	 * Storage Allocation Table constructor
 	 *
-	 * @param // TODO: params
+	 * @param pagesCount Physical drive pages count
+	 * @param driver     Physical drive read/write driver
 	 */
 	StorageAT(
 		uint32_t        pagesCount,
@@ -48,10 +55,11 @@ public:
 
 	/*
 	 * Find data in storage
-	 * TODO: params
-	 * @param searchData Name or index, or another value of header that needed to be found in storage
-	 * @param address    Variable pointer that used to find needed page address
-	 * @return           Returns STORAGE_OK if the data was found
+	 * 
+	 * @param address Pointer that used to find needed page address
+	 * @param prefix  String page prefix of header that needed to be found in storage
+	 * @param id      Integer page prefix of header that needed to be found in storage
+	 * @return        Returns STORAGE_OK if the data was found
 	 */
 	StorageStatus find(
 		StorageFindMode mode,
@@ -62,20 +70,22 @@ public:
 
 
 	/*
-	 * Load data from storage
+	 * Load the data from storage address
 	 *
 	 * @param address Storage page address to load
 	 * @param data    Pointer to data array for load data
-	 * @param len     Data length
+	 * @param len     Data array length
 	 * @return        Returns STORAGE_OK if the data was loaded successfully
 	 */
 	StorageStatus load(uint32_t address, uint8_t* data, uint32_t len);
 
 
 	/*
-	 * Save data to storage
+	 * Save the data to storage address
 	 *
 	 * @param address Storage page address to save
+	 * @param prefix  String page prefix of header
+	 * @param id      Integer page prefix of header
 	 * @param data    Pointer to data array for save data
 	 * @param len     Array size
 	 * @return        Returns STORAGE_OK if the data was saved successfully
@@ -87,8 +97,24 @@ public:
 		uint8_t*    data,
 		uint32_t    len
 	);
-
-	// TODO: rewrite - find start, check prefix and id, save, din't update headers
+	
+	/*
+	 * Rewrite the data contained in storage address
+	 *
+	 * @param address Storage page address to save
+	 * @param prefix  String page prefix of header
+	 * @param id      Integer page prefix of header
+	 * @param data    Pointer to data array for save data
+	 * @param len     Array size
+	 * @return        Returns STORAGE_OK if the data was rewritten successfully
+	 */
+	StorageStatus rewrite(
+		uint32_t    address,
+		const char* prefix,
+		uint32_t    id,
+		uint8_t*    data,
+		uint32_t    len
+	);
 
 	/*
 	 * Format FLASH memory
@@ -106,10 +132,13 @@ public:
 	StorageStatus deleteData(uint32_t address);
 
 	/*
-	 * @return Returns pages count on physical storage
+	 * @return Returns pages count of physical drive
 	 */
 	static uint32_t getStoragePagesCount();
 
+	/*
+	 * @return Returns max payload pages count in storage alocation table
+	 */
 	static uint32_t getPayloadPagesCount();
 
 	/*
@@ -117,8 +146,13 @@ public:
 	 */
 	static uint32_t getStorageSize();
 
+	/*
+	 * @return Returns max payload bytes count in storage alocation table
+	 */
 	static uint32_t getPayloadSize();
 
-// TODO: docs
+	/*
+	 * @return Returns read/write driver of physical drive 
+	 */
 	static IStorageDriver* driverCallback();
 };
