@@ -137,14 +137,14 @@ public:
 	static uint32_t getStoragePagesCount();
 
 	/*
-	 * @return Returns max payload pages count in storage alocation table
-	 */
-	static uint32_t getPayloadPagesCount();
-
-	/*
 	 * @return Returns bytes count on physical storage
 	 */
 	static uint32_t getStorageSize();
+
+	/*
+	 * @return Returns max payload pages count in storage alocation table
+	 */
+	static uint32_t getPayloadPagesCount();
 
 	/*
 	 * @return Returns max payload bytes count in storage alocation table

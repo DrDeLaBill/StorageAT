@@ -240,7 +240,7 @@ public:
 	 * @param pageIndex The page index in current macroblock
 	 * @param status    Target status
 	 */
-	void setHeaderStatus(uint32_t pageIndex, uint8_t status);
+	void setHeaderStatus(PageHeader* pageHeader, uint8_t status);
 
 	/*
 	 * Checks that the target page status is set in the header
@@ -249,14 +249,14 @@ public:
 	 * @param status    Target status
 	 * @return          Returns true if the target page status is set
 	 */
-	bool isSetHeaderStatus(uint32_t pageIndex, uint8_t status);
+	bool isSetHeaderStatus(PageHeader* pageHeader, uint8_t status);
 
 	/*
 	 * Sets the page blocked status in the header
 	 *
 	 * @param pageIndex The page index in current macroblock
 	 */
-	void setPageBlocked(uint32_t pageIndex);
+	void setPageBlocked(PageHeader* pageHeader);
 
 	/*
 	 * Checks that the target page is empty
