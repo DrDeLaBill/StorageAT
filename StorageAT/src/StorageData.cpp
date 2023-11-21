@@ -97,12 +97,12 @@ StorageStatus StorageData::rewrite(
 	}
 
 	uint32_t checkAddress = pageAddress;
-	Header checkHeader(checkAddress);
-	StorageStatus status = StorageMacroblock::loadHeader(&checkHeader);
+	std::unique_ptr<Header> header = std::make_unique<Header>(checkAddress);
+	StorageStatus status = StorageMacroblock::loadHeader(header.get());
 	if (status == STORAGE_BUSY || status == STORAGE_OOM) {
 		return status;
 	}
-	if (!checkHeader.isAddressEmpty(checkAddress)) {
+	if (!header->isAddressEmpty(checkAddress)) {
 		status = StorageData::findStartAddress(&checkAddress);
 	}
 	if (status == STORAGE_OK) {
@@ -113,7 +113,6 @@ StorageStatus StorageData::rewrite(
 	uint32_t curAddr = pageAddress;
 	uint32_t prevAddr = pageAddress;
 	uint32_t macroblockAddress = Page::PAGE_SIZE + 1;
-	std::unique_ptr<Header> header;
 	std::unique_ptr<Page> page;
 	while (curLen < len) {
 		if (curAddr - 1 + Page::PAGE_SIZE > StorageAT::getStorageSize()) {
@@ -174,18 +173,20 @@ StorageStatus StorageData::rewrite(
 		if (status == STORAGE_BUSY) {
 			break;
 		}
+
+		uint32_t pageIndex = StorageMacroblock::getPageIndexByAddress(curAddr);
+		Header::PageHeader* headerPtr = &(header->data->pages[pageIndex]);
 		if (status != STORAGE_OK) {
-			header->setPageBlocked(StorageMacroblock::getPageIndexByAddress(page->getAddress()));
+			header->setPageBlocked(headerPtr);
 			curAddr = nextAddr;
 			continue;
 		}
 
 
 		// Registrate page in header
-		uint32_t pageIndex = StorageMacroblock::getPageIndexByAddress(curAddr);
-		header->data->pages[pageIndex].id     = id;
-		header->data->pages[pageIndex].status = Header::PAGE_OK;
-		memcpy(header->data->pages[pageIndex].prefix, prefix, Page::PREFIX_SIZE);
+		(*headerPtr).id = id;
+		(*headerPtr).status = Header::PAGE_OK;
+		memcpy((*headerPtr).prefix, prefix, Page::PREFIX_SIZE);
 
 
 		// Update current values
@@ -255,9 +256,10 @@ StorageStatus StorageData::deleteData()
 
 		// Delete page from header
 		uint32_t pageIndex = StorageMacroblock::getPageIndexByAddress(page->getAddress());
-		header->data->pages[pageIndex].id     = 0;
-		header->data->pages[pageIndex].status = Header::PAGE_EMPTY;
-		memset(header->data->pages[pageIndex].prefix, 0, Page::PREFIX_SIZE);
+		Header::PageHeader* headerPtr = &(header->data->pages[pageIndex]);
+		(*headerPtr).id = 0;
+		(*headerPtr).status = Header::PAGE_EMPTY;
+		memset((*headerPtr).prefix, 0, Page::PREFIX_SIZE);
 
 		// Load next page
 		status = page->loadNext();

@@ -16,12 +16,12 @@ typedef StorageAT AT;
 
 uint32_t StorageMacroblock::getMacroblockAddress(uint32_t macroblockIndex)
 {
-	return PAGES_COUNT * macroblockIndex * Page::PAGE_SIZE;
+	return macroblockIndex * Page::PAGE_SIZE * StorageMacroblock::PAGES_COUNT;
 }
 
-uint32_t StorageMacroblock::getMacroblockIndex(uint32_t address)
+uint32_t StorageMacroblock::getMacroblockIndex(uint32_t macroblockAddress)
 {
-	return address / Page::PAGE_SIZE / PAGES_COUNT;
+	return macroblockAddress / Page::PAGE_SIZE / StorageMacroblock::PAGES_COUNT;
 }
 
 uint32_t StorageMacroblock::getMacroblocksCount()
@@ -55,11 +55,13 @@ StorageStatus StorageMacroblock::formatMacroblock(uint32_t macroblockIndex)
 		return status;
 	}
 
-	for (unsigned i = 0; i < Header::PAGES_COUNT; i++) {
-		memset(reinterpret_cast<void*>(header.data->pages[i].prefix), 0, Page::PREFIX_SIZE);
-		header.data->pages[i].id = 0;
-		if (!header.isSetHeaderStatus(i, Header::PAGE_BLOCKED)) {
-			header.setHeaderStatus(i, Header::PAGE_EMPTY);
+	Header::PageHeader* headerPtr = header.data->pages;
+	Header::PageHeader* headerEndPtr = &(header.data->pages[Header::PAGES_COUNT-1]);
+	for (; headerPtr < headerEndPtr; headerPtr++) {
+		memset((*headerPtr).prefix, 0, Page::PREFIX_SIZE);
+		(*headerPtr).id = 0;
+		if (!header.isSetHeaderStatus(headerPtr, Header::PAGE_BLOCKED)) {
+			header.setHeaderStatus(headerPtr, Header::PAGE_EMPTY);
 		}
 	}
 	return header.save();

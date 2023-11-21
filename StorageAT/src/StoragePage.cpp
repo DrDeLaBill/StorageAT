@@ -37,23 +37,21 @@ StorageStatus Page::loadPrev()
 		return STORAGE_NOT_FOUND;
 	}
 
-	this->address = this->page.header.prev_addr;
-
-	uint8_t prefix[PREFIX_SIZE] = {};
-	memcpy(prefix, this->page.header.prefix, sizeof(prefix));
-	uint32_t id = this->page.header.id;
-
-	StorageStatus status = this->load();
+	Page tmpPage(this->page.header.prev_addr);
+	StorageStatus status = tmpPage.load();
 	if (status != STORAGE_OK) {
 		return status;
 	}
 
-	if (memcmp(prefix, this->page.header.prefix, sizeof(prefix))) {
+	if (memcmp(tmpPage.page.header.prefix, this->page.header.prefix, sizeof(tmpPage.page.header.prefix))) {
 		return STORAGE_NOT_FOUND;
 	}
-	if (id != this->page.header.id) {
+	if (tmpPage.page.header.id != this->page.header.id) {
 		return STORAGE_NOT_FOUND;
 	}
+
+	this->address = this->page.header.prev_addr;
+	memcpy(reinterpret_cast<void*>(&this->page), reinterpret_cast<void*>(&tmpPage.page), sizeof(this->page));
 
 	return STORAGE_OK;
 }
@@ -63,23 +61,21 @@ StorageStatus Page::loadNext() {
 		return STORAGE_NOT_FOUND;
 	}
 
-	this->address = this->page.header.next_addr;
-
-	uint8_t prefix[PREFIX_SIZE] = {};
-	memcpy(prefix, this->page.header.prefix, sizeof(prefix));
-	uint32_t id = this->page.header.id;
-
-	StorageStatus status = this->load();
+	Page tmpPage(this->page.header.next_addr);
+	StorageStatus status = tmpPage.load();
 	if (status != STORAGE_OK) {
 		return status;
 	}
 
-	if (memcmp(prefix, this->page.header.prefix, sizeof(prefix))) {
+	if (memcmp(tmpPage.page.header.prefix, this->page.header.prefix, sizeof(tmpPage.page.header.prefix))) {
 		return STORAGE_NOT_FOUND;
 	}
-	if (id != this->page.header.id) {
+	if (tmpPage.page.header.id != this->page.header.id) {
 		return STORAGE_NOT_FOUND;
 	}
+
+	this->address = this->page.header.next_addr;
+	memcpy(reinterpret_cast<void*>(&this->page), reinterpret_cast<void*>(&tmpPage.page), sizeof(this->page));
 
 	return STORAGE_OK;
 }
@@ -89,18 +85,22 @@ StorageStatus Page::load(bool startPage)
 	if (this->address + sizeof(page) > StorageAT::getStorageSize()) {
 		return STORAGE_OOM;
 	}
-	StorageStatus status = AT::driverCallback()->read(address, reinterpret_cast<uint8_t*>(&page), sizeof(page));
+
+	Page tmpPage(this->address);
+	StorageStatus status = AT::driverCallback()->read(address, reinterpret_cast<uint8_t*>(&tmpPage.page), sizeof(tmpPage.page));
 	if (status != STORAGE_OK) {
 		return status;
 	}
 
-	if (!this->validate()) {
+	if (!tmpPage.validate()) {
 		return STORAGE_ERROR;
 	}
 
-	if (startPage && !this->isStart()) {
+	if (startPage && !tmpPage.isStart()) {
 		return STORAGE_ERROR;
 	}
+
+	memcpy(reinterpret_cast<void*>(&this->page), reinterpret_cast<void*>(&tmpPage.page), sizeof(this->page));
 
 	return STORAGE_OK;
 }
@@ -242,8 +242,8 @@ void Page::setNextAddress(uint32_t nextAddress)
 
 Header::Header(uint32_t address): Page(address)
 {
-	this->address       = Header::getMacroblockStartAddress(address);
-	this->data          = reinterpret_cast<HeaderPageStruct*>(page.payload);
+	this->address           = Header::getMacroblockStartAddress(address);
+	this->data              = reinterpret_cast<HeaderPageStruct*>(page.payload);
 	this->m_macroblockIndex = StorageMacroblock::getMacroblockIndex(address);
 
 	this->page.header.prev_addr = 0;
@@ -257,19 +257,19 @@ Header& Header::operator=(Header* other)
  	return *this;
 }
 
-void Header::setHeaderStatus(uint32_t pageIndex, uint8_t status)
+void Header::setHeaderStatus(PageHeader* pageHeader, uint8_t status)
 {
-	data->pages[pageIndex].status = status;
+	(*pageHeader).status = status;
 }
 
-bool Header::isSetHeaderStatus(uint32_t pageIndex, uint8_t status)
+bool Header::isSetHeaderStatus(PageHeader* pageHeader, uint8_t status)
 {
-	return static_cast<bool>(data->pages[pageIndex].status & status);
+	return static_cast<bool>((*pageHeader).status & status);
 }
 
-void Header::setPageBlocked(uint32_t pageIndex)
+void Header::setPageBlocked(PageHeader* pageHeader)
 {
-	this->setHeaderStatus(pageIndex, Header::PAGE_BLOCKED);
+	this->setHeaderStatus(pageHeader, Header::PAGE_BLOCKED);
 }
 
 uint32_t Header::getMacroblockIndex()
@@ -279,12 +279,13 @@ uint32_t Header::getMacroblockIndex()
 
 bool Header::isAddressEmpty(uint32_t targetAddress)
 {
-	return this->isSetHeaderStatus(StorageMacroblock::getPageIndexByAddress(targetAddress), Header::PAGE_EMPTY);
+	return this->isSetHeaderStatus(&this->data->pages[StorageMacroblock::getPageIndexByAddress(targetAddress)], Header::PAGE_EMPTY);
 }
 
 bool Header::isSameMeta(uint32_t pageIndex, const uint8_t* prefix, uint32_t id)
 {
-	return !memcmp(data->pages[pageIndex].prefix, prefix, Page::PREFIX_SIZE) && data->pages[pageIndex].id == id;
+	PageHeader* headerPtr = &(data->pages[pageIndex]);
+	return !memcmp((*headerPtr).prefix, prefix, Page::PREFIX_SIZE) && (*headerPtr).id == id;
 }
 
 uint32_t Header::getMacroblockStartAddress(uint32_t address)
@@ -294,7 +295,8 @@ uint32_t Header::getMacroblockStartAddress(uint32_t address)
 
 StorageStatus Header::create()
 {
-	for (uint16_t i = 0; i < PAGES_COUNT; i++) {
+	PageHeader* headerPtr = this->data->pages;
+	for (unsigned  i = 0; i < Header::PAGES_COUNT; i++, headerPtr++) {
 		Page tmpPage(StorageMacroblock::getPageAddressByIndex(this->m_macroblockIndex, i));
 
 		StorageStatus status = tmpPage.load();
@@ -302,12 +304,12 @@ StorageStatus Header::create()
 			return STORAGE_BUSY;
 		}
 
-		memset(this->data->pages[i].prefix, 0, sizeof(tmpPage.page.header.prefix));
-		this->data->pages[i].id     = 0;
-		this->data->pages[i].status = Header::PAGE_EMPTY;
+		memset((*headerPtr).prefix, 0, sizeof(tmpPage.page.header.prefix));
+		(*headerPtr).id     = 0;
+		(*headerPtr).status = Header::PAGE_EMPTY;
 		
 		if (status == STORAGE_OOM) {
-			this->data->pages[i].status = Header::PAGE_BLOCKED;
+			(*headerPtr).status = Header::PAGE_BLOCKED;
 		}
 		if (status != STORAGE_OK) {
 			continue;
@@ -330,9 +332,9 @@ StorageStatus Header::create()
 		}
 
 		if (status == STORAGE_OK) {
-			memcpy(this->data->pages[i].prefix, tmpPage.page.header.prefix, sizeof(tmpPage.page.header.prefix));
-			this->data->pages[i].id     = tmpPage.page.header.id;
-			this->data->pages[i].status = Header::PAGE_OK;
+			memcpy((*headerPtr).prefix, tmpPage.page.header.prefix, sizeof(tmpPage.page.header.prefix));
+			(*headerPtr).id     = tmpPage.page.header.id;
+			(*headerPtr).status = Header::PAGE_OK;
 		}
 	}
 
@@ -384,8 +386,10 @@ bool Header::validate()
 		return false;
 	}
 
-	for (unsigned i = 0; i < PAGES_COUNT; i++) {
-		if (!data->pages[i].status) {
+	PageHeader* headerPtr = data->pages;
+	PageHeader* headerEndPtr = &(this->data->pages[Header::PAGES_COUNT-1]);
+	for (; headerPtr < headerEndPtr; headerPtr++) {
+		if (!(*headerPtr).status) {
 			return false;
 		}
 	}
