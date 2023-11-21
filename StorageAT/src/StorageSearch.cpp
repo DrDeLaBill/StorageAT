@@ -54,20 +54,21 @@ StorageStatus StorageSearchBase::searchPageAddressInMacroblock(
 	uint32_t pageIndex = StorageMacroblock::getPageIndexByAddress(this->startSearchAddress);
 	this->foundInMacroblock = false;
 
-	for (; pageIndex < Header::PAGES_COUNT; pageIndex++) {
-		if (!header->isSetHeaderStatus(pageIndex, Header::PAGE_OK)) {
+	Header::PageHeader *headerPtr = header->data->pages;
+	for (; pageIndex < Header::PAGES_COUNT; pageIndex++, headerPtr++) {
+		if (!header->isSetHeaderStatus(headerPtr, Header::PAGE_OK)) {
 			continue;
 		}
 
-		if (header->isSetHeaderStatus(pageIndex, Header::PAGE_EMPTY)) {
+		if (header->isSetHeaderStatus(headerPtr, Header::PAGE_EMPTY)) {
 			break;
 		}
 
-		if (memcmp(header->data->pages[pageIndex].prefix, prefix, Page::PREFIX_SIZE)) {
+		if (memcmp((*headerPtr).prefix, prefix, Page::PREFIX_SIZE)) {
 			continue;
 		}
 
-		if (!isIdFound(header->data->pages[pageIndex].id, id)) {
+		if (!isIdFound((*headerPtr).id, id)) {
 			continue;
 		}
 
@@ -77,10 +78,10 @@ StorageStatus StorageSearchBase::searchPageAddressInMacroblock(
 			continue;
 		}
 
-		this->foundOnce     = true;
+		this->foundOnce         = true;
 		this->foundInMacroblock = true;
-		this->prevId        = header->data->pages[pageIndex].id;
-		this->prevAddress   = StorageMacroblock::getPageAddressByIndex(header->getMacroblockIndex(), pageIndex);
+		this->prevId            = (*headerPtr).id;
+		this->prevAddress       = StorageMacroblock::getPageAddressByIndex(header->getMacroblockIndex(), pageIndex);
 
 		if (isNeededFirstResult()) {
 			break;
@@ -126,16 +127,17 @@ StorageStatus StorageSearchEmpty::searchPageAddressInMacroblock(
 	const uint8_t  prefix[Page::PREFIX_SIZE],
 	const uint32_t id
 ) {
-	uint32_t pageIndex = StorageMacroblock::getPageIndexByAddress(this->startSearchAddress);
 	this->foundInMacroblock = false;
-	for (; pageIndex < Header::PAGES_COUNT; pageIndex++) {
-		if (header->isSetHeaderStatus(pageIndex, Header::PAGE_BLOCKED)) {
+	uint32_t pageIndex = StorageMacroblock::getPageIndexByAddress(this->startSearchAddress);
+	Header::PageHeader* headerPtr = &(header->data->pages[pageIndex]);
+	for (; pageIndex < Header::PAGES_COUNT; pageIndex++, headerPtr++) {
+		if (header->isSetHeaderStatus(headerPtr, Header::PAGE_BLOCKED)) {
 			continue;
 		}
 
 		uint32_t address = StorageMacroblock::getPageAddressByIndex(header->getMacroblockIndex(), pageIndex);
 
-		if (header->isSetHeaderStatus(pageIndex, Header::PAGE_EMPTY)) {
+		if (header->isSetHeaderStatus(headerPtr, Header::PAGE_EMPTY)) {
 			this->foundOnce     = true;
 			this->foundInMacroblock = true;
 			this->prevAddress   = address;
