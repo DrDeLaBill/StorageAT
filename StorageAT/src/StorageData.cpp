@@ -175,18 +175,18 @@ StorageStatus StorageData::rewrite(
 		}
 
 		uint32_t pageIndex = StorageMacroblock::getPageIndexByAddress(curAddr);
-		Header::PageHeader* headerPtr = &(header->data->pages[pageIndex]);
+		Header::MetaUnit* metaUnitPtr = &(header->data->metaUnits[pageIndex]);
 		if (status != STORAGE_OK) {
-			header->setPageBlocked(headerPtr);
+			header->setAddressBlocked(curAddr);
 			curAddr = nextAddr;
 			continue;
 		}
 
 
 		// Registrate page in header
-		(*headerPtr).id = id;
-		(*headerPtr).status = Header::PAGE_OK;
-		memcpy((*headerPtr).prefix, prefix, Page::PREFIX_SIZE);
+		memcpy((*metaUnitPtr).prefix, prefix, Page::PREFIX_SIZE);
+		(*metaUnitPtr).id = id;
+		header->setPageStatus(pageIndex, Header::PAGE_OK);
 
 
 		// Update current values
@@ -256,10 +256,10 @@ StorageStatus StorageData::deleteData()
 
 		// Delete page from header
 		uint32_t pageIndex = StorageMacroblock::getPageIndexByAddress(page->getAddress());
-		Header::PageHeader* headerPtr = &(header->data->pages[pageIndex]);
-		(*headerPtr).id = 0;
-		(*headerPtr).status = Header::PAGE_EMPTY;
-		memset((*headerPtr).prefix, 0, Page::PREFIX_SIZE);
+		Header::MetaUnit* metaUnitPtr = &(header->data->metaUnits[pageIndex]);
+		memset((*metaUnitPtr).prefix, 0, Page::PREFIX_SIZE);
+		(*metaUnitPtr).id = 0;
+		header->setPageStatus(pageIndex, Header::PAGE_EMPTY);
 
 		// Load next page
 		status = page->loadNext();
