@@ -170,31 +170,74 @@ protected:
  */
 class Header: public Page
 {
+private:
+	/* Header macroblock index in memory */
+	uint32_t m_macroblockIndex;
+
+	/* Single page meta status bits count */
+	static const uint8_t STATUS_BITS_COUNT = 2;
+
+protected:
+	/*
+	 * Validates the header data
+	 * 
+	 * @return Returns true if the header data is correct
+	 */
+	bool validate() override;
+
 public:
 	/* Header page statuses */
 	typedef enum _PageHeaderStatus {
-		PAGE_OK      = static_cast<uint8_t>(0b00000001), // Data on page exists
-		PAGE_EMPTY   = static_cast<uint8_t>(0b00000010), // Page is empty
-		PAGE_BLOCKED = static_cast<uint8_t>(0b00000100), // Page is blocked for load and save by StorageAT library
-	} PageHeaderStatus;
+		PAGE_OK      = static_cast<uint8_t>(0b01), // Data on page exists
+		PAGE_EMPTY   = static_cast<uint8_t>(0b10), // Page is empty
+		PAGE_BLOCKED = static_cast<uint8_t>(0b11), // Page is blocked for load and save by StorageAT library
+	} PageStatus;
 
-	/* Single page status structure */
-	STORAGE_PACK(typedef struct, _PageHeader {
+	/* Single page meta data structure */
+	STORAGE_PACK(typedef struct, _MetaUnit {
 		uint8_t  prefix[PREFIX_SIZE]; // String page prefix for searching
 		uint32_t id;                  // ID for searching
-		uint8_t  status;              // Page status (PageHeaderStatus)
-	} PageHeader);
+	} MetaUnit);
+
+	/* Single page meta status structure */
+	STORAGE_PACK(typedef struct, _MetaStatus {
+		uint8_t  status; // Page status (PageStatus)
+
+		/*
+		* Checks that the target page status is set in the MetaStatus
+		*
+		* @param pageIndex The page index in current macroblock
+		* @param status    Target status
+		* @return          Returns true if the target page status is set
+		*/
+		bool isStatus(uint32_t pageIndex, PageStatus targetStatus);
+
+		/*
+		* Sets the page status in the MetaStatus
+		*
+		* @param pageIndex The page index in current macroblock
+		* @param status    Target status
+		*/
+		void setStatus(uint32_t pageIndex, PageStatus targetStatus);
+	} MetaStatus);
 
 	/* Pages in block that header page contains */
-	static const uint32_t PAGES_COUNT = PAYLOAD_SIZE / sizeof(struct _PageHeader);
+	static const uint32_t PAGES_COUNT = (PAYLOAD_SIZE * 8) / (sizeof(struct _MetaUnit) * 8 + STATUS_BITS_COUNT);
+
+	/* Statuses count in byte */
+	static const uint32_t BYTE_STAUSES_COUNT = 8 / STATUS_BITS_COUNT;
+
+	/* Header page payload data statuses count */
+	static const uint32_t STATUSES_COUNT = PAGES_COUNT / BYTE_STAUSES_COUNT + (PAGES_COUNT % BYTE_STAUSES_COUNT ? 1 : 0);
 
 	/* Header page payload data */
-	STORAGE_PACK(typedef struct, _HeaderPageStruct {
-		PageHeader pages[PAGES_COUNT]; // Macroblock page status structures
-	} HeaderPageStruct);
+	STORAGE_PACK(typedef struct, _HeaderMeta {
+		MetaUnit   metaUnits[PAGES_COUNT];       // Macroblock page meta units
+		MetaStatus metaStatuses[STATUSES_COUNT]; // Macroblock page meta statuses
+	} HeaderMeta);
 
 	/* Pointer to payload header data */
-	HeaderPageStruct* data;
+	HeaderMeta* data;
 
 	/*
 	 * Header constructor
@@ -230,7 +273,8 @@ public:
 	/*
 	 * Deletes the page information from the header
 	 *
-	 * @return Returns STORAGE_OK if the page was deleted successfully
+	 * @param targetAddress Page address for delete
+	 * @return              Returns STORAGE_OK if the page was deleted successfully
 	 */
 	StorageStatus deletePage(uint32_t targetAddress);
 
@@ -240,7 +284,7 @@ public:
 	 * @param pageIndex The page index in current macroblock
 	 * @param status    Target status
 	 */
-	void setHeaderStatus(PageHeader* pageHeader, uint8_t status);
+	void setPageStatus(uint32_t pageIndex, PageStatus status);
 
 	/*
 	 * Checks that the target page status is set in the header
@@ -249,14 +293,14 @@ public:
 	 * @param status    Target status
 	 * @return          Returns true if the target page status is set
 	 */
-	bool isSetHeaderStatus(PageHeader* pageHeader, uint8_t status);
+	bool isPageStatus(uint32_t pageIndex, PageStatus status);
 
 	/*
 	 * Sets the page blocked status in the header
 	 *
-	 * @param pageIndex The page index in current macroblock
+	 * @param targetAddress Page address
 	 */
-	void setPageBlocked(PageHeader* pageHeader);
+	void setAddressBlocked(uint32_t targetAddress);
 
 	/*
 	 * Checks that the target page is empty
@@ -288,17 +332,5 @@ public:
 	 * @return Returns header macroblock index in memory
 	 */
 	uint32_t getMacroblockIndex();
-
-protected:
-	/*
-	 * Validates the header data
-	 * 
-	 * @return Returns true if the header data is correct
-	 */
-	bool validate() override;
-
-private:
-	/* Header macroblock index in memory */
-	uint32_t m_macroblockIndex;
 
 };
