@@ -43,7 +43,7 @@ public:
     uint32_t getPagesCount();
 
     void setBusy(bool busy);
-    void setBlocked(uint32_t idx, bool blocked);
+    void setBlocked(uint32_t idx, bool blockState);
 
     void clear();
 

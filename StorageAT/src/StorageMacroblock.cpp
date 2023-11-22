@@ -55,13 +55,12 @@ StorageStatus StorageMacroblock::formatMacroblock(uint32_t macroblockIndex)
 		return status;
 	}
 
-	Header::PageHeader* headerPtr = header.data->pages;
-	Header::PageHeader* headerEndPtr = &(header.data->pages[Header::PAGES_COUNT-1]);
-	for (; headerPtr < headerEndPtr; headerPtr++) {
-		memset((*headerPtr).prefix, 0, Page::PREFIX_SIZE);
-		(*headerPtr).id = 0;
-		if (!header.isSetHeaderStatus(headerPtr, Header::PAGE_BLOCKED)) {
-			header.setHeaderStatus(headerPtr, Header::PAGE_EMPTY);
+	Header::MetaUnit* metaUnitPtr = header.data->metaUnits;
+	for (uint32_t pageIndex = 0; pageIndex < Header::PAGES_COUNT; pageIndex++, metaUnitPtr++) {
+		memset((*metaUnitPtr).prefix, 0, Page::PREFIX_SIZE);
+		(*metaUnitPtr).id = 0;
+		if (!header.isPageStatus(pageIndex, Header::PAGE_BLOCKED)) {
+			header.setPageStatus(pageIndex, Header::PAGE_EMPTY);
 		}
 	}
 	return header.save();
