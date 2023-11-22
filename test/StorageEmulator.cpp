@@ -43,12 +43,12 @@ void StorageEmulator::setBusy(bool busy)
     this->isBusy = busy;
 }
 
-void StorageEmulator::setBlocked(uint32_t idx, bool blocked)
+void StorageEmulator::setBlocked(uint32_t idx, bool blockState)
 {
     if (idx > StorageEmulator::getSize()) {
         return;
     }
-    this->blocked[idx] = blocked;
+    this->blocked[idx] = blockState;
 }
 
 StorageEmulatorStatus StorageEmulator::readPage(uint32_t address, uint8_t* data, uint32_t len)

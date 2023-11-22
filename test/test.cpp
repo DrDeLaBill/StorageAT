@@ -121,12 +121,14 @@ TEST(Page, Struct)
 
 TEST(Header, Struct)
 {
-    EXPECT_EQ(sizeof(struct Header::_PageHeader), 8);
+    EXPECT_EQ(sizeof(struct Header::_MetaUnit), 7);
+    EXPECT_EQ(sizeof(struct Header::_MetaStatus), 1);
+    EXPECT_EQ(sizeof(struct Header::_HeaderMeta), 232);
 }
 
 TEST(StorageMacroblock, Struct)
 {
-    EXPECT_EQ(StorageMacroblock::PAGES_COUNT, (Page::PAYLOAD_SIZE / sizeof(struct Header::_PageHeader)) + StorageMacroblock::RESERVED_PAGES_COUNT);
+    EXPECT_EQ(StorageMacroblock::PAGES_COUNT, ((Page::PAYLOAD_SIZE * 8) / (sizeof(struct Header::_MetaUnit) * 8 + 2)) + StorageMacroblock::RESERVED_PAGES_COUNT);
 }
 
 TEST(StorageMacroblock, CheckSectorAddresses)
@@ -571,10 +573,10 @@ TEST_F(StorageFixture, IsSetStatusesInHeader)
     EXPECT_EQ(sat->format(), STORAGE_OK);
     EXPECT_EQ(header.load(), STORAGE_OK);
 
-    Header::PageHeader* headerPtr = header.data->pages;
-    for (unsigned i = 0; i < Header::PAGES_COUNT; i++, headerPtr++) {
-        EXPECT_TRUE(header.isSetHeaderStatus(headerPtr, Header::PAGE_EMPTY));
-        EXPECT_TRUE(header.isAddressEmpty(StorageMacroblock::getPageAddressByIndex(0, i)));
+    for (unsigned i = 0; i < Header::PAGES_COUNT; i++) {
+        uint32_t targetAddress = StorageMacroblock::getPageAddressByIndex(0, i);
+        EXPECT_TRUE(header.isPageStatus(i, Header::PAGE_EMPTY));
+        EXPECT_TRUE(header.isAddressEmpty(targetAddress));
     }
 }
 
@@ -585,10 +587,9 @@ TEST_F(StorageFixture, SetStatusesInHeader)
     EXPECT_EQ(sat->format(), STORAGE_OK);
     EXPECT_EQ(header.load(), STORAGE_OK);
 
-    Header::PageHeader* headerPtr = header.data->pages;
-    for (unsigned i = 0; i < Header::PAGES_COUNT; i++, headerPtr++) {
-        header.setHeaderStatus(headerPtr, Header::PAGE_OK);
-        EXPECT_TRUE(header.isSetHeaderStatus(headerPtr, Header::PAGE_OK));
+    for (unsigned i = 0; i < Header::PAGES_COUNT; i++) {
+        header.setPageStatus(i, Header::PAGE_OK);
+        EXPECT_TRUE(header.isPageStatus(i, Header::PAGE_OK));
     }
 }
 
@@ -598,11 +599,11 @@ TEST_F(StorageFixture, SetBlockStatusesInHeader)
 
     EXPECT_EQ(sat->format(), STORAGE_OK);
     EXPECT_EQ(header.load(), STORAGE_OK);
-
-    Header::PageHeader* headerPtr = header.data->pages;
-    for (unsigned i = 0; i < Header::PAGES_COUNT; i++, headerPtr++) {
-        header.setPageBlocked(headerPtr);
-        EXPECT_TRUE(header.isSetHeaderStatus(headerPtr, Header::PAGE_BLOCKED));
+    
+    for (unsigned i = 0; i < Header::PAGES_COUNT; i++) {
+        uint32_t targetAddress = StorageMacroblock::getPageAddressByIndex(0, i);
+        header.setAddressBlocked(targetAddress);
+        EXPECT_TRUE(header.isPageStatus(i, Header::PAGE_BLOCKED));
     }
 }
 
@@ -860,12 +861,12 @@ TEST_F(StorageFixture, SaveDataOnBlockedPage)
     EXPECT_EQ(sat->save(address, shortPrefix, 1, wdata, sizeof(wdata)), STORAGE_OK);
     EXPECT_EQ(StorageMacroblock::loadHeader(&header), STORAGE_OK);
 
-    Header::PageHeader* headerPtr = &(header.data->pages[StorageMacroblock::getPageIndexByAddress(address)]);
-    EXPECT_TRUE(headerPtr, Header::PAGE_BLOCKED);
+    uint32_t pageIndex = StorageMacroblock::getPageIndexByAddress(address);
+    EXPECT_TRUE(header.isPageStatus(pageIndex, Header::PAGE_BLOCKED));
     EXPECT_EQ(sat->find(FIND_MODE_EQUAL, &tmpAddress, shortPrefix, 1), STORAGE_OK);
     EXPECT_NE(address, tmpAddress);
     EXPECT_EQ(header.load(), STORAGE_OK);
-    EXPECT_TRUE(headerPtr, Header::PAGE_BLOCKED);
+    EXPECT_TRUE(header.isPageStatus(pageIndex, Header::PAGE_BLOCKED));
 }
 
 TEST_F(StorageFixture, SaveDataOnBlockedSector)
@@ -874,7 +875,6 @@ TEST_F(StorageFixture, SaveDataOnBlockedSector)
     uint8_t wdata[Page::PAYLOAD_SIZE] = { 1, 2, 3, 4, 5 };
     Header header(address);
     uint32_t tmpAddress = 0;
-    Header::PageHeader* headerPtr;
 
     for (unsigned i = 0; i < StorageMacroblock::PAGES_COUNT * Page::PAGE_SIZE; i++) {
         storage.setBlocked(address + i, true);
@@ -883,15 +883,13 @@ TEST_F(StorageFixture, SaveDataOnBlockedSector)
     EXPECT_EQ(sat->save(address, shortPrefix, 1, wdata, sizeof(wdata)), STORAGE_OK);
     EXPECT_EQ(StorageMacroblock::loadHeader(&header), STORAGE_OK);
 
-    headerPtr = header.data->pages;
-    for (unsigned i = 0; i < Header::PAGES_COUNT; i++, headerPtr++) {
-        EXPECT_TRUE(header.isSetHeaderStatus(headerPtr, Header::PAGE_BLOCKED));
+    for (unsigned i = 0; i < Header::PAGES_COUNT; i++) {
+        EXPECT_TRUE(header.isPageStatus(i, Header::PAGE_BLOCKED));
     }
     EXPECT_EQ(sat->find(FIND_MODE_EQUAL, &tmpAddress, shortPrefix, 1), STORAGE_OK);
     EXPECT_NE(address, tmpAddress);
     EXPECT_EQ(header.load(), STORAGE_OK);
-    headerPtr = &(header.data->pages[StorageMacroblock::getPageIndexByAddress(address)]);
-    EXPECT_TRUE(header.isSetHeaderStatus(headerPtr, Header::PAGE_BLOCKED));
+    EXPECT_TRUE(header.isPageStatus(StorageMacroblock::getPageIndexByAddress(address), Header::PAGE_BLOCKED));
 }
 
 TEST_F(StorageFixture, BlockAllMemory)
