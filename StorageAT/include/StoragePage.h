@@ -21,7 +21,7 @@ public:
 	static const uint32_t STORAGE_MAGIC  = 0xBEDAC0DE;
 
 	/* Current page structure version */
-	static const uint8_t STORAGE_VERSION = 0x05;
+	static const uint8_t STORAGE_VERSION = 0x06;
 
 	/* Available page title bytes in block header */
 	static const uint8_t PREFIX_SIZE     = 3;
@@ -219,6 +219,15 @@ public:
 		* @param status    Target status
 		*/
 		void setStatus(uint32_t pageIndex, PageStatus targetStatus);
+
+
+		/*
+		* Returns the page status in the MetaStatus
+		*
+		* @param pageIndex The page index in current macroblock
+		* @return          Returns page status
+		*/
+		uint8_t getStatus(uint32_t pageIndex);
 	} MetaStatus);
 
 	/* Pages in block that header page contains */
