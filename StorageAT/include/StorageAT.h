@@ -56,6 +56,7 @@ public:
 	/*
 	 * Find data in storage
 	 * 
+	 * @param mode    Current search mode
 	 * @param address Pointer that used to find needed page address
 	 * @param prefix  String page prefix of header that needed to be found in storage
 	 * @param id      Integer page prefix of header that needed to be found in storage
