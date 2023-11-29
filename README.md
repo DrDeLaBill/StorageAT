@@ -186,7 +186,7 @@ StorageAT storage(
 
 ### 3. Allocation table usage
 
-Memory formating:
+Memory formatting:
 ```c++
 storage.format();
 ```
