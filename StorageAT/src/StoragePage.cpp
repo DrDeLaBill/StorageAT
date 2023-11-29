@@ -265,6 +265,12 @@ void Header::MetaStatus::setStatus(uint32_t pageIndex, PageStatus targetStatus)
 	this->status = (this->status & mask) | (static_cast<uint8_t>(targetStatus) << offset);
 }
 
+uint8_t Header::MetaStatus::getStatus(uint32_t pageIndex)
+{
+	uint8_t offset = ((pageIndex % BYTE_STAUSES_COUNT) * STATUS_BITS_COUNT);
+	return ((this->status >> offset) & 0b00000011);
+}
+
 void Header::setPageStatus(uint32_t pageIndex, PageStatus status)
 {
 	if (pageIndex >= Header::PAGES_COUNT) {
@@ -380,6 +386,11 @@ StorageStatus Header::load()
 			return STORAGE_OK;
 		}
 	}
+
+	if (!this->validate()) {
+		return STORAGE_ERROR;
+	}
+
 	return status;
 }
 
@@ -400,6 +411,10 @@ StorageStatus Header::save()
 		}
 	}
 
+	if (!this->validate()) {
+		return STORAGE_ERROR;
+	}
+
 	return status;
 }
 
@@ -409,12 +424,13 @@ bool Header::validate()
 		return false;
 	}
 
-
 	MetaStatus* statusPtr = data->metaStatuses;
 	MetaStatus* statusEndPtr = &(this->data->metaStatuses[Header::PAGES_COUNT-1]);
 	for (; statusPtr < statusEndPtr; statusPtr++) {
-		if (!(*statusPtr).status) {
-			return false;
+		for (unsigned pageIndex = 0; pageIndex < Header::PAGES_COUNT; pageIndex++) {
+			if (!(*statusPtr).getStatus(pageIndex)) {
+				return false;
+			}
 		}
 	}
 
