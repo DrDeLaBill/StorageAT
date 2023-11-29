@@ -13,7 +13,7 @@
 
 ## Description
 
-StorageAT is an allocation table (file system) library for memory of embeded devices.
+StorageAT is an allocation table (file system) library for memory of embedded devices.
 
 Navigation occurs through the use of a prefix and an identifier that each record has. The prefix is used to determine the purpose of the data and the identifier is used to number them.
 
