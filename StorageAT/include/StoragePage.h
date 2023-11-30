@@ -31,7 +31,7 @@ public:
 	STORAGE_PACK(typedef struct, _PageMeta {
 		uint32_t magic;               // Special code
 		uint8_t  version;             // StorageAT library version
-		uint32_t prev_addr;           // Previosly data address
+		uint32_t prev_addr;           // Previously data address
 		uint32_t next_addr;           // Next data address
 		uint8_t  prefix[PREFIX_SIZE]; // String page prefix for searching
 		uint32_t id;                  // ID for searching
@@ -234,10 +234,10 @@ public:
 	static const uint32_t PAGES_COUNT = (PAYLOAD_SIZE * 8) / (sizeof(struct _MetaUnit) * 8 + STATUS_BITS_COUNT);
 
 	/* Statuses count in byte */
-	static const uint32_t BYTE_STAUSES_COUNT = 8 / STATUS_BITS_COUNT;
+	static const uint32_t BYTE_STATUSES_COUNT = 8 / STATUS_BITS_COUNT;
 
 	/* Header page payload data statuses count */
-	static const uint32_t STATUSES_COUNT = PAGES_COUNT / BYTE_STAUSES_COUNT + (PAGES_COUNT % BYTE_STAUSES_COUNT ? 1 : 0);
+	static const uint32_t STATUSES_COUNT = PAGES_COUNT / BYTE_STATUSES_COUNT + (PAGES_COUNT % BYTE_STATUSES_COUNT ? 1 : 0);
 
 	/* Header page payload data */
 	STORAGE_PACK(typedef struct, _HeaderMeta {
