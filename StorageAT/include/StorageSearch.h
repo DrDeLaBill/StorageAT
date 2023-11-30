@@ -12,7 +12,7 @@
 
 
 /*
- * StorageSearchBase is a parrent base class for search data in storage allocation table
+ * StorageSearchBase is a parent base class for search data in storage allocation table
  */
 class StorageSearchBase
 {
@@ -30,7 +30,7 @@ public:
 	virtual ~StorageSearchBase() { foundOnce = false; }
 
 	/*
-	 * Serches data in all memory
+	 * Searches data in all memory
 	 * 
 	 * @param prefix     String page prefix of header
 	 * @param id         Integer page prefix of header
@@ -70,7 +70,7 @@ protected:
 	virtual bool isNeededFirstResult() { return false; }
 
 	/*
-	 * Serches data in current macroblock
+	 * Searches data in current macroblock
 	 * 
 	 * @param header Current macroblock header
 	 * @param prefix String page prefix of header
@@ -219,7 +219,7 @@ protected:
 	bool isNeededFirstResult() override { return true; }
 
 	/*
-	 * Serches data in current macroblock
+	 * Searches data in current macroblock
 	 * 
 	 * @param header Current macroblock header
 	 * @param prefix String page prefix of header

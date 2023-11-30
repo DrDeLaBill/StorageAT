@@ -72,7 +72,7 @@ public:
 	 * Formats target macroblock
 	 * 
 	 * @param macroblockIndex Target macroblock index
-	 * @return                Returns STORAGE_OK if the macroblock was formatted successfullty
+	 * @return                Returns STORAGE_OK if the macroblock was formatted successfully
 	 */
 	static StorageStatus formatMacroblock(uint32_t macroblockIndex);
 
@@ -80,7 +80,7 @@ public:
 	 * Loads header from the header macroblock
 	 * 
 	 * @param header Pointer to the target header
-	 * @return       Returns STORAGE_OK if the header was loaded successfullty
+	 * @return       Returns STORAGE_OK if the header was loaded successfully
 	 */
 	static StorageStatus loadHeader(Header *header);
 };

@@ -30,7 +30,7 @@ Each macroblock has a table of contents (Header) and a data storage area (User d
 <p align="center">Figure 2</p>
 
 The Page is the minimum operaded unit in the data allocation table, it has a meta-data area and a user data area. 
-Each page (includeing macroblock header) saves with specially generated meta-data. Page code - defines the beginning of the page, Version - the library version that was used wheb writing the page, Prev page address and Next page address - the linked pages addresses, if the previously saved data exceeded the size of the area of the page, prefix and identifier - special data set by user (also stored in the macroblock header) that is uses to search for specific data in memory, CRC16 - checksum of the page (Figure 3).
+Each page (including macroblock header) saves with specially generated meta-data. Page code - defines the beginning of the page, Version - the library version that was used when writing the page, Prev page address and Next page address - the linked pages addresses, if the previously saved data exceeded the size of the area of the page, prefix and identifier - special data set by user (also stored in the macroblock header) that is uses to search for specific data in memory, CRC16 - checksum of the page (Figure 3).
 
 <img src="https://github.com/DrDeLaBill/StorageAT/assets/40359652/8636232b-68e4-49b3-bb6f-1a5a3f945f14">
 <p align="center">Figure 3</p>
@@ -43,22 +43,22 @@ In the header of macroblock is reserved 4 pages for the storing its table of con
 ## API
 
 The entire API, after processing the request, returns the execution status:
-* STORAGE_OK - Successfull exit code
+* STORAGE_OK - Successful exit code
 * STORAGE_ERROR - Interanal error
 * STORAGE_BUSY - Physical drive is busy
 * STORAGE_OOM - Out of memory
 * STORAGE_NOT_FOUND - Data was not found on physical drive
 * STORAGE_DATA_EXISTS - Data already exists on current address
 
-For any manipulation of the mamory uses a 32-bit address, so to save or/and load data you must perform a search in the appropriate mode.
+For any manipulation of the memory uses a 32-bit address, so to save or/and load data you must perform a search in the appropriate mode.
 
-Find funcion - finds data in storage
+Find function - finds data in storage
 * mode - search mode
-    * FIND_MODE_EQUAL - serches for data with equal prefix and identifier
-    * FIND_MODE_NEXT - serches for data that has an identifier next to the current, with a prefix identical current
-    * FIND_MODE_MIN - serches for data that has an minimum identifier, with a prefix identical current
-    * FIND_MODE_MAX - serches for data that has an maximum identifier, with a prefix identical current
-    * FIND_MODE_EMPTY - serches for empty page
+    * FIND_MODE_EQUAL - searches for data with equal prefix and identifier
+    * FIND_MODE_NEXT - searches for data that has an identifier next to the current, with a prefix identical current
+    * FIND_MODE_MIN - searches for data that has an minimum identifier, with a prefix identical current
+    * FIND_MODE_MAX - searches for data that has an maximum identifier, with a prefix identical current
+    * FIND_MODE_EMPTY - searches for empty page
 * address - the variable in which the result will be written
 * prefix - data prefix
 * id - data identifier
@@ -71,7 +71,7 @@ StorageStatus find(
 );
 ```
 
-Load funcion - loads the data from the storage by address
+Load function - loads the data from the storage by address
 * address - storage page address to load
 * data - the variable in which the result will be written
 * len - the result variable length in bytes
@@ -95,7 +95,7 @@ StorageStatus save(
 );
 ```
 
-Rewrite funcion - saves data to memory at the specified address in any case
+Rewrite function - saves data to memory at the specified address in any case
 * address - storage page address to save
 * prefix - data prefix
 * id - data identifier
@@ -116,7 +116,7 @@ Format function - formats all the memory
 StorageStatus format();
 ```
 
-Delte funciton - deletes data from the header
+Delete function - deletes data from the header
 * address - storage page address to delete
 ```c++
 StorageStatus deleteData(uint32_t address);
