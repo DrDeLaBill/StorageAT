@@ -19,8 +19,8 @@
  * StorageAT method exit codes 
  */
 typedef enum _StorageStatus {
-	STORAGE_OK          = static_cast<uint8_t>(0x00), // Successfull exit code
-	STORAGE_ERROR       = static_cast<uint8_t>(0x01), // Interanal error
+	STORAGE_OK          = static_cast<uint8_t>(0x00), // Successful exit code
+	STORAGE_ERROR       = static_cast<uint8_t>(0x01), // Internal error
 	STORAGE_BUSY        = static_cast<uint8_t>(0x02), // Physical drive is busy
 	STORAGE_OOM         = static_cast<uint8_t>(0x03), // Out of memory
 	STORAGE_NOT_FOUND   = static_cast<uint8_t>(0x04), // Data was not found on physical drive
