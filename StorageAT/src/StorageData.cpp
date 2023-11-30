@@ -78,10 +78,15 @@ StorageStatus StorageData::save(
 		return STORAGE_DATA_EXISTS;
 	}
 	if (checkHeader.isSameMeta(StorageMacroblock::getPageIndexByAddress(checkAddress), prefix, id)) {
-		status = StorageData::findStartAddress(&checkAddress);
+		status = StorageData::findStartAddress(&checkAddress); // TODO: check
 	}
 
-	return this->rewrite(prefix, id, data, len);
+
+	status = this->rewrite(prefix, id, data, len);
+	if (status != STORAGE_OK) {
+		this->deleteData();
+	}
+	return status;
 }
 
 StorageStatus StorageData::rewrite(
@@ -196,7 +201,6 @@ StorageStatus StorageData::rewrite(
 	} 
 
 	if (status != STORAGE_OK) {
-		this->deleteData();
 		return status;
 	}
 
