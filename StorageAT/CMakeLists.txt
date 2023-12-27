@@ -13,7 +13,7 @@ set(ALL_SRCS "${${PROJECT_NAME}_SOURCES};${${PROJECT_NAME}_HEADERS}")
 add_library(storageatlib STATIC ${ALL_SRCS})
 target_include_directories(
     storageatlib
-    PRIVATE
+    PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 set_target_properties(
