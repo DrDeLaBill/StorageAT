@@ -23,11 +23,7 @@ file(GLOB ${PROJECT_NAME}_HEADERS "./*.h")
 file(GLOB ${PROJECT_NAME}_SOURCES "./*.cpp")
 set(ALL_SRCS "${${PROJECT_NAME}_SOURCES};${${PROJECT_NAME}_HEADERS}")
 add_executable(storageattest ${ALL_SRCS})
-target_include_directories(
-    storageattest
-    PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/../StorageAT/include
-)
+
 target_link_libraries(
     storageattest
     GTest::gtest_main
