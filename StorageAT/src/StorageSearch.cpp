@@ -124,8 +124,8 @@ bool StorageSearchMax::isIdFound(
 
 StorageStatus StorageSearchEmpty::searchPageAddressInMacroblock(
 	Header*        header,
-	const uint8_t  prefix[Page::PREFIX_SIZE],
-	const uint32_t id
+	const uint8_t[Page::PREFIX_SIZE],
+	const uint32_t
 ) {
 	this->foundInMacroblock = false;
 	uint32_t pageIndex = StorageMacroblock::getPageIndexByAddress(this->startSearchAddress);
