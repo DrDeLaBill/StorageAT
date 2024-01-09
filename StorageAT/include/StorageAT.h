@@ -50,7 +50,7 @@ public:
 	 */
 	StorageAT(
 		uint32_t        pagesCount,
-		IStorageDriver* driver
+		IStorageDriver* driver // TODO: pointer to reference
 	);
 
 	/*
