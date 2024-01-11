@@ -3,6 +3,7 @@
 #pragma once
 
 
+#include <limits>
 #include <stdint.h>
 
 #include "StoragePage.h"
@@ -40,7 +41,7 @@ private:
 
 public:
 	/* Max available address for StorageFS */
-	static const uint32_t MAX_ADDRESS = 0xFFFFFFFF;
+	static const uint32_t MAX_ADDRESS = std::numeric_limits<uint32_t>::max();
 
 	/*
 	 * Storage Allocation Table constructor
