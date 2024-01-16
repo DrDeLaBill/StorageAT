@@ -174,10 +174,12 @@ StorageStatus StorageData::rewrite(
         }
 
         // Save page
-        memcpy(page.page.header.prefix, prefix, Page::PREFIX_SIZE);
-        page.page.header.id = id;
-        memcpy(page.page.payload, data + curLen, neededLen);
-        status = page.save();
+        if (status == STORAGE_OK) {
+            memcpy(page.page.header.prefix, prefix, Page::PREFIX_SIZE);
+            page.page.header.id = id;
+            memcpy(page.page.payload, data + curLen, neededLen);
+            status = page.save();
+        }
         if (status == STORAGE_BUSY) {
             break;
         }
@@ -208,7 +210,9 @@ StorageStatus StorageData::rewrite(
     }
 
     // Save last header
-    return header.save();
+    header.save();
+
+    return STORAGE_OK;
 }
 
 
