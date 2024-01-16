@@ -876,7 +876,7 @@ TEST_F(StorageFixture, SaveDataOnBlockedSector)
     Header header(address);
     uint32_t tmpAddress = 0;
 
-    for (unsigned i = 0; i < StorageMacroblock::PAGES_COUNT * Page::PAGE_SIZE; i++) {
+    for (unsigned i = 0; i < Header::PAGES_COUNT * Page::PAGE_SIZE; i++) {
         storage.setBlocked(address + i, true);
     }
 
@@ -932,8 +932,8 @@ TEST_F(StorageFixture, SaveAndFindDataWithBlockedAllHeaders)
     uint8_t wdata[Page::PAYLOAD_SIZE] = { 1, 2, 3, 4, 5 };
     uint8_t rdata[Page::PAYLOAD_SIZE] = { 0 };
 
-    for (unsigned i = 0; i < StorageMacroblock::RESERVED_PAGES_COUNT; i++) {
-        storage.setBlocked(address + Page::PAGE_SIZE * i, true);
+    for (unsigned i = 0; i < StorageMacroblock::RESERVED_PAGES_COUNT * Page::PAGE_SIZE; i++) {
+        storage.setBlocked(i, true);
     }
 
     EXPECT_EQ(sat->find(FIND_MODE_EMPTY, &address), STORAGE_OK);
@@ -1027,6 +1027,12 @@ TEST_F(StorageFixture, TimeCheck)
     endTime = std::chrono::high_resolution_clock::now();
     std::cout << "Delete: " << (double)(duration.count() / 1000.0) << "ms" << std::endl;
 }
+
+/*
+ * Tests:
+ * 1. search for empty prefix = "" (search for any string)
+ * 2. erase several sectors
+ */
 
 int main(int args, char** argv)
 {
