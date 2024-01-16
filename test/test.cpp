@@ -1028,6 +1028,12 @@ TEST_F(StorageFixture, TimeCheck)
     std::cout << "Delete: " << (double)(duration.count() / 1000.0) << "ms" << std::endl;
 }
 
+/*
+ * Tests:
+ * 1. search for empty prefix = "" (search for any string)
+ * 2. erase several sectors
+ */
+
 int main(int args, char** argv)
 {
     testing::InitGoogleTest(&args, argv);

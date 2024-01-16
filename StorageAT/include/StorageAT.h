@@ -22,6 +22,7 @@ class IStorageDriver
 public:
 	virtual StorageStatus read(uint32_t, uint8_t*, uint32_t) { return STORAGE_ERROR; }
 	virtual StorageStatus write(uint32_t, uint8_t*, uint32_t) { return STORAGE_ERROR; }
+	// TODO: virtual StorageStatus erase(address, length)
 };
 
 /*
