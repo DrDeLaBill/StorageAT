@@ -54,9 +54,9 @@ StorageStatus StorageAT::find(
         return (StorageSearchMax(/*startSearchAddress=*/0)).searchPageAddress(tmpPrefix, id, address);
     case FIND_MODE_EMPTY:
         return (StorageSearchEmpty(/*startSearchAddress=*/0)).searchPageAddress(tmpPrefix, id, address);
+    default:
+        return STORAGE_ERROR;
     }
-
-    return STORAGE_ERROR;
 }
 
 StorageStatus StorageAT::load(uint32_t address, uint8_t* data, uint32_t len)
