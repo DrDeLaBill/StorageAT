@@ -22,7 +22,7 @@ public:
 	 *
 	 * @param startSearchAddress The address from which the search begins
 	 */
-	StorageSearchBase(uint32_t startSearchAddress): startSearchAddress(startSearchAddress) {}
+	StorageSearchBase(uint32_t startSearchAddress = 0): startSearchAddress(startSearchAddress) {}
 
 	/*
 	 * StorageSearchBase destructor
@@ -103,7 +103,7 @@ public:
 	 *
 	 * @param startSearchAddress The address from which the search begins
 	 */
-	StorageSearchEqual(uint32_t startSearchAddress): StorageSearchBase(startSearchAddress) {}
+	StorageSearchEqual(uint32_t startSearchAddress = 0): StorageSearchBase(startSearchAddress) {}
 
 protected:
 	/*
@@ -131,7 +131,7 @@ public:
 	 *
 	 * @param startSearchAddress The address from which the search begins
 	 */
-	StorageSearchNext(uint32_t startSearchAddress): StorageSearchBase(startSearchAddress) {}
+	StorageSearchNext(uint32_t startSearchAddress = 0): StorageSearchBase(startSearchAddress) {}
 
 protected:
 	/*
@@ -159,7 +159,7 @@ public:
 	 *
 	 * @param startSearchAddress The address from which the search begins
 	 */
-	StorageSearchMin(uint32_t startSearchAddress): StorageSearchBase(startSearchAddress) {}
+	StorageSearchMin(uint32_t startSearchAddress = 0): StorageSearchBase(startSearchAddress) {}
 
 protected:
 	/*
@@ -187,7 +187,7 @@ public:
 	 *
 	 * @param startSearchAddress The address from which the search begins
 	 */
-	StorageSearchMax(uint32_t startSearchAddress): StorageSearchBase(startSearchAddress) {}
+	StorageSearchMax(uint32_t startSearchAddress = 0): StorageSearchBase(startSearchAddress) {}
 
 protected:
 	/*
@@ -210,7 +210,7 @@ public:
 	 *
 	 * @param startSearchAddress The address from which the search begins
 	 */
-	StorageSearchEmpty(uint32_t startSearchAddress): StorageSearchBase(startSearchAddress) {}
+	StorageSearchEmpty(uint32_t startSearchAddress = 0): StorageSearchBase(startSearchAddress) {}
 
 protected:
 	/*
