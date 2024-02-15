@@ -402,7 +402,10 @@ StorageStatus Header::create()
         }
     }
 
-    return this->save();
+    // If header has not been saved, the header data will be available
+    this->save();
+
+    return STORAGE_OK;
 }
 
 StorageStatus Header::load()

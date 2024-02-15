@@ -80,13 +80,5 @@ StorageStatus StorageMacroblock::loadHeader(Header* header)
         return STORAGE_OK;
     }
 
-    status = header->create();
-    if (status == STORAGE_BUSY || status == STORAGE_OOM) {
-        return status;
-    }
-    if (status == STORAGE_OK) {
-        return STORAGE_OK;
-    }
-
-    return status;
+    return header->create();
 }

@@ -129,10 +129,19 @@ public:
 	/*
 	 * Removes data from address
 	 *
-	 * @param address Data start address
+	 * @param data Pointer to data array for save data
+	 * @param len  Array size
+	 * @return     Returns STORAGE_OK if the data was removed successfully
+	 */
+	StorageStatus deleteData(const char* prefix, const uint32_t index);
+
+	/*
+	 * Removes data from address
+	 *
+	 * @param address The address of the data for delete
 	 * @return        Returns STORAGE_OK if the data was removed successfully
 	 */
-	StorageStatus deleteData(uint32_t address);
+	StorageStatus clearAddress(const uint32_t address);
 
 	/*
 	 * @return Returns pages count of physical drive

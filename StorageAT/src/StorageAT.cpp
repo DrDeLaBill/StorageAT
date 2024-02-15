@@ -54,9 +54,9 @@ StorageStatus StorageAT::find(
         return (StorageSearchMax(/*startSearchAddress=*/0)).searchPageAddress(tmpPrefix, id, address);
     case FIND_MODE_EMPTY:
         return (StorageSearchEmpty(/*startSearchAddress=*/0)).searchPageAddress(tmpPrefix, id, address);
+    default:
+        return STORAGE_ERROR;
     }
-
-    return STORAGE_ERROR;
 }
 
 StorageStatus StorageAT::load(uint32_t address, uint8_t* data, uint32_t len)
@@ -142,13 +142,17 @@ StorageStatus StorageAT::format()
     return STORAGE_OK;
 }
 
-StorageStatus StorageAT::deleteData(uint32_t address)
+StorageStatus StorageAT::deleteData(const char* prefix, const uint32_t index)
 {
-    if (address > StorageAT::getStorageSize()) {
-        return STORAGE_OOM;
-    }
-    StorageData storageData(address);
-    return storageData.deleteData();
+    uint8_t tmpPrefix[Page::PREFIX_SIZE + 1] = {};
+    memcpy(tmpPrefix, prefix, std::min(static_cast<size_t>(Page::PREFIX_SIZE), strlen(prefix)));
+
+    return StorageData(0).deleteData(tmpPrefix, index);
+}
+
+StorageStatus StorageAT::clearAddress(const uint32_t address)
+{
+	return StorageData(0).clearAddress(address);
 }
 
 uint32_t StorageAT::getStoragePagesCount()
