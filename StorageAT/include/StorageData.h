@@ -69,11 +69,23 @@ public:
 	);
 	
 	/*
-	 * Delete data from m_startAddress storage address
+	 * Delete data
 	 *
+	 * @param  prefix The prefix of the data for delete
+	 * @param  index  The index of the data for delete
 	 * @return Returns STORAGE_OK if the data was deleted successfully
 	 */
-	StorageStatus deleteData();
+	 // TODO: change tests + fill full RAM with same data, broke first payload data, try to delete and save new
+	StorageStatus deleteData(const uint8_t prefix[Header::PREFIX_SIZE], const uint32_t index);
+
+	/*
+	 * Removes data from address
+	 *
+	 * @param address The address of the data for delete
+	 * @return        Returns STORAGE_OK if the data was removed successfully
+	 */
+	 // TODO: tests
+	StorageStatus clearAddress(const uint32_t address);
 	
 	/*
 	 * Searches data start address in storage

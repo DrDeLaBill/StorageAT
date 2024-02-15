@@ -48,7 +48,7 @@ StorageStatus StorageData::load(uint8_t* data, uint32_t len)
     }
 
     if (status != STORAGE_OK) {
-        this->deleteData();
+        this->deleteData(page.page.header.prefix, page.page.header.id);
     }
 
     return status;
@@ -84,7 +84,7 @@ StorageStatus StorageData::save(
 
     status = this->rewrite(prefix, id, data, len);
     if (status != STORAGE_OK) {
-        this->deleteData();
+        this->deleteData(prefix, id);
     }
     return status;
 }
@@ -101,12 +101,7 @@ StorageStatus StorageData::rewrite(
         return STORAGE_ERROR;
     }
 
-    StorageStatus status = StorageSearchEqual(0).searchPageAddress(prefix, id, &m_startAddress);
-    if (status == STORAGE_OK) {
-    	status = deleteData();
-    } else {
-    	status = STORAGE_OK;
-    }
+    StorageStatus status = deleteData(prefix, id);
     if (status != STORAGE_OK) {
     	return STORAGE_ERROR;
     }
@@ -206,8 +201,8 @@ StorageStatus StorageData::rewrite(
 
         // Update current values
         prevAddr = curAddr;
-        curAddr = nextAddr;
-        curLen += neededLen;
+        curAddr  = nextAddr;
+        curLen  += neededLen;
     }
 
     if (status != STORAGE_OK) {
@@ -215,30 +210,17 @@ StorageStatus StorageData::rewrite(
     }
 
     // Save last header
-    header.save();
+    if (header.save() != STORAGE_OK) {
+    	return deleteData(prefix, id);
+    }
 
     return STORAGE_OK;
 }
 
 
-StorageStatus StorageData::deleteData()
+StorageStatus StorageData::deleteData(const uint8_t prefix[Header::PREFIX_SIZE], const uint32_t index)
 {
-    if (StorageMacroblock::isMacroblockAddress(this->m_startAddress)) {
-        return STORAGE_ERROR;
-    }
-
-    // Load first page
-    Page page(this->m_startAddress);
-    StorageStatus status = page.load();
-    if (status != STORAGE_OK) {
-        return status;
-    }
-
-    uint8_t  prefix[Header::PREFIX_SIZE] = {};
-    memcpy(prefix, page.page.header.prefix, Header::PREFIX_SIZE);
-    uint32_t data_id = page.page.header.id;
-
-    for (uint32_t macroblockIndex = 0; macroblockIndex < StorageMacroblock::getMacroblocksCount(); macroblockIndex++) {
+	for (uint32_t macroblockIndex = 0; macroblockIndex < StorageMacroblock::getMacroblocksCount(); macroblockIndex++) {
 		Header header(StorageMacroblock::getMacroblockAddress(macroblockIndex));
 
 		StorageStatus status = StorageMacroblock::loadHeader(&header);
@@ -249,9 +231,8 @@ StorageStatus StorageData::deleteData()
 	    Header::MetaUnit *metUnitPtr = header.data->metaUnits;
 		for (uint32_t pageIndex = 0; pageIndex < Header::PAGES_COUNT; pageIndex++, metUnitPtr++) {
 			if (
-				strlen(reinterpret_cast<const char*>(prefix)) &&
-				memcmp((*metUnitPtr).prefix, prefix, Page::PREFIX_SIZE) &&
-				(*metUnitPtr).id == data_id
+				memcmp((*metUnitPtr).prefix, prefix, Page::PREFIX_SIZE) ||
+				(*metUnitPtr).id != index
 			) {
 				continue;
 			}
@@ -271,6 +252,32 @@ StorageStatus StorageData::deleteData()
     return STORAGE_OK;
 }
 
+StorageStatus StorageData::clearAddress(const uint32_t address)
+{
+	uint32_t cur_address = address;
+
+    if (StorageMacroblock::isMacroblockAddress(cur_address)) {
+    	return STORAGE_ERROR;
+    }
+
+	StorageStatus status = StorageData::findStartAddress(&cur_address);
+	if (status == STORAGE_BUSY || status == STORAGE_OOM) {
+		return status;
+	}
+	if (status == STORAGE_OK) {
+		m_startAddress = cur_address;
+	}
+
+	uint32_t curAddress = m_startAddress;
+	uint32_t macroblockAddress = Page::PAGE_SIZE + 1;
+	Page page(curAddress);
+	status = page.load();
+	if (status != STORAGE_OK) {
+		return status;
+	}
+
+	return this->deleteData(page.page.header.prefix, page.page.header.id);
+}
 
 StorageStatus StorageData::findStartAddress(uint32_t* address)
 {

@@ -142,13 +142,14 @@ StorageStatus StorageAT::format()
     return STORAGE_OK;
 }
 
-StorageStatus StorageAT::deleteData(uint32_t address)
+StorageStatus StorageAT::deleteData(const uint8_t prefix[Header::PREFIX_SIZE], const uint32_t index)
 {
-    if (address > StorageAT::getStorageSize()) {
-        return STORAGE_OOM;
-    }
-    StorageData storageData(address);
-    return storageData.deleteData();
+    return StorageData(0).deleteData(prefix, index);
+}
+
+StorageStatus StorageAT::clearAddress(const uint32_t address)
+{
+	return StorageData(0).clearAddress(address);
 }
 
 uint32_t StorageAT::getStoragePagesCount()
