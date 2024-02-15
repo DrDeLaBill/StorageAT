@@ -23,6 +23,13 @@ private:
 	 */
 	StorageStatus isEmptyAddress(uint32_t address);
 
+	/*
+	 * Erases page from memory
+	 *
+	 * @return Returns STORAGE_OK if the page erased successfully
+	 */
+	StorageStatus erasePage(const uint32_t address);
+
 public:
 	/*
 	 * Storage data constructor

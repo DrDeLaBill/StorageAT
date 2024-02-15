@@ -142,9 +142,12 @@ StorageStatus StorageAT::format()
     return STORAGE_OK;
 }
 
-StorageStatus StorageAT::deleteData(const uint8_t prefix[Header::PREFIX_SIZE], const uint32_t index)
+StorageStatus StorageAT::deleteData(const char* prefix, const uint32_t index)
 {
-    return StorageData(0).deleteData(prefix, index);
+    uint8_t tmpPrefix[Page::PREFIX_SIZE + 1] = {};
+    memcpy(tmpPrefix, prefix, std::min(static_cast<size_t>(Page::PREFIX_SIZE), strlen(prefix)));
+
+    return StorageData(0).deleteData(tmpPrefix, index);
 }
 
 StorageStatus StorageAT::clearAddress(const uint32_t address)

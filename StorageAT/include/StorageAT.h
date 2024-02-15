@@ -133,7 +133,7 @@ public:
 	 * @param len  Array size
 	 * @return     Returns STORAGE_OK if the data was removed successfully
 	 */
-	StorageStatus deleteData(const uint8_t prefix[Header::PREFIX_SIZE], const uint32_t index);
+	StorageStatus deleteData(const char* prefix, const uint32_t index);
 
 	/*
 	 * Removes data from address

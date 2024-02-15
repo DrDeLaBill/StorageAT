@@ -2,8 +2,8 @@
 
 #include "StorageData.h"
 
+#include <cstring>
 #include <algorithm>
-#include <string.h>
 
 #include "StoragePage.h"
 #include "StorageType.h"
@@ -103,7 +103,7 @@ StorageStatus StorageData::rewrite(
 
     StorageStatus status = deleteData(prefix, id);
     if (status != STORAGE_OK) {
-    	return STORAGE_ERROR;
+    	return status;
     }
     m_startAddress = pageAddress;
 
@@ -209,10 +209,8 @@ StorageStatus StorageData::rewrite(
         return status;
     }
 
-    // Save last header
-    if (header.save() != STORAGE_OK) {
-    	return deleteData(prefix, id);
-    }
+    // If header has not been saved, the data will be available
+    header.save();
 
     return STORAGE_OK;
 }
@@ -220,18 +218,19 @@ StorageStatus StorageData::rewrite(
 
 StorageStatus StorageData::deleteData(const uint8_t prefix[Header::PREFIX_SIZE], const uint32_t index)
 {
+    StorageStatus status = STORAGE_OK;
+
 	for (uint32_t macroblockIndex = 0; macroblockIndex < StorageMacroblock::getMacroblocksCount(); macroblockIndex++) {
 		Header header(StorageMacroblock::getMacroblockAddress(macroblockIndex));
 
-		StorageStatus status = StorageMacroblock::loadHeader(&header);
+		status = StorageMacroblock::loadHeader(&header);
 		if (status == STORAGE_BUSY || status == STORAGE_OOM) {
 			return status;
 		}
 
 	    Header::MetaUnit *metUnitPtr = header.data->metaUnits;
 		for (uint32_t pageIndex = 0; pageIndex < Header::PAGES_COUNT; pageIndex++, metUnitPtr++) {
-			if (
-				memcmp((*metUnitPtr).prefix, prefix, Page::PREFIX_SIZE) ||
+			if (memcmp((*metUnitPtr).prefix, prefix, Page::PREFIX_SIZE) ||
 				(*metUnitPtr).id != index
 			) {
 				continue;
@@ -245,11 +244,22 @@ StorageStatus StorageData::deleteData(const uint8_t prefix[Header::PREFIX_SIZE],
 
 		status = header.save();
 		if (status != STORAGE_OK) {
-			return status;
+            for (uint32_t pageIndex = 0; pageIndex < Header::PAGES_COUNT; pageIndex++, metUnitPtr++) {
+                Page page(StorageMacroblock::getPageAddressByIndex(macroblockIndex, pageIndex));
+                if (page.load() != STORAGE_OK) {
+                    continue;
+                }
+                if (memcmp(page.page.header.prefix, prefix, Page::PREFIX_SIZE) ||
+                    page.page.header.id != index
+                ) {
+                    continue;
+                }
+                this->erasePage(page.getAddress());
+            }
 		}
 	}
 
-    return STORAGE_OK;
+    return status;
 }
 
 StorageStatus StorageData::clearAddress(const uint32_t address)
@@ -363,4 +373,16 @@ StorageStatus StorageData::isEmptyAddress(uint32_t address)
         return STORAGE_OK;
     }
     return STORAGE_DATA_EXISTS;
+}
+
+StorageStatus StorageData::erasePage(const uint32_t address)
+{
+    if (StorageMacroblock::isMacroblockAddress(address)) {
+        return STORAGE_ERROR;
+    }
+
+    Page page(address);
+    memset(reinterpret_cast<void*>(&page.page), 0xFF, sizeof(page.page));
+
+    return page.save();
 }

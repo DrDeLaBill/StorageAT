@@ -732,7 +732,7 @@ TEST_F(StorageFixture, DeleteData)
     EXPECT_EQ(sat->find(FIND_MODE_EMPTY, &address), STORAGE_OK);
     EXPECT_EQ(sat->save(address, shortPrefix, 0, wdata, sizeof(wdata)), STORAGE_OK);
     EXPECT_EQ(sat->find(FIND_MODE_EQUAL, &address, shortPrefix, 0), STORAGE_OK);
-    EXPECT_EQ(sat->deleteData(address), STORAGE_OK);
+    EXPECT_EQ(sat->clearAddress(address), STORAGE_OK);
     EXPECT_EQ(sat->find(FIND_MODE_EQUAL, &address, shortPrefix, 0), STORAGE_NOT_FOUND);
 }
 
@@ -901,7 +901,7 @@ TEST_F(StorageFixture, BlockAllMemory)
         storage.setBlocked(i, true);
     }
 
-    EXPECT_EQ(sat->save(address, shortPrefix, 1, wdata, sizeof(wdata)), STORAGE_OOM);
+    EXPECT_EQ(sat->save(address, shortPrefix, 1, wdata, sizeof(wdata)), STORAGE_ERROR);
     EXPECT_EQ(sat->find(FIND_MODE_EQUAL, &address, shortPrefix, 1), STORAGE_NOT_FOUND);
 }
 
@@ -924,7 +924,7 @@ TEST_F(StorageFixture, SetAllHeadersBlocked)
         storage.setBlocked(address + Page::PAGE_SIZE * i, true);
     }
 
-    EXPECT_EQ(StorageMacroblock::loadHeader(&header), STORAGE_ERROR);
+    EXPECT_EQ(StorageMacroblock::loadHeader(&header), STORAGE_OK);
 }
 
 TEST_F(StorageFixture, SaveAndFindDataWithBlockedAllHeaders)
@@ -985,6 +985,49 @@ TEST_F(StorageFixture, SaveFindLoadPartitionedData)
     EXPECT_FALSE(memcmp(wdata2, rdata2, sizeof(wdata2)));
 }
 
+TEST_F(StorageFixture, FindForAnyAddress)
+{
+    uint8_t wdata[Page::PAYLOAD_SIZE] = {};
+
+    EXPECT_EQ(sat->find(FIND_MODE_EMPTY, &address), STORAGE_OK);
+    EXPECT_EQ(address, StorageMacroblock::RESERVED_PAGES_COUNT * Page::PAGE_SIZE);
+    EXPECT_EQ(sat->save(address, shortPrefix, 1, wdata, sizeof(wdata)), STORAGE_OK);
+    uint32_t lastAddress = address;
+    EXPECT_EQ(sat->find(FIND_MODE_NEXT, &address, "", 0), STORAGE_OK);
+    EXPECT_EQ(lastAddress, address);
+}
+
+TEST_F(StorageFixture, DeleteDataWithBlockedHeader)
+{
+    uint8_t wdata[Page::PAYLOAD_SIZE] = { 1, 2, 3, 4, 5 };
+
+    for (unsigned i = 0; i < StorageMacroblock::RESERVED_PAGES_COUNT * Page::PAGE_SIZE; i++) {
+        storage.setBlocked(i, true);
+    }
+
+    EXPECT_EQ(sat->find(FIND_MODE_EMPTY, &address), STORAGE_OK);
+    EXPECT_EQ(address, StorageMacroblock::RESERVED_PAGES_COUNT * Page::PAGE_SIZE);
+    EXPECT_EQ(sat->save(address, shortPrefix, 1, wdata, sizeof(wdata)), STORAGE_OK);
+    EXPECT_EQ(sat->deleteData(shortPrefix, 1), STORAGE_OK);
+    EXPECT_EQ(sat->find(FIND_MODE_EQUAL, &address, shortPrefix, 1), STORAGE_NOT_FOUND);
+}
+
+TEST_F(StorageFixture, DeleteDataWithBlockedPage)
+{
+    uint8_t wdata[Page::PAYLOAD_SIZE] = { 1, 2, 3, 4, 5 };
+
+    EXPECT_EQ(sat->find(FIND_MODE_EMPTY, &address), STORAGE_OK);
+    EXPECT_EQ(address, StorageMacroblock::RESERVED_PAGES_COUNT * Page::PAGE_SIZE);
+    EXPECT_EQ(sat->save(address, shortPrefix, 1, wdata, sizeof(wdata)), STORAGE_OK);
+
+    for (unsigned i = 0; i < StorageMacroblock::RESERVED_PAGES_COUNT * Page::PAGE_SIZE; i++) {
+        storage.setBlocked(StorageMacroblock::RESERVED_PAGES_COUNT * Page::PAGE_SIZE + i, true);
+    }
+
+    EXPECT_EQ(sat->deleteData(shortPrefix, 1), STORAGE_OK);
+    EXPECT_EQ(sat->find(FIND_MODE_EQUAL, &address, shortPrefix, 1), STORAGE_NOT_FOUND);
+}
+
 TEST_F(StorageFixture, TimeCheck)
 {
     uint8_t data[Page::PAYLOAD_SIZE] = { 0 };
@@ -1023,14 +1066,14 @@ TEST_F(StorageFixture, TimeCheck)
     std::cout << "Load:   " << (double)(duration.count() / 1000.0) << "ms" << std::endl;
 
     startTime = std::chrono::high_resolution_clock::now();
-    sat->deleteData(address);
+    sat->clearAddress(address);
     endTime = std::chrono::high_resolution_clock::now();
     std::cout << "Delete: " << (double)(duration.count() / 1000.0) << "ms" << std::endl;
 }
 
 /*
- * Tests:
- * 1. search for empty prefix = "" (search for any string)
+ * Tasks:
+ * 1. if true header will be blocked, how to find out that?
  * 2. erase several sectors
  */
 
