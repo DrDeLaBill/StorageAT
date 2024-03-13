@@ -279,7 +279,6 @@ StorageStatus StorageData::clearAddress(const uint32_t address)
 	}
 
 	uint32_t curAddress = m_startAddress;
-	uint32_t macroblockAddress = Page::PAGE_SIZE + 1;
 	Page page(curAddress);
 	status = page.load();
 	if (status != STORAGE_OK) {
