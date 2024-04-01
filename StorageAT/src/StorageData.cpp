@@ -55,7 +55,7 @@ StorageStatus StorageData::load(uint8_t* data, uint32_t len)
 }
 
 StorageStatus StorageData::save(
-    uint8_t  prefix[Page::PREFIX_SIZE],
+    uint8_t  prefix[STORAGE_PAGE_PREFIX_SIZE],
     uint32_t id,
     uint8_t* data,
     uint32_t len
@@ -90,7 +90,7 @@ StorageStatus StorageData::save(
 }
 
 StorageStatus StorageData::rewrite(
-    uint8_t  prefix[Page::PREFIX_SIZE],
+    uint8_t  prefix[STORAGE_PAGE_PREFIX_SIZE],
     uint32_t id,
     uint8_t* data,
     uint32_t len
@@ -116,12 +116,12 @@ StorageStatus StorageData::rewrite(
     uint32_t curLen = 0;
     uint32_t curAddr = pageAddress;
     uint32_t prevAddr = pageAddress;
-    uint32_t macroblockAddress = Page::PAGE_SIZE + 1;
+    uint32_t macroblockAddress = STORAGE_PAGE_SIZE + 1;
     bool headerLoaded = false;
     // TODO: remove heap variables
     // TODO: previously erase needed memory length
     while (curLen < len) {
-        if (curAddr - 1 + Page::PAGE_SIZE > StorageAT::getStorageSize()) {
+        if (curAddr - 1 + STORAGE_PAGE_SIZE > StorageAT::getStorageSize()) {
             return STORAGE_OOM;
         }
 
@@ -133,9 +133,9 @@ StorageStatus StorageData::rewrite(
 
         // Search
         uint32_t nextAddr = 0;
-        status = StorageSearchEmpty(/*startSearchAddress=*/curAddr + Page::PAGE_SIZE).searchPageAddress(prefix, id, &nextAddr);
+        status = StorageSearchEmpty(/*startSearchAddress=*/curAddr + STORAGE_PAGE_SIZE).searchPageAddress(prefix, id, &nextAddr);
         if (status != STORAGE_OK) {
-            nextAddr = curAddr + Page::PAGE_SIZE;
+            nextAddr = curAddr + STORAGE_PAGE_SIZE;
         }
         if (!isEnd && status != STORAGE_OK) {
             break;
@@ -175,7 +175,7 @@ StorageStatus StorageData::rewrite(
 
         // Save page
         if (status == STORAGE_OK) {
-            memcpy(page.page.header.prefix, prefix, Page::PREFIX_SIZE);
+            memcpy(page.page.header.prefix, prefix, STORAGE_PAGE_PREFIX_SIZE);
             page.page.header.id = id;
             memcpy(page.page.payload, data + curLen, neededLen);
             status = page.save();
@@ -194,7 +194,7 @@ StorageStatus StorageData::rewrite(
 
 
         // Registrate page in header
-        memcpy((*metaUnitPtr).prefix, prefix, Page::PREFIX_SIZE);
+        memcpy((*metaUnitPtr).prefix, prefix, STORAGE_PAGE_PREFIX_SIZE);
         (*metaUnitPtr).id = id;
         header.setPageStatus(pageIndex, Header::PAGE_OK);
 
@@ -216,7 +216,7 @@ StorageStatus StorageData::rewrite(
 }
 
 
-StorageStatus StorageData::deleteData(const uint8_t prefix[Header::PREFIX_SIZE], const uint32_t index)
+StorageStatus StorageData::deleteData(const uint8_t prefix[STORAGE_PAGE_PREFIX_SIZE], const uint32_t index)
 {
     StorageStatus status = STORAGE_OK;
 
@@ -230,14 +230,14 @@ StorageStatus StorageData::deleteData(const uint8_t prefix[Header::PREFIX_SIZE],
 
 	    Header::MetaUnit *metUnitPtr = header.data->metaUnits;
 		for (uint32_t pageIndex = 0; pageIndex < Header::PAGES_COUNT; pageIndex++, metUnitPtr++) {
-			if (memcmp((*metUnitPtr).prefix, prefix, Page::PREFIX_SIZE) ||
+			if (memcmp((*metUnitPtr).prefix, prefix, STORAGE_PAGE_PREFIX_SIZE) ||
 				(*metUnitPtr).id != index
 			) {
 				continue;
 			}
 
 	        Header::MetaUnit* metaUnitPtr = &(header.data->metaUnits[pageIndex]);
-	        memset((*metaUnitPtr).prefix, 0, Page::PREFIX_SIZE);
+	        memset((*metaUnitPtr).prefix, 0, STORAGE_PAGE_PREFIX_SIZE);
 	        (*metaUnitPtr).id = 0;
 	        header.setPageStatus(pageIndex, Header::PAGE_EMPTY);
 		}
@@ -249,7 +249,7 @@ StorageStatus StorageData::deleteData(const uint8_t prefix[Header::PREFIX_SIZE],
                 if (page.load() != STORAGE_OK) {
                     continue;
                 }
-                if (memcmp(page.page.header.prefix, prefix, Page::PREFIX_SIZE) ||
+                if (memcmp(page.page.header.prefix, prefix, STORAGE_PAGE_PREFIX_SIZE) ||
                     page.page.header.id != index
                 ) {
                     continue;

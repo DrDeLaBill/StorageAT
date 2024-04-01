@@ -55,7 +55,7 @@ public:
 	 * @return     Returns STORAGE_OK if the data was saved successfully
 	 */
 	StorageStatus save(
-		uint8_t  prefix[Page::PREFIX_SIZE],
+		uint8_t  prefix[STORAGE_PAGE_PREFIX_SIZE],
 		uint32_t id,
 		uint8_t* data,
 		uint32_t len
@@ -69,7 +69,7 @@ public:
 	 * @return     Returns STORAGE_OK if the data was rewritten successfully
 	 */
 	StorageStatus rewrite(
-		uint8_t  prefix[Page::PREFIX_SIZE],
+		uint8_t  prefix[STORAGE_PAGE_PREFIX_SIZE],
 		uint32_t id,
 		uint8_t* data,
 		uint32_t len
@@ -83,7 +83,7 @@ public:
 	 * @return Returns STORAGE_OK if the data was deleted successfully
 	 */
 	 // TODO: change tests + fill full RAM with same data, broke first payload data, try to delete and save new
-	StorageStatus deleteData(const uint8_t prefix[Header::PREFIX_SIZE], const uint32_t index);
+	StorageStatus deleteData(const uint8_t prefix[STORAGE_PAGE_PREFIX_SIZE], const uint32_t index);
 
 	/*
 	 * Removes data from address
