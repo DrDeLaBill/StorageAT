@@ -14,43 +14,6 @@
 class Page
 {
 public:
-    /* Data storage page size in bytes */
-    static const uint16_t PAGE_SIZE      = 256;
-
-    /* Page structure validator */
-    static const uint32_t STORAGE_MAGIC  = 0xBEDAC0DE;
-
-    /* Current page structure version */
-    static const uint8_t STORAGE_VERSION = 0x06;
-
-    /* Available page title bytes in block header */
-    static const uint8_t PREFIX_SIZE     = 3;
-
-
-    /* Packed page header meta data structure */
-    STORAGE_PACK(typedef struct, _PageMeta {
-        uint32_t magic;               // Special code
-        uint8_t  version;             // StorageAT library version
-        uint32_t prev_addr;           // Previously data address
-        uint32_t next_addr;           // Next data address
-        uint8_t  prefix[PREFIX_SIZE]; // String page prefix for searching
-        uint32_t id;                  // ID for searching
-    } PageMeta);
-
-
-    /* Available payload bytes in page structure */
-    static const uint16_t PAYLOAD_SIZE =
-        PAGE_SIZE -
-        sizeof(struct _PageMeta) -
-        sizeof(uint16_t);
-
-    /* Page structure */
-    STORAGE_PACK(typedef struct, _PageStruct {
-        PageMeta header;                // Page meta data
-        uint8_t  payload[PAYLOAD_SIZE]; // User payload data
-        uint16_t crc;                   // Page CRC16
-    } PageStruct);
-
     /* Current page */
     PageStruct page;
 
@@ -212,8 +175,10 @@ public:
 
     /* Single page meta data structure */
     STORAGE_PACK(typedef struct, _MetaUnit {
-        uint8_t  prefix[PREFIX_SIZE]; // String page prefix for searching
-        uint32_t id;                  // ID for searching
+    	// String page prefix for searching
+        uint8_t  prefix[STORAGE_PAGE_PREFIX_SIZE];
+        // ID for searching// ID for searching
+        uint32_t id;
     } MetaUnit);
 
     /* Single page meta status structure */
@@ -248,7 +213,7 @@ public:
     } MetaStatus);
 
     /* Pages in block that header page contains */
-    static const uint32_t PAGES_COUNT = (PAYLOAD_SIZE * 8) / (sizeof(struct _MetaUnit) * 8 + STATUS_BITS_COUNT);
+    static const uint32_t PAGES_COUNT = (STORAGE_PAGE_PAYLOAD_SIZE * 8) / (sizeof(struct _MetaUnit) * 8 + STATUS_BITS_COUNT);
 
     /* Statuses count in byte */
     static const uint32_t BYTE_STATUSES_COUNT = 8 / STATUS_BITS_COUNT;

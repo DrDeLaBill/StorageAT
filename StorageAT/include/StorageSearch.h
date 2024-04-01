@@ -38,7 +38,7 @@ public:
 	 * @return           Returns STORAGE_OK if data was found
 	 */
 	virtual StorageStatus searchPageAddress(
-		const uint8_t  prefix[Page::PREFIX_SIZE],
+		const uint8_t  prefix[STORAGE_PAGE_PREFIX_SIZE],
 		const uint32_t id,
 		uint32_t*      resAddress
 	);
@@ -79,7 +79,7 @@ protected:
 	 */
 	virtual StorageStatus searchPageAddressInMacroblock(
 		Header*        header,
-		const uint8_t  prefix[Page::PREFIX_SIZE],
+		const uint8_t  prefix[STORAGE_PAGE_PREFIX_SIZE],
 		const uint32_t id
 	);
 
@@ -228,7 +228,7 @@ protected:
 	 */
 	StorageStatus searchPageAddressInMacroblock(
 		Header*        header,
-		const uint8_t  prefix[Page::PREFIX_SIZE],
+		const uint8_t  prefix[STORAGE_PAGE_PREFIX_SIZE],
 		const uint32_t id
 	) override;
 };

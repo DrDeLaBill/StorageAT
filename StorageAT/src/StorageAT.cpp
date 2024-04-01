@@ -40,8 +40,8 @@ StorageStatus StorageAT::find(
         return STORAGE_ERROR;
     }
 
-    uint8_t tmpPrefix[Page::PREFIX_SIZE + 1] = { 0 };
-    memcpy(tmpPrefix, prefix, std::min(static_cast<size_t>(Page::PREFIX_SIZE), strlen(prefix)));
+    uint8_t tmpPrefix[STORAGE_PAGE_PREFIX_SIZE + 1] = { 0 };
+    memcpy(tmpPrefix, prefix, std::min(static_cast<size_t>(STORAGE_PAGE_PREFIX_SIZE), strlen(prefix)));
 
     switch (mode) {
     case FIND_MODE_EQUAL:
@@ -61,7 +61,7 @@ StorageStatus StorageAT::find(
 
 StorageStatus StorageAT::load(uint32_t address, uint8_t* data, uint32_t len)
 {
-    if (address % Page::PAGE_SIZE > 0) {
+    if (address % STORAGE_PAGE_SIZE > 0) {
         return STORAGE_ERROR;
     }
     if (!data) {
@@ -82,7 +82,7 @@ StorageStatus StorageAT::save(
     uint8_t* data,
     uint32_t len
 ) {
-    if (address % Page::PAGE_SIZE > 0) {
+    if (address % STORAGE_PAGE_SIZE > 0) {
         return STORAGE_ERROR;
     }
     if (!data) {
@@ -95,8 +95,8 @@ StorageStatus StorageAT::save(
         return STORAGE_OOM;
     }
 
-    uint8_t tmpPrefix[Page::PREFIX_SIZE] = {};
-    memcpy(tmpPrefix, prefix, std::min(static_cast<size_t>(Page::PREFIX_SIZE), strlen(prefix)));
+    uint8_t tmpPrefix[STORAGE_PAGE_PREFIX_SIZE] = {};
+    memcpy(tmpPrefix, prefix, std::min(static_cast<size_t>(STORAGE_PAGE_PREFIX_SIZE), strlen(prefix)));
 
     StorageData storageData(address);
     return storageData.save(tmpPrefix, id, data, len);
@@ -111,7 +111,7 @@ StorageStatus StorageAT::rewrite(
     uint8_t* data,
     uint32_t len
 ) {
-    if (address % Page::PAGE_SIZE > 0) {
+    if (address % STORAGE_PAGE_SIZE > 0) {
         return STORAGE_ERROR;
     }
     if (!data) {
@@ -124,8 +124,8 @@ StorageStatus StorageAT::rewrite(
         return STORAGE_OOM;
     }
 
-    uint8_t tmpPrefix[Page::PREFIX_SIZE + 1] = {};
-    memcpy(tmpPrefix, prefix, std::min(static_cast<size_t>(Page::PREFIX_SIZE), strlen(prefix)));
+    uint8_t tmpPrefix[STORAGE_PAGE_PREFIX_SIZE + 1] = {};
+    memcpy(tmpPrefix, prefix, std::min(static_cast<size_t>(STORAGE_PAGE_PREFIX_SIZE), strlen(prefix)));
 
     StorageData storageData(address);
     return storageData.rewrite(tmpPrefix, id, data, len);
@@ -144,8 +144,8 @@ StorageStatus StorageAT::format()
 
 StorageStatus StorageAT::deleteData(const char* prefix, const uint32_t index)
 {
-    uint8_t tmpPrefix[Page::PREFIX_SIZE + 1] = {};
-    memcpy(tmpPrefix, prefix, std::min(static_cast<size_t>(Page::PREFIX_SIZE), strlen(prefix)));
+    uint8_t tmpPrefix[STORAGE_PAGE_PREFIX_SIZE + 1] = {};
+    memcpy(tmpPrefix, prefix, std::min(static_cast<size_t>(STORAGE_PAGE_PREFIX_SIZE), strlen(prefix)));
 
     return StorageData(0).deleteData(tmpPrefix, index);
 }
@@ -172,12 +172,12 @@ uint32_t StorageAT::getPayloadPagesCount()
 
 uint32_t StorageAT::getStorageSize()
 {
-    return StorageAT::getStoragePagesCount() * Page::PAGE_SIZE;
+    return StorageAT::getStoragePagesCount() * STORAGE_PAGE_SIZE;
 }
 
 uint32_t StorageAT::getPayloadSize()
 {
-    return StorageAT::getPayloadPagesCount() * Page::PAYLOAD_SIZE;
+    return StorageAT::getPayloadPagesCount() * STORAGE_PAGE_PAYLOAD_SIZE;
 }
 
 IStorageDriver* StorageAT::driverCallback()
