@@ -10,7 +10,7 @@
 #include "StorageAT.h"
 
 
-StorageEmulator::StorageEmulator(uint32_t pagesCount): pagesCount(pagesCount), size(pagesCount * Page::PAGE_SIZE)
+StorageEmulator::StorageEmulator(uint32_t pagesCount): pagesCount(pagesCount), size(pagesCount * STORAGE_PAGE_SIZE)
 {
     this->memory = std::make_unique<uint8_t[]>(this->getSize());
     this->blocked = std::make_unique<bool[]>(this->getSize());
@@ -21,7 +21,7 @@ StorageEmulator::StorageEmulator(uint32_t pagesCount): pagesCount(pagesCount), s
 
 uint32_t StorageEmulator::getSize()
 {
-    return this->getPagesCount() * Page::PAGE_SIZE;
+    return this->getPagesCount() * STORAGE_PAGE_SIZE;
 }
 
 uint32_t  StorageEmulator::getPayloadSize()
@@ -30,7 +30,7 @@ uint32_t  StorageEmulator::getPayloadSize()
     if (getPagesCount() % StorageMacroblock::PAGES_COUNT > StorageMacroblock::RESERVED_PAGES_COUNT) {
         payloadPages += (getPagesCount() % StorageMacroblock::PAGES_COUNT) - StorageMacroblock::RESERVED_PAGES_COUNT;
     }
-    return payloadPages * Page::PAYLOAD_SIZE;
+    return payloadPages * STORAGE_PAGE_PAYLOAD_SIZE;
 }
 
 uint32_t StorageEmulator::getPagesCount()
@@ -56,7 +56,7 @@ StorageEmulatorStatus StorageEmulator::readPage(uint32_t address, uint8_t* data,
     if (address + len > this->size) {
         return EMULATOR_OOM;
     }
-    requestsCount[address / Page::PAGE_SIZE].read++;
+    requestsCount[address / STORAGE_PAGE_SIZE].read++;
     if (this->isBusy) {
         return EMULATOR_BUSY;
     }
@@ -79,7 +79,7 @@ StorageEmulatorStatus StorageEmulator::writePage(uint32_t address, uint8_t* data
     if (address + len > this->size) {
         return EMULATOR_OOM;
     }
-    requestsCount[address / Page::PAGE_SIZE].write++;
+    requestsCount[address / STORAGE_PAGE_SIZE].write++;
     if (this->isBusy) {
         return EMULATOR_BUSY;
     }
@@ -137,7 +137,7 @@ void StorageEmulator::showPage(uint32_t address)
     do {
         printf("%08X: ", (unsigned int)(start_counter + i));
         for (uint32_t j = 0; j < cols_count; j++) {
-            if (i * cols_count + j > Page::PAGE_SIZE) {
+            if (i * cols_count + j > STORAGE_PAGE_SIZE) {
             	printf("   ");
             } else {
             	printf("%02X ", this->memory[i * cols_count + j]);
@@ -147,7 +147,7 @@ void StorageEmulator::showPage(uint32_t address)
             }
         }
         for (uint32_t j = 0; j < cols_count; j++) {
-            if (i * cols_count + j > Page::PAGE_SIZE) {
+            if (i * cols_count + j > STORAGE_PAGE_SIZE) {
                 break;
             }
             char c = this->memory[i * cols_count + j];
@@ -159,5 +159,5 @@ void StorageEmulator::showPage(uint32_t address)
         }
         printf("\n");
         i++;
-    } while (i * cols_count < Page::PAGE_SIZE);
+    } while (i * cols_count < STORAGE_PAGE_SIZE);
 }
