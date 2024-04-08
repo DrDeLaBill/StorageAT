@@ -16,12 +16,12 @@ typedef StorageAT AT;
 
 uint32_t StorageMacroblock::getMacroblockAddress(uint32_t macroblockIndex)
 {
-    return macroblockIndex * Page::PAGE_SIZE * StorageMacroblock::PAGES_COUNT;
+    return macroblockIndex * STORAGE_PAGE_SIZE * StorageMacroblock::PAGES_COUNT;
 }
 
 uint32_t StorageMacroblock::getMacroblockIndex(uint32_t macroblockAddress)
 {
-    return macroblockAddress / Page::PAGE_SIZE / StorageMacroblock::PAGES_COUNT;
+    return macroblockAddress / STORAGE_PAGE_SIZE / StorageMacroblock::PAGES_COUNT;
 }
 
 uint32_t StorageMacroblock::getMacroblocksCount()
@@ -31,7 +31,7 @@ uint32_t StorageMacroblock::getMacroblocksCount()
 
 uint32_t StorageMacroblock::getPageAddressByIndex(uint32_t macroblockIndex, uint32_t pageIndex)
 {
-    return getMacroblockAddress(macroblockIndex) + (RESERVED_PAGES_COUNT + pageIndex) * Page::PAGE_SIZE;
+    return getMacroblockAddress(macroblockIndex) + (RESERVED_PAGES_COUNT + pageIndex) * STORAGE_PAGE_SIZE;
 }
 
 uint32_t StorageMacroblock::getPageIndexByAddress(uint32_t address)
@@ -39,12 +39,12 @@ uint32_t StorageMacroblock::getPageIndexByAddress(uint32_t address)
     if (StorageMacroblock::isMacroblockAddress(address)) {
         return 0;
     }
-    return ((address / Page::PAGE_SIZE) % (PAGES_COUNT)) - RESERVED_PAGES_COUNT;
+    return ((address / STORAGE_PAGE_SIZE) % (PAGES_COUNT)) - RESERVED_PAGES_COUNT;
 }
 
 bool StorageMacroblock::isMacroblockAddress(uint32_t address)
 {
-    return ((address / Page::PAGE_SIZE) % (PAGES_COUNT)) < RESERVED_PAGES_COUNT;
+    return ((address / STORAGE_PAGE_SIZE) % (PAGES_COUNT)) < RESERVED_PAGES_COUNT;
 }
 
 StorageStatus StorageMacroblock::formatMacroblock(uint32_t macroblockIndex)
@@ -57,7 +57,7 @@ StorageStatus StorageMacroblock::formatMacroblock(uint32_t macroblockIndex)
 
     Header::MetaUnit* metaUnitPtr = header.data->metaUnits;
     for (uint32_t pageIndex = 0; pageIndex < Header::PAGES_COUNT; pageIndex++, metaUnitPtr++) {
-        memset((*metaUnitPtr).prefix, 0, Page::PREFIX_SIZE);
+        memset((*metaUnitPtr).prefix, 0, STORAGE_PAGE_PREFIX_SIZE);
         (*metaUnitPtr).id = 0;
         if (!header.isPageStatus(pageIndex, Header::PAGE_BLOCKED)) {
             header.setPageStatus(pageIndex, Header::PAGE_EMPTY);

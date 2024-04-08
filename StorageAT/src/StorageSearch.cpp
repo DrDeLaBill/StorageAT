@@ -9,7 +9,7 @@
 
 
 StorageStatus StorageSearchBase::searchPageAddress(
-    const uint8_t  prefix[Page::PREFIX_SIZE],
+    const uint8_t  prefix[STORAGE_PAGE_PREFIX_SIZE],
     const uint32_t id,
     uint32_t*      resAddress
 ) {
@@ -48,7 +48,7 @@ StorageStatus StorageSearchBase::searchPageAddress(
 
 StorageStatus StorageSearchBase::searchPageAddressInMacroblock(
     Header*        header,
-    const uint8_t  prefix[Page::PREFIX_SIZE],
+    const uint8_t  prefix[STORAGE_PAGE_PREFIX_SIZE],
     const uint32_t id
 ) {
     uint32_t pageIndex = StorageMacroblock::getPageIndexByAddress(this->startSearchAddress);
@@ -66,7 +66,7 @@ StorageStatus StorageSearchBase::searchPageAddressInMacroblock(
 
         if (
             strlen(reinterpret_cast<const char*>(prefix)) &&
-            memcmp((*metUnitPtr).prefix, prefix, Page::PREFIX_SIZE)
+            memcmp((*metUnitPtr).prefix, prefix, STORAGE_PAGE_PREFIX_SIZE)
         ) {
             continue;
         }
@@ -127,7 +127,7 @@ bool StorageSearchMax::isIdFound(
 
 StorageStatus StorageSearchEmpty::searchPageAddressInMacroblock(
     Header*        header,
-    const uint8_t[Page::PREFIX_SIZE],
+    const uint8_t[STORAGE_PAGE_PREFIX_SIZE],
     const uint32_t
 ) {
     this->foundInMacroblock = false;

@@ -168,7 +168,7 @@ StorageStatus Header::deletePage(uint32_t targetAddress)
         Header::MetaUnit* metaUnitPtr = &(header.data->metaUnits[pageIndex]);
 
         header.setPageStatus(pageIndex, Header::PAGE_EMPTY);
-        memset(metaUnitPtr->prefix, 0, Page::PREFIX_SIZE);
+        memset(metaUnitPtr->prefix, 0, STORAGE_PAGE_PREFIX_SIZE);
         metaUnitPtr->id = 0;
 
         return header.save();
@@ -349,12 +349,12 @@ bool Header::isAddressEmpty(uint32_t targetAddress)
 bool Header::isSameMeta(uint32_t pageIndex, const uint8_t* prefix, uint32_t id)
 {
     MetaUnit* metaUnitPtr = &(data->metaUnits[pageIndex]);
-    return !memcmp((*metaUnitPtr).prefix, prefix, Page::PREFIX_SIZE) && (*metaUnitPtr).id == id;
+    return !memcmp((*metaUnitPtr).prefix, prefix, STORAGE_PAGE_PREFIX_SIZE) && (*metaUnitPtr).id == id;
 }
 
 uint32_t Header::getMacroblockStartAddress(uint32_t address)
 {
-    return (address / (StorageMacroblock::PAGES_COUNT * Page::PAGE_SIZE)) * (StorageMacroblock::PAGES_COUNT * Page::PAGE_SIZE);
+    return (address / (StorageMacroblock::PAGES_COUNT * STORAGE_PAGE_SIZE)) * (StorageMacroblock::PAGES_COUNT * STORAGE_PAGE_SIZE);
 }
 
 StorageStatus Header::create()
@@ -414,7 +414,7 @@ StorageStatus Header::load()
 
     StorageStatus status = STORAGE_ERROR;
     for (uint8_t i = 0; i < StorageMacroblock::RESERVED_PAGES_COUNT; i++) {
-        this->address = startAddress + static_cast<uint32_t>(i * Page::PAGE_SIZE);
+        this->address = startAddress + static_cast<uint32_t>(i * STORAGE_PAGE_SIZE);
 
         status = Page::load();
         if (status == STORAGE_BUSY) {
@@ -438,7 +438,7 @@ StorageStatus Header::save()
 
     StorageStatus status = STORAGE_ERROR;
     for (uint8_t i = 0; i < StorageMacroblock::RESERVED_PAGES_COUNT; i++) {
-        this->address = startAddress + static_cast<uint32_t>(i * Page::PAGE_SIZE);
+        this->address = startAddress + static_cast<uint32_t>(i * STORAGE_PAGE_SIZE);
 
         status = Page::save();
         if (status == STORAGE_BUSY) {
