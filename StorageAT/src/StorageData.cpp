@@ -239,7 +239,7 @@ StorageStatus StorageData::rewrite(
 
         uint32_t pageIndex = StorageMacroblock::getPageIndexByAddress(curAddr);
         Header::MetaUnit* metaUnitPtr = &(header.data->metaUnits[pageIndex]);
-        if (status != STORAGE_OK) {
+        if (status == STORAGE_ERROR) {
             header.setAddressBlocked(curAddr);
             curAddr = nextAddr;
             continue;
