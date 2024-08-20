@@ -51,7 +51,7 @@ void StorageEmulator::setBlocked(uint32_t idx, bool blockState)
     this->blocked[idx] = blockState;
 }
 
-StorageEmulatorStatus StorageEmulator::readPage(uint32_t address, uint8_t* data, uint32_t len)
+StorageEmulatorStatus StorageEmulator::readPage(const uint32_t address, uint8_t* data, const uint32_t len)
 {
     if (address + len > this->size) {
         return EMULATOR_OOM;
@@ -74,7 +74,7 @@ StorageEmulatorStatus StorageEmulator::readPage(uint32_t address, uint8_t* data,
     return EMULATOR_OK;
 }
 
-StorageEmulatorStatus StorageEmulator::writePage(uint32_t address, uint8_t* data, uint32_t len)
+StorageEmulatorStatus StorageEmulator::writePage(const uint32_t address, const uint8_t* data, const uint32_t len)
 {
     if (address + len > this->size) {
         return EMULATOR_OOM;
@@ -97,6 +97,35 @@ StorageEmulatorStatus StorageEmulator::writePage(uint32_t address, uint8_t* data
             continue;
         }
         this->memory[address + i] = data[i];
+    }
+
+    return EMULATOR_OK;
+}
+
+StorageEmulatorStatus StorageEmulator::erase(const uint32_t* addresses, const uint32_t count)
+{
+    if (!addresses || !count)  {
+        return EMULATOR_ERROR;
+    }
+
+    if (this->isBusy) {
+        return EMULATOR_BUSY;
+    }
+
+    for (unsigned i = 0; i < count; i++) {
+        if (addresses[i] + STORAGE_PAGE_SIZE > this->size) {
+            return EMULATOR_OOM;
+        }
+        
+        requestsCount[addresses[i] / STORAGE_PAGE_SIZE].write++;
+        
+        for (unsigned j = 0; j < STORAGE_PAGE_SIZE; j++) {
+            if (this->blocked[addresses[i] + j]) {
+                continue;
+            }
+        }
+
+        memset(this->memory.get() + addresses[i], 0xFF, STORAGE_PAGE_SIZE);
     }
 
     return EMULATOR_OK;

@@ -35,8 +35,9 @@ public:
 
     StorageEmulator(uint32_t pagesCount);
 
-    StorageEmulatorStatus writePage(uint32_t address, uint8_t* data, uint32_t len);
-    StorageEmulatorStatus readPage(uint32_t address, uint8_t* data, uint32_t len);
+    StorageEmulatorStatus writePage(const uint32_t address, const uint8_t* data, const uint32_t len);
+    StorageEmulatorStatus readPage(const uint32_t address, uint8_t* data, const uint32_t len);
+    StorageEmulatorStatus erase(const uint32_t* addresses, const uint32_t count);
 
     uint32_t getSize();
     uint32_t getPayloadSize();

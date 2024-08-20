@@ -20,9 +20,9 @@
 class IStorageDriver
 {
 public:
-	virtual StorageStatus read(uint32_t, uint8_t*, uint32_t) { return STORAGE_ERROR; }
-	virtual StorageStatus write(uint32_t, uint8_t*, uint32_t) { return STORAGE_ERROR; }
-	// TODO: virtual StorageStatus erase(address, length)
+	virtual StorageStatus read(const uint32_t, uint8_t*, const uint32_t)        { return STORAGE_ERROR; }
+	virtual StorageStatus write(const uint32_t, const uint8_t*, const uint32_t) { return STORAGE_ERROR; }
+	virtual StorageStatus erase(const uint32_t*, const uint32_t)                { return STORAGE_ERROR; }
 };
 
 /*
@@ -40,6 +40,9 @@ private:
 	/* Storage read/write driver */
 	static IStorageDriver* m_driver;
 
+	/* Storage minimum erase size */
+	static uint32_t m_minEraseSize;
+
 public:
 	/* Max available address for StorageFS */
 	static const uint32_t MAX_ADDRESS = std::numeric_limits<uint32_t>::max();
@@ -47,12 +50,14 @@ public:
 	/*
 	 * Storage Allocation Table constructor
 	 *
-	 * @param pagesCount Physical drive pages count
-	 * @param driver     Physical drive read/write driver
+	 * @param pagesCount   Physical drive pages count
+	 * @param driver       Physical drive read/write driver
+	 * @param minEraseSize Minimal erase sector size
 	 */
 	StorageAT(
 		uint32_t        pagesCount,
-		IStorageDriver* driver // TODO: pointer to reference
+		IStorageDriver* driver,
+		uint32_t        minEraseSize
 	);
 
 	/*
@@ -167,4 +172,9 @@ public:
 	 * @return Returns read/write driver of physical drive 
 	 */
 	static IStorageDriver* driverCallback();
+
+	/*
+	 * @return Returns minimum erase size of physical drive
+	 */
+	static uint32_t getMinEraseSize();
 };

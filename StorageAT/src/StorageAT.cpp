@@ -16,14 +16,17 @@
 
 uint32_t StorageAT::m_pagesCount = 0;
 IStorageDriver* StorageAT::m_driver = nullptr;
+uint32_t StorageAT::m_minEraseSize = 0;
 
 
 StorageAT::StorageAT(
-    uint32_t pagesCount,
-    IStorageDriver* driver
+	uint32_t        pagesCount,
+	IStorageDriver* driver,
+	uint32_t        minEraseSize
 ) {
-    StorageAT::m_pagesCount = pagesCount;
-    StorageAT::m_driver = driver;
+	m_pagesCount   = pagesCount;
+	m_driver       = driver;
+	m_minEraseSize = minEraseSize;
 }
 
 StorageStatus StorageAT::find(
@@ -183,4 +186,9 @@ uint32_t StorageAT::getPayloadSize()
 IStorageDriver* StorageAT::driverCallback()
 {
     return StorageAT::m_driver;
+}
+
+uint32_t StorageAT::getMinEraseSize()
+{
+	return m_minEraseSize;
 }

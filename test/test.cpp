@@ -13,8 +13,9 @@
 
 const int SECTORS_COUNT = 20;
 const int PAGES_COUNT   = StorageMacroblock::PAGES_COUNT * SECTORS_COUNT;
-const int PAGE_LEN      = 256;
+const int PAGE_LEN      = STORAGE_PAGE_SIZE;
 
+uint32_t minMemoryEraseSize = STORAGE_PAGE_SIZE;
 
 StorageEmulator storage(PAGES_COUNT);
 
@@ -23,7 +24,7 @@ class StorageDriver: public IStorageDriver
 {
 public: 
     StorageDriver() {}
-	StorageStatus read(uint32_t address, uint8_t* data, uint32_t len) override
+	StorageStatus read(const uint32_t address, uint8_t* data, const uint32_t len) override
     {
         StorageEmulatorStatus status = storage.readPage(address, data, len);
         if (status == EMULATOR_BUSY) {
@@ -37,9 +38,23 @@ public:
         }
         return STORAGE_OK;
     }
-	StorageStatus write(uint32_t address, uint8_t* data, uint32_t len) override
+	StorageStatus write(const uint32_t address, const uint8_t* data, const uint32_t len) override
     {
         StorageEmulatorStatus status = storage.writePage(address, data, len);
+        if (status == EMULATOR_BUSY) {
+            return STORAGE_BUSY;
+        }
+        if (status == EMULATOR_OOM) {
+            return STORAGE_OOM;
+        }
+        if (status == EMULATOR_ERROR) {
+            return STORAGE_ERROR;
+        }
+        return STORAGE_OK;
+    }
+	StorageStatus erase(const uint32_t* addresses, const uint32_t count) override
+    {
+        StorageEmulatorStatus status = storage.erase(addresses, count);
         if (status == EMULATOR_BUSY) {
             return STORAGE_BUSY;
         }
@@ -62,14 +77,21 @@ public:
     MOCK_METHOD(
         StorageStatus,
         read,
-        (uint32_t, uint8_t*, uint32_t),
+        (const uint32_t, uint8_t*, const uint32_t),
         (override)
     );
 
     MOCK_METHOD(
         StorageStatus,
         write,
-        (uint32_t, uint8_t*, uint32_t),
+        (const uint32_t, const uint8_t*, const uint32_t),
+        (override)
+    );
+
+    MOCK_METHOD(
+        StorageStatus,
+        erase,
+        (const uint32_t*, const uint32_t),
         (override)
     );
 };
@@ -94,7 +116,8 @@ public:
         address = 0;
         sat = std::make_unique<StorageAT>(
             storage.getPagesCount(),
-            &driver
+            &driver,
+            minMemoryEraseSize
         );
     }
 
@@ -259,7 +282,8 @@ TEST(StorageDriver, RequestExists)
     MockStorageDriver mockDriver;
     StorageAT sat(
         storage.getPagesCount(),
-        &mockDriver
+        &mockDriver,
+        minMemoryEraseSize
     );
     uint32_t address = 0;
 
@@ -1082,12 +1106,25 @@ int main(int args, char** argv)
     testing::InitGoogleTest(&args, argv);
 
     clock_t tStart = clock();
-    int result = RUN_ALL_TESTS();
+    int result1 = RUN_ALL_TESTS();
     clock_t tEnd = clock();
 
     storage.showReadWrite();
 
-    std::cout << "Test execution time: " << static_cast<double>(tEnd - tStart) << "ms" << std::endl;
+    std::cout << "Test 1 execution time: " << static_cast<double>(tEnd - tStart) << "ms" << std::endl;
 
-    return result;
+    if (result1) {
+        return result1;
+    }
+
+    minMemoryEraseSize = STORAGE_PAGE_SIZE * 16;
+    tStart = clock();
+    int result2 = RUN_ALL_TESTS();
+    tEnd = clock();
+
+    storage.showReadWrite();
+
+    std::cout << "Test 2 execution time: " << static_cast<double>(tEnd - tStart) << "ms" << std::endl;
+
+    return result2;
 }

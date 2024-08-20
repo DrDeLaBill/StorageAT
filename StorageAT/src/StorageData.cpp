@@ -2,9 +2,11 @@
 
 #include "StorageData.h"
 
+#include <memory>
 #include <cstring>
 #include <algorithm>
 
+#include "StorageAT.h"
 #include "StoragePage.h"
 #include "StorageType.h"
 #include "StorageSearch.h"
@@ -113,13 +115,64 @@ StorageStatus StorageData::rewrite(
         return status;
     }
 
+	/* Erase target addresses BEGIN */
+    {
+		std::unique_ptr<uint32_t[]> eraseAddrs =
+			std::make_unique<uint32_t[]>(StorageAT::getMinEraseSize());
+		unsigned eraseCnt  = 0;
+		uint32_t eraseLen  = STORAGE_PAGE_SIZE;
+		uint32_t eraseAddr = pageAddress;
+		eraseAddrs[eraseCnt++] = pageAddress;
+		while (eraseLen < len) {
+			uint32_t eraseNextAddr = 0;
+
+			status = StorageSearchEmpty(
+				eraseAddr + STORAGE_PAGE_SIZE
+			).searchPageAddress(prefix, id, &eraseNextAddr);
+			if (status != STORAGE_OK) {
+				return status;
+			}
+
+			uint32_t minEraseSize        = StorageAT::getMinEraseSize();
+			uint32_t eraseSectorAddr     = (eraseAddr / minEraseSize) * minEraseSize;
+			uint32_t eraseNextSectorAddr = (eraseNextAddr / minEraseSize) * minEraseSize;
+
+			status = STORAGE_OK;
+			if (eraseSectorAddr != eraseNextSectorAddr) {
+				uint32_t tmpCount = eraseCnt;
+				status = StorageAT::driverCallback()->erase(eraseAddrs.get(), eraseCnt);
+
+				memset((uint8_t*)eraseAddrs.get(), 0, minEraseSize * sizeof(eraseAddrs[0]));
+				eraseCnt = 0;
+
+				if (status == STORAGE_BUSY) {
+					return status;
+				}
+				if (status != STORAGE_OK) {
+					continue;
+				}
+
+				eraseLen += tmpCount * STORAGE_PAGE_SIZE;
+			}
+
+			eraseAddrs[eraseCnt++] = eraseNextAddr;
+			eraseAddr = eraseNextAddr;
+		}
+
+		if (eraseCnt) {
+			status = StorageAT::driverCallback()->erase(eraseAddrs.get(), eraseCnt);
+		}
+		if (status != STORAGE_OK) {
+			return status;
+		}
+    }
+	/* Erase target addresses END */
+
     uint32_t curLen = 0;
     uint32_t curAddr = pageAddress;
     uint32_t prevAddr = pageAddress;
     uint32_t macroblockAddress = STORAGE_PAGE_SIZE + 1;
     bool headerLoaded = false;
-    // TODO: remove heap variables
-    // TODO: previously erase needed memory length
     while (curLen < len) {
         if (curAddr - 1 + STORAGE_PAGE_SIZE > StorageAT::getStorageSize()) {
             return STORAGE_OOM;
