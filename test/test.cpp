@@ -396,10 +396,10 @@ TEST_F(StorageFixture, CheckSingleStartPageSave)
     EXPECT_FALSE(page.validatePrevAddress());
     EXPECT_TRUE(page.validateNextAddress());
     EXPECT_EQ(page.loadPrev(), STORAGE_NOT_FOUND);
-    EXPECT_EQ(page.loadNext(), STORAGE_ERROR);
+    EXPECT_EQ(page.loadNext(), STORAGE_NOT_FOUND);
     Page tmpPage(0);
     EXPECT_EQ(tmpPage.load(), STORAGE_OK);
-    EXPECT_EQ(tmpPage.loadNext(), STORAGE_ERROR);
+    EXPECT_EQ(tmpPage.loadNext(), STORAGE_NOT_FOUND);
 }
 
 TEST_F(StorageFixture, CheckSingleMiddlePageSave)
@@ -423,7 +423,7 @@ TEST_F(StorageFixture, CheckSingleMiddlePageSave)
     EXPECT_EQ(page.loadPrev(), STORAGE_ERROR);
     Page tmpPage(STORAGE_PAGE_SIZE);
     EXPECT_EQ(tmpPage.load(), STORAGE_OK);
-    EXPECT_EQ(tmpPage.loadNext(), STORAGE_ERROR);
+    EXPECT_EQ(tmpPage.loadNext(), STORAGE_NOT_FOUND);
 }
 
 TEST_F(StorageFixture, CheckSingleEndPageSave)
@@ -577,7 +577,7 @@ TEST_F(StorageFixture, CheckDataBrokenPayloadSinglePageLoad)
     storage.writePage(page.getAddress(), reinterpret_cast<uint8_t*>(&page.page), sizeof(page.page));
 
     EXPECT_EQ(sat->find(FIND_MODE_EQUAL, &address, shortPrefix, 1), STORAGE_OK);
-    EXPECT_EQ(sat->load(address, rdata, sizeof(rdata)), STORAGE_ERROR);
+    EXPECT_EQ(sat->load(address, rdata, sizeof(rdata)), STORAGE_NOT_FOUND);
 }
 
 TEST_F(StorageFixture, FindPageAfterFormat)
