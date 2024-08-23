@@ -2,7 +2,6 @@
 
 #include "StorageData.h"
 
-#include <memory>
 #include <cstring>
 #include <algorithm>
 
@@ -49,7 +48,7 @@ StorageStatus StorageData::load(uint8_t* data, uint32_t len)
         return STORAGE_OK;
     }
 
-    if (status != STORAGE_OK) {
+    if (status == STORAGE_NOT_FOUND) {
         this->deleteData(page.page.header.prefix, page.page.header.id);
     }
 
@@ -117,19 +116,24 @@ StorageStatus StorageData::rewrite(
 
 	/* Erase target addresses BEGIN */
     {
-		std::unique_ptr<uint32_t[]> eraseAddrs =
-			std::make_unique<uint32_t[]>(StorageAT::getMinEraseSize());
-		unsigned eraseCnt  = 0;
-		uint32_t eraseLen  = STORAGE_PAGE_SIZE;
-		uint32_t eraseAddr = pageAddress;
-		eraseAddrs[eraseCnt++] = pageAddress;
-		while (eraseLen < len) {
+		uint32_t eraseAddrs[STORAGE_DEFAULT_MIN_ERASE_SIZE / STORAGE_PAGE_SIZE] = {};
+		unsigned eraseCnt       = 0;
+		uint32_t eraseLen       = 0;
+        uint32_t eraseTargetLen = STORAGE_PAGE_SIZE * (
+                                      len / STORAGE_PAGE_PAYLOAD_SIZE +
+                                      (len % STORAGE_PAGE_PAYLOAD_SIZE ? 1 : 0)
+                                  );
+		uint32_t eraseAddr      = pageAddress;
+		eraseAddrs[eraseCnt++]  = pageAddress;
+		while (eraseLen < eraseTargetLen) {
 			uint32_t eraseNextAddr = 0;
 
 			status = StorageSearchEmpty(
 				eraseAddr + STORAGE_PAGE_SIZE
 			).searchPageAddress(prefix, id, &eraseNextAddr);
-			if (status != STORAGE_OK) {
+            if (eraseLen + STORAGE_PAGE_SIZE < eraseTargetLen &&
+                status != STORAGE_OK
+            ) {
 				return status;
 			}
 
@@ -138,29 +142,36 @@ StorageStatus StorageData::rewrite(
 			uint32_t eraseNextSectorAddr = (eraseNextAddr / minEraseSize) * minEraseSize;
 
 			status = STORAGE_OK;
-			if (eraseSectorAddr != eraseNextSectorAddr) {
-				uint32_t tmpCount = eraseCnt;
-				status = StorageAT::driverCallback()->erase(eraseAddrs.get(), eraseCnt);
+			if (eraseLen + STORAGE_PAGE_SIZE >= eraseTargetLen ||
+				eraseSectorAddr != eraseNextSectorAddr
+			) {
+				status = StorageAT::driverCallback()->erase(eraseAddrs, eraseCnt);
 
-				memset((uint8_t*)eraseAddrs.get(), 0, minEraseSize * sizeof(eraseAddrs[0]));
-				eraseCnt = 0;
+				memset(
+					(uint8_t*)eraseAddrs,
+					0,
+					StorageAT::getMinEraseSize() / STORAGE_PAGE_SIZE * sizeof(eraseAddrs[0])
+				);
 
 				if (status == STORAGE_BUSY) {
 					return status;
 				}
 				if (status != STORAGE_OK) {
-					continue;
+					break;
 				}
 
-				eraseLen += tmpCount * STORAGE_PAGE_SIZE;
+				eraseCnt = 0;
 			}
 
-			eraseAddrs[eraseCnt++] = eraseNextAddr;
 			eraseAddr = eraseNextAddr;
+			eraseLen += STORAGE_PAGE_SIZE;
+			if (eraseLen < eraseTargetLen) {
+				eraseAddrs[eraseCnt++] = eraseNextAddr;
+			}
 		}
 
 		if (eraseCnt) {
-			status = StorageAT::driverCallback()->erase(eraseAddrs.get(), eraseCnt);
+			status = StorageAT::driverCallback()->erase(eraseAddrs, eraseCnt);
 		}
 		if (status != STORAGE_OK) {
 			return status;

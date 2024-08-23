@@ -27,6 +27,9 @@ StorageAT::StorageAT(
 	m_pagesCount   = pagesCount;
 	m_driver       = driver;
 	m_minEraseSize = minEraseSize;
+
+	// TODO: add warning with debug message
+	while (minEraseSize > STORAGE_DEFAULT_MIN_ERASE_SIZE);
 }
 
 StorageStatus StorageAT::find(

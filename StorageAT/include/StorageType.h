@@ -47,16 +47,19 @@ typedef enum _StorageFindMode {
 
 
 /* Data storage page size in bytes */
-#define STORAGE_PAGE_SIZE        (256)
+#define STORAGE_PAGE_SIZE              (256)
 
 /* Page structure validator */
-#define STORAGE_MAGIC            (0xBEDAC0DE)
+#define STORAGE_MAGIC                  (0xBEDAC0DE)
 
 /* Current page structure version */
-#define STORAGE_VERSION          (0x06)
+#define STORAGE_VERSION                (0x06)
 
 /* Available page title bytes in block header */
-#define STORAGE_PAGE_PREFIX_SIZE (3)
+#define STORAGE_PAGE_PREFIX_SIZE       (3)
+
+/* Storage AT default minimal erase size of the memory sector */
+#define STORAGE_DEFAULT_MIN_ERASE_SIZE (4096)
 
 
 /* Packed page header meta data structure */

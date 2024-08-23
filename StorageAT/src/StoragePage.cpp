@@ -79,8 +79,11 @@ StorageStatus Page::loadNext() {
 
     Page tmpPage(this->page.header.next_addr);
     StorageStatus status = tmpPage.load();
+    if (status == STORAGE_BUSY) {
+    	return status;
+    }
     if (status != STORAGE_OK) {
-        return status;
+        return STORAGE_NOT_FOUND;
     }
 
     if (memcmp(tmpPage.page.header.prefix, this->page.header.prefix, sizeof(tmpPage.page.header.prefix))) {
