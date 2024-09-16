@@ -143,6 +143,13 @@ protected:
      * @return Returns CRC16 of the page data
      */
     uint16_t getCRC16(uint8_t* buf, uint16_t len);
+
+private:
+    /*
+     * Tries to repair the page
+     */
+    void repair();
+
 };
 
 /*

@@ -55,6 +55,12 @@ typedef enum _StorageFindMode {
 /* Current page structure version */
 #define STORAGE_VERSION                (0x06)
 
+/* Current page structure version v5 */
+#define STORAGE_VERSION_V6             (0x06)
+
+/* Current page structure version v5 */
+#define STORAGE_VERSION_V5             (0x05)
+
 /* Available page title bytes in block header */
 #define STORAGE_PAGE_PREFIX_SIZE       (3)
 
