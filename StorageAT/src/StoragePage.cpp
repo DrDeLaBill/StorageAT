@@ -112,6 +112,9 @@ StorageStatus Page::load(bool startPage)
     }
 
     if (!tmpPage.validate()) {
+        tmpPage.repair();
+    }
+    if (!tmpPage.validate()) {
         return STORAGE_ERROR;
     }
 
@@ -259,6 +262,25 @@ void Page::setPrevAddress(uint32_t prevAddress)
 void Page::setNextAddress(uint32_t nextAddress)
 {
     this->page.header.next_addr = nextAddress;
+}
+
+void Page::repair()
+{
+    if (page.header.magic != STORAGE_MAGIC) {
+        return;
+    }
+
+    uint16_t crc = this->getCRC16(reinterpret_cast<uint8_t*>(&page), sizeof(page) - sizeof(page.crc));
+    if (crc != page.crc) {
+        return;
+    }
+
+    if (page.header.version == STORAGE_VERSION_V5) {
+    	page.header.version = STORAGE_VERSION_V6;
+        page.crc = this->getCRC16(reinterpret_cast<uint8_t*>(&page), sizeof(page) - sizeof(page.crc));
+        AT::driverCallback()->write(address, reinterpret_cast<uint8_t*>(&page), sizeof(page));
+        AT::driverCallback()->read(address, reinterpret_cast<uint8_t*>(&page), sizeof(page));
+    }
 }
 
 Header::Header(uint32_t address): Page(address)
