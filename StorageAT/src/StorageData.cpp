@@ -31,6 +31,7 @@ StorageStatus StorageData::load(uint8_t* data, uint32_t len)
         return status;
     }
 
+    bool hasEnd = false;
     uint32_t readLen = 0;
     do {
         uint32_t neededLen = std::min(static_cast<uint32_t>(len - readLen), static_cast<uint32_t>(sizeof(page.page.payload)));
@@ -42,10 +43,13 @@ StorageStatus StorageData::load(uint8_t* data, uint32_t len)
         if (status != STORAGE_OK) {
             break;
         }
+        hasEnd = page.isEnd();
     } while (readLen < len);
 
     if (readLen == len) {
         return STORAGE_OK;
+    } else if (hasEnd) {
+    	return STORAGE_NOT_FOUND;
     }
 
     if (status == STORAGE_NOT_FOUND) {
