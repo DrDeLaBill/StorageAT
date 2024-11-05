@@ -161,6 +161,11 @@ StorageStatus StorageAT::clearAddress(const uint32_t address)
 	return StorageData(0).clearAddress(address);
 }
 
+void StorageAT::setPagesCount(const uint32_t pagesCount)
+{
+	m_pagesCount = pagesCount;
+}
+
 uint32_t StorageAT::getStoragePagesCount()
 {
     return m_pagesCount;

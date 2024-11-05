@@ -149,6 +149,13 @@ public:
 	StorageStatus clearAddress(const uint32_t address);
 
 	/*
+	 * Changes storage pages count
+	 *
+	 * @param pagesCount Physical drive pages count
+	 */
+	static void setPagesCount(const uint32_t pagesCount);
+
+	/*
 	 * @return Returns pages count of physical drive
 	 */
 	static uint32_t getStoragePagesCount();
