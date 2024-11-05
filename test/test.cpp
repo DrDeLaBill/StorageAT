@@ -1095,6 +1095,31 @@ TEST_F(StorageFixture, TimeCheck)
     std::cout << "Delete: " << (double)(duration.count() / 1000.0) << "ms" << std::endl;
 }
 
+TEST_F(StorageFixture, ChangePagesCount)
+{
+    uint8_t wdata[STORAGE_PAGE_PAYLOAD_SIZE] = { 1, 2, 3, 4, 5 };
+    uint8_t rdata[STORAGE_PAGE_PAYLOAD_SIZE] = { 0 };
+    address = StorageMacroblock::RESERVED_PAGES_COUNT * STORAGE_PAGE_SIZE;
+    EXPECT_EQ(sat->save(address, shortPrefix, 1, wdata, sizeof(wdata)), STORAGE_OK);
+    EXPECT_EQ(sat->load(address, rdata, sizeof(rdata)), STORAGE_OK);
+    EXPECT_FALSE(memcmp(wdata, rdata, sizeof(wdata)));
+
+    storage.clear();
+    sat->setPagesCount(0);
+    EXPECT_EQ(sat->save(address, shortPrefix, 1, wdata, sizeof(wdata)), STORAGE_OOM);
+    EXPECT_EQ(sat->load(address, rdata, sizeof(rdata)), STORAGE_OOM);
+
+    sat->setPagesCount(StorageMacroblock::RESERVED_PAGES_COUNT + 1);
+    memset(rdata, 0, sizeof(rdata));
+    EXPECT_EQ(sat->save(address, shortPrefix, 1, wdata, sizeof(wdata)), STORAGE_OK);
+    EXPECT_EQ(sat->load(address, rdata, sizeof(rdata)), STORAGE_OK);
+    EXPECT_FALSE(memcmp(wdata, rdata, sizeof(wdata)));
+
+    address += STORAGE_PAGE_SIZE;
+    EXPECT_EQ(sat->save(address, shortPrefix, 1, wdata, sizeof(wdata)), STORAGE_OOM);
+    EXPECT_EQ(sat->load(address, rdata, sizeof(rdata)), STORAGE_OOM);
+}
+
 /*
  * Tasks:
  * 1. if true header will be blocked, how to find out that?
