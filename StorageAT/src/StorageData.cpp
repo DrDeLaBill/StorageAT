@@ -83,9 +83,8 @@ StorageStatus StorageData::save(
         return STORAGE_DATA_EXISTS;
     }
     if (checkHeader.isSameMeta(StorageMacroblock::getPageIndexByAddress(checkAddress), prefix, id)) {
-        status = StorageData::findStartAddress(&checkAddress); // TODO: check
+        status = StorageData::findStartAddress(&checkAddress); // TODO: tests
     }
-
 
     status = this->rewrite(prefix, id, data, len);
     if (status != STORAGE_OK) {
@@ -277,23 +276,25 @@ StorageStatus StorageData::rewrite(
         return status;
     }
 
-    // If header has not been saved, the data will be available
-    header.save();
-
-    return STORAGE_OK;
+    status = header.save();
+    if (storage_at_data_success(status)) {
+        return STORAGE_OK;
+    }
+    return status;
 }
 
 
 StorageStatus StorageData::deleteData(const uint8_t prefix[STORAGE_PAGE_PREFIX_SIZE], const uint32_t index)
 {
-    StorageStatus status = STORAGE_OK;
-
+    StorageStatus resStatus = STORAGE_OK;
 	for (uint32_t macroblockIndex = 0; macroblockIndex < StorageMacroblock::getMacroblocksCount(); macroblockIndex++) {
+	    StorageStatus status = STORAGE_OK;
 		Header header(StorageMacroblock::getMacroblockAddress(macroblockIndex));
 
 		status = StorageMacroblock::loadHeader(&header);
 		if (status == STORAGE_BUSY || status == STORAGE_OOM) {
-			return status;
+			resStatus = status;
+			break;
 		}
 
 	    Header::MetaUnit *metUnitPtr = header.data->metaUnits;
@@ -312,6 +313,8 @@ StorageStatus StorageData::deleteData(const uint8_t prefix[STORAGE_PAGE_PREFIX_S
 
 		status = header.save();
 		if (status != STORAGE_OK) {
+			unsigned count = 0;
+			uint32_t addresess[Header::PAGES_COUNT] = {};
             for (uint32_t pageIndex = 0; pageIndex < Header::PAGES_COUNT; pageIndex++, metUnitPtr++) {
                 Page page(StorageMacroblock::getPageAddressByIndex(macroblockIndex, pageIndex));
                 if (page.load() != STORAGE_OK) {
@@ -322,12 +325,21 @@ StorageStatus StorageData::deleteData(const uint8_t prefix[STORAGE_PAGE_PREFIX_S
                 ) {
                     continue;
                 }
-                this->erasePage(page.getAddress());
+                addresess[count++] = page.getAddress();
             }
+            if (!count) {
+                continue;
+            }
+			status = StorageAT::driverCallback()->erase(addresess, count);
+			if (!storage_at_data_success(status)) {
+				resStatus = status;
+			}
 		}
 	}
-
-    return status;
+    if (storage_at_data_success(resStatus)) {
+        return STORAGE_OK;
+    }
+    return resStatus;
 }
 
 StorageStatus StorageData::clearAddress(const uint32_t address)

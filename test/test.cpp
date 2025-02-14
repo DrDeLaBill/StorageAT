@@ -741,12 +741,19 @@ TEST_F(StorageFixture, FindAllData)
     EXPECT_EQ(address, STORAGE_PAGE_SIZE * (StorageMacroblock::RESERVED_PAGES_COUNT + 1));
 }
 
-TEST_F(StorageFixture, WriteAllPayloadBytes)
-{
-    uint32_t payloadSize = StorageAT::getPayloadSize();
+TEST_F(StorageFixture, SaveDataWithMaxSize) {
+    uint32_t maxSize = StorageAT::getPayloadSize();
+    uint8_t* wdata = new uint8_t[maxSize];
+    uint8_t* rdata = new uint8_t[maxSize];
+    memset(wdata, 0xAA, maxSize); // Заполняем данные
 
     EXPECT_EQ(sat->find(FIND_MODE_EMPTY, &address), STORAGE_OK);
-    EXPECT_EQ(sat->save(address, shortPrefix, 0, (new uint8_t[payloadSize]), payloadSize), STORAGE_OK);
+    EXPECT_EQ(sat->save(address, shortPrefix, 1, wdata, maxSize), STORAGE_OK);
+    EXPECT_EQ(sat->load(address, rdata, maxSize), STORAGE_OK);
+    EXPECT_FALSE(memcmp(wdata, rdata, maxSize));
+
+    delete[] wdata;
+    delete[] rdata;
 }
 
 TEST_F(StorageFixture, DeleteData)
@@ -760,18 +767,28 @@ TEST_F(StorageFixture, DeleteData)
     EXPECT_EQ(sat->find(FIND_MODE_EQUAL, &address, shortPrefix, 0), STORAGE_NOT_FOUND);
 }
 
-TEST_F(StorageFixture, ReadUnacceptableAddress)
-{
-    address = StorageAT::getStorageSize();
+TEST_F(StorageFixture, LoadDataWithInvalidAddress) {
+    uint8_t rdata[STORAGE_PAGE_PAYLOAD_SIZE] = { 0 };
 
-    EXPECT_EQ(sat->load(address, (new uint8_t[STORAGE_PAGE_SIZE]), STORAGE_PAGE_SIZE), STORAGE_OOM);
+    // Некорректный адрес (не кратный размеру страницы)
+    address = 1;
+    EXPECT_EQ(sat->load(address, rdata, sizeof(rdata)), STORAGE_ERROR);
+
+    // Адрес за пределами памяти
+    address = StorageAT::getStorageSize() + STORAGE_PAGE_SIZE;
+    EXPECT_EQ(sat->load(address, rdata, sizeof(rdata)), STORAGE_OOM);
 }
 
-TEST_F(StorageFixture, WriteUnacceptableAddress)
-{
-    address = StorageAT::getStorageSize() + STORAGE_PAGE_SIZE;
+TEST_F(StorageFixture, SaveDataWithInvalidAddress) {
+    uint8_t wdata[STORAGE_PAGE_PAYLOAD_SIZE] = { 1, 2, 3, 4, 5 };
 
-    EXPECT_EQ(sat->save(address, shortPrefix, 1, (new uint8_t[STORAGE_PAGE_SIZE]), STORAGE_PAGE_SIZE), STORAGE_OOM);
+    // Некорректный адрес (не кратный размеру страницы)
+    address = 1;
+    EXPECT_EQ(sat->save(address, shortPrefix, 1, wdata, sizeof(wdata)), STORAGE_ERROR);
+
+    // Адрес за пределами памяти
+    address = StorageAT::getStorageSize() + STORAGE_PAGE_SIZE;
+    EXPECT_EQ(sat->save(address, shortPrefix, 1, wdata, sizeof(wdata)), STORAGE_OOM);
 }
 
 TEST_F(StorageFixture, LoadEmptyPage)
@@ -925,7 +942,7 @@ TEST_F(StorageFixture, BlockAllMemory)
         storage.setBlocked(i, true);
     }
 
-    EXPECT_EQ(sat->save(address, shortPrefix, 1, wdata, sizeof(wdata)), STORAGE_ERROR);
+    EXPECT_EQ(sat->save(address, shortPrefix, 1, wdata, sizeof(wdata)), STORAGE_OOM);
     EXPECT_EQ(sat->find(FIND_MODE_EQUAL, &address, shortPrefix, 1), STORAGE_NOT_FOUND);
 }
 
@@ -1118,6 +1135,29 @@ TEST_F(StorageFixture, ChangePagesCount)
     address += STORAGE_PAGE_SIZE;
     EXPECT_EQ(sat->save(address, shortPrefix, 1, wdata, sizeof(wdata)), STORAGE_OOM);
     EXPECT_EQ(sat->load(address, rdata, sizeof(rdata)), STORAGE_OOM);
+}
+
+TEST_F(StorageFixture, FormatMacroblock) {
+    uint32_t macroblockIndex = 0;
+    EXPECT_EQ(StorageMacroblock::formatMacroblock(macroblockIndex), STORAGE_OK);
+
+    Header header(StorageMacroblock::getMacroblockAddress(macroblockIndex));
+    EXPECT_EQ(header.load(), STORAGE_OK);
+    EXPECT_TRUE(header.isPageStatus(0, Header::PAGE_EMPTY));
+}
+
+TEST_F(StorageFixture, FormatMacroblockWithInvalidHeader) {
+    uint32_t macroblockIndex = 0;
+
+    // Портим заголовок
+    for (unsigned i = 0; i < StorageMacroblock::RESERVED_PAGES_COUNT * STORAGE_PAGE_SIZE; i++) {
+        storage.setBlocked(i, true);
+    }
+    Header header(StorageMacroblock::getMacroblockAddress(macroblockIndex));
+    EXPECT_EQ(header.save(), STORAGE_HEADER_ERROR);
+    EXPECT_EQ(header.load(), STORAGE_HEADER_ERROR);
+
+    EXPECT_EQ(StorageMacroblock::formatMacroblock(macroblockIndex), STORAGE_OK);
 }
 
 /*

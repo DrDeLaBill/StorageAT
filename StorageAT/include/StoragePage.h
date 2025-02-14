@@ -286,14 +286,6 @@ public:
     StorageStatus create();
 
     /*
-     * Deletes the page information from the header
-     *
-     * @param targetAddress Page address for delete
-     * @return              Returns STORAGE_OK if the page was deleted successfully
-     */
-    StorageStatus deletePage(uint32_t targetAddress);
-
-    /*
      * Sets the page status in the header
      *
      * @param pageIndex The page index in current macroblock

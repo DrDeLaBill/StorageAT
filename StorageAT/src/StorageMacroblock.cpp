@@ -51,7 +51,7 @@ StorageStatus StorageMacroblock::formatMacroblock(uint32_t macroblockIndex)
 {
     Header header(StorageMacroblock::getMacroblockAddress(macroblockIndex));
     StorageStatus status = StorageMacroblock::loadHeader(&header);
-    if (status != STORAGE_OK) {
+    if (!storage_at_data_success(status)) {
         return status;
     }
 
@@ -63,7 +63,22 @@ StorageStatus StorageMacroblock::formatMacroblock(uint32_t macroblockIndex)
             header.setPageStatus(pageIndex, Header::PAGE_EMPTY);
         }
     }
-    return header.save();
+    status = header.save();
+    if (status == STORAGE_HEADER_ERROR) {
+		unsigned count = 0;
+		uint32_t addresess[Header::PAGES_COUNT] = {};
+        for (uint32_t i = 0; i < Header::PAGES_COUNT; i++) {
+            addresess[count++] = StorageMacroblock::getPageAddressByIndex(macroblockIndex, i);
+        }
+		status = StorageAT::driverCallback()->erase(addresess, count);
+		if (storage_at_data_success(status)) {
+			status = STORAGE_OK;
+		}
+    }
+    if (storage_at_data_success(status)) {
+    	return STORAGE_OK;
+    }
+    return status;
 }
 
 StorageStatus StorageMacroblock::loadHeader(Header* header)
