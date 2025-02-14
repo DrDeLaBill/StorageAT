@@ -4,11 +4,6 @@
 #define _STORAGE_TYPE_H_
 
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-
 #include <stdint.h>
 
 
@@ -25,12 +20,13 @@ extern "C" {
  * StorageAT method exit codes 
  */
 typedef enum _StorageStatus {
-	STORAGE_OK          = (0x00), // Successful exit code
-	STORAGE_ERROR       = (0x01), // Internal error
-	STORAGE_BUSY        = (0x02), // Physical drive is busy
-	STORAGE_OOM         = (0x03), // Out of memory
-	STORAGE_NOT_FOUND   = (0x04), // Data was not found on physical drive
-	STORAGE_DATA_EXISTS = (0x05), // Data already exists on current address
+	STORAGE_OK           = (0x00), // Successful exit code
+	STORAGE_ERROR        = (0x01), // Internal error
+	STORAGE_BUSY         = (0x02), // Physical drive is busy
+	STORAGE_OOM          = (0x03), // Out of memory
+	STORAGE_NOT_FOUND    = (0x04), // Data was not found on physical drive
+	STORAGE_DATA_EXISTS  = (0x05), // Data already exists on current address
+	STORAGE_HEADER_ERROR = (0x06), // Error with header data saving
 } StorageStatus;
 
 
@@ -99,9 +95,7 @@ STORAGE_PACK(typedef struct, _PageStruct {
 } PageStruct);
 
 
-#ifdef __cplusplus
-}
-#endif
+bool storage_at_data_success(StorageStatus status);
 
 
 #endif

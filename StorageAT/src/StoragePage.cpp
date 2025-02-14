@@ -14,6 +14,12 @@
 typedef StorageAT AT;
 
 
+bool storage_at_data_success(StorageStatus status)
+{
+    return status == STORAGE_OK || status == STORAGE_HEADER_ERROR;
+}
+
+
 Page::Page(uint32_t address): address(address)
 {
     memset(reinterpret_cast<void*>(&page), 0, sizeof(page));
@@ -156,42 +162,6 @@ StorageStatus Page::save()
     }
 
     return status;
-}
-
-StorageStatus Header::deletePage(uint32_t targetAddress)
-{
-    if (StorageMacroblock::isMacroblockAddress(targetAddress)) {
-        return STORAGE_ERROR;
-    }
-
-    Header header(targetAddress);
-    StorageStatus status = StorageMacroblock::loadHeader(&header);
-    if (status == STORAGE_BUSY || status == STORAGE_OOM) {
-        return status;
-    }
-    if (status == STORAGE_OK) {
-        uint32_t pageIndex = StorageMacroblock::getPageIndexByAddress(this->address);
-        Header::MetaUnit* metaUnitPtr = &(header.data->metaUnits[pageIndex]);
-
-        header.setPageStatus(pageIndex, Header::PAGE_EMPTY);
-        memset(metaUnitPtr->prefix, 0, STORAGE_PAGE_PREFIX_SIZE);
-        metaUnitPtr->id = 0;
-
-        return header.save();
-    }
-
-    Page targetPage(targetAddress);
-    status = targetPage.load();
-    if (status == STORAGE_BUSY) {
-        return status;
-    }
-    if (status != STORAGE_OK) {
-        return STORAGE_OK;
-    }
-
-    memset(reinterpret_cast<void*>(&targetPage.page), 0xFF, sizeof(targetPage.page));
-
-    return targetPage.save();
 }
 
 bool Page::validate()
@@ -384,11 +354,12 @@ uint32_t Header::getMacroblockStartAddress(uint32_t address)
 
 StorageStatus Header::create()
 {
+    StorageStatus status = STORAGE_OK;
     MetaUnit* metaUnitPtr = this->data->metaUnits;
     for (unsigned  i = 0; i < Header::PAGES_COUNT; i++, metaUnitPtr++) {
         Page tmpPage(StorageMacroblock::getPageAddressByIndex(this->m_macroblockIndex, i));
 
-        StorageStatus status = tmpPage.load();
+        status = tmpPage.load();
         if (status == STORAGE_BUSY) {
             return STORAGE_BUSY;
         }
@@ -427,10 +398,12 @@ StorageStatus Header::create()
         }
     }
 
-    // If header has not been saved, the header data will be available
-    this->save();
+    status = this->save();
+    if (storage_at_data_success(status)) {
+        return STORAGE_OK;
+    }
 
-    return STORAGE_OK;
+    return status;
 }
 
 StorageStatus Header::load()
@@ -451,9 +424,13 @@ StorageStatus Header::load()
     }
 
     if (!this->validate()) {
-        return STORAGE_ERROR;
+        return STORAGE_HEADER_ERROR;
     }
 
+    if (status == STORAGE_ERROR) {
+        return STORAGE_HEADER_ERROR;
+    }
+    
     return status;
 }
 
@@ -475,9 +452,13 @@ StorageStatus Header::save()
     }
 
     if (!this->validate()) {
-        return STORAGE_ERROR;
+        return STORAGE_HEADER_ERROR;
     }
 
+    if (status == STORAGE_ERROR) {
+        return STORAGE_HEADER_ERROR;
+    }
+    
     return status;
 }
 
@@ -488,7 +469,7 @@ bool Header::validate()
     }
 
     MetaStatus* statusPtr = data->metaStatuses;
-    MetaStatus* statusEndPtr = &(this->data->metaStatuses[Header::PAGES_COUNT-1]);
+    MetaStatus* statusEndPtr = &(this->data->metaStatuses[Header::STATUSES_COUNT-1]);
     for (; statusPtr < statusEndPtr; statusPtr++) {
         for (unsigned pageIndex = 0; pageIndex < Header::PAGES_COUNT; pageIndex++) {
             if (!(*statusPtr).getStatus(pageIndex)) {

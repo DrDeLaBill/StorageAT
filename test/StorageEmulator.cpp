@@ -94,7 +94,7 @@ StorageEmulatorStatus StorageEmulator::writePage(const uint32_t address, const u
 
     for (unsigned i = 0; i < len; i++) {
         if (this->blocked[address + i]) {
-            continue;
+            return EMULATOR_ERROR;
         }
         this->memory[address + i] = data[i];
     }
