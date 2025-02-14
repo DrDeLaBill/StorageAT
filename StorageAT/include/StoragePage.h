@@ -1,6 +1,7 @@
-/* Copyright © 2023 Georgy E. All rights reserved. */
+/* Copyright © 2025 Georgy E. All rights reserved. */
 
-#pragma once
+#ifndef _STORAGE_PAGE_H_
+#define _STORAGE_PAGE_H_
 
 
 #include <stdint.h>
@@ -341,3 +342,6 @@ public:
     uint32_t getMacroblockIndex();
 
 };
+
+
+#endif

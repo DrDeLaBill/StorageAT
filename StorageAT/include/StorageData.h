@@ -1,6 +1,7 @@
 /* Copyright © 2023 Georgy E. All rights reserved. */
 
-#pragma once
+#ifndef _STORAGE_DATA_H_
+#define _STORAGE_DATA_H_
 
 
 #include "StoragePage.h"
@@ -82,7 +83,6 @@ public:
 	 * @param  index  The index of the data for delete
 	 * @return Returns STORAGE_OK if the data was deleted successfully
 	 */
-	 // TODO: change tests + fill full RAM with same data, broke first payload data, try to delete and save new
 	StorageStatus deleteData(const uint8_t prefix[STORAGE_PAGE_PREFIX_SIZE], const uint32_t index);
 
 	/*
@@ -91,7 +91,6 @@ public:
 	 * @param address The address of the data for delete
 	 * @return        Returns STORAGE_OK if the data was removed successfully
 	 */
-	 // TODO: tests
 	StorageStatus clearAddress(const uint32_t address);
 	
 	/*
@@ -110,3 +109,6 @@ public:
 	 */
 	static StorageStatus findEndAddress(uint32_t* address);
 };
+
+
+#endif

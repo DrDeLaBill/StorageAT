@@ -1,6 +1,7 @@
 /* Copyright © 2023 Georgy E. All rights reserved. */
 
-#pragma once
+#ifndef _STORAGE_AT_H_
+#define _STORAGE_AT_H_
 
 
 #include <limits>
@@ -185,3 +186,6 @@ public:
 	 */
 	static uint32_t getMinEraseSize();
 };
+
+
+#endif

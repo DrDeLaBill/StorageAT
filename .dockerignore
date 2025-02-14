@@ -1,0 +1,5 @@
+# *
+# !/app/*
+# !/app/src/*
+# !/app/Debug/*
+# !/app/Release/*
