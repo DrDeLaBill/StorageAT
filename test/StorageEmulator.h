@@ -45,6 +45,7 @@ public:
 
     void setBusy(bool busy);
     void setBlocked(uint32_t idx, bool blockState);
+    void setByte(uint32_t idx, uint8_t byte);
 
     void clear();
 

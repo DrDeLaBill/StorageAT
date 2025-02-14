@@ -1,4 +1,4 @@
-/* Copyright © 2023 Georgy E. All rights reserved. */
+/* Copyright © 2025 Georgy E. All rights reserved. */
 
 #ifndef _STORAGE_TYPE_H_
 #define _STORAGE_TYPE_H_

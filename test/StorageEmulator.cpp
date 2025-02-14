@@ -51,6 +51,14 @@ void StorageEmulator::setBlocked(uint32_t idx, bool blockState)
     this->blocked[idx] = blockState;
 }
 
+void StorageEmulator::setByte(uint32_t idx, uint8_t byte)
+{
+    if (idx > StorageEmulator::getSize()) {
+        return;
+    }
+    this->memory[idx] = byte;
+}
+
 StorageEmulatorStatus StorageEmulator::readPage(const uint32_t address, uint8_t* data, const uint32_t len)
 {
     if (address + len > this->size) {
@@ -180,7 +188,7 @@ void StorageEmulator::showPage(uint32_t address)
                 break;
             }
             char c = this->memory[i * cols_count + j];
-            if (c > 31 && c != 0xFF) {
+            if (c > 31 && c < 0xFF) {
                 printf("%c", (char)c);
             } else {
                 printf(".");

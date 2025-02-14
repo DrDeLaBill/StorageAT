@@ -1,6 +1,7 @@
-/* Copyright © 2023 Georgy E. All rights reserved. */
+/* Copyright © 2025 Georgy E. All rights reserved. */
 
-#pragma once
+#ifndef _STORAGE_SEARCH_H_
+#define _STORAGE_SEARCH_H_
 
 
 #include <stdint.h>
@@ -232,3 +233,6 @@ protected:
 		const uint32_t id
 	) override;
 };
+
+
+#endif
