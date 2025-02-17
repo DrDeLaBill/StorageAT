@@ -23,3 +23,12 @@ RUN cd $RELEASE_ROOT \
  && cmake --build $RELEASE_ROOT
 
 RUN $RELEASE_ROOT/test/storageattest
+
+FROM scratch
+
+ENV APP_ROOT=/app
+ENV DEBUG_ROOT=$APP_ROOT/Debug
+ENV RELEASE_ROOT=$APP_ROOT/Release
+
+COPY --from=builder $RELEASE_ROOT/test/storageattest /release
+COPY --from=builder $DEBUG_ROOT/test/storageattest /debug

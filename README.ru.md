@@ -50,6 +50,8 @@ StorageAT - библиотека таблицы распределения да�
 * STORAGE_OOM - выход за пределы памяти
 * STORAGE_NOT_FOUND - данные не найдены
 * STORAGE_DATA_EXISTS - область памяти уже занята другими данными
+* STORAGE_HEADER_ERROR - ошибка сохранения оглавления макроблока
+
 
 Для любых манипуляций с памятью используется 32-битный адрес, поэтому для сохранения и загрузки данных сначала необходимо выполнить поиск в соответствующем режиме.
 
@@ -148,7 +150,7 @@ public:
     StorageDriver() {}
 	StorageStatus read(uint32_t address, uint8_t* data, uint32_t len) override
     {
-        DriverStatus status = storage.readPage(address, data, len);
+        DriverStatus status = memory_read(address, data, len);
         if (status == DRIVER_BUSY) {
             return STORAGE_BUSY;
         }
@@ -162,7 +164,21 @@ public:
     }
 	StorageStatus write(uint32_t address, uint8_t* data, uint32_t len) override
     {
-        DriverStatus status = storage.writePage(address, data, len);
+        DriverStatus status = memory_write(address, data, len);
+        if (status == DRIVER_BUSY) {
+            return STORAGE_BUSY;
+        }
+        if (status == DRIVER_OOM) {
+            return STORAGE_OOM;
+        }
+        if (status == DRIVER_ERROR) {
+            return STORAGE_ERROR;
+        }
+        return STORAGE_OK;
+    }
+    StorageStatus erase(const uint32_t* addresses, const uint32_t len) override
+    {
+        DriverStatus status = memory_erase(addresses, len);
         if (status == DRIVER_BUSY) {
             return STORAGE_BUSY;
         }

@@ -49,6 +49,7 @@ The entire API, after processing the request, returns the execution status:
 * STORAGE_OOM - Out of memory
 * STORAGE_NOT_FOUND - Data was not found on physical drive
 * STORAGE_DATA_EXISTS - Data already exists on current address
+* STORAGE_HEADER_ERROR - Error with header data saving
 
 For any manipulation of the memory uses a 32-bit address, so to save or/and load data you must perform a search in the appropriate mode.
 
@@ -146,7 +147,7 @@ public:
     StorageDriver() {}
 	StorageStatus read(uint32_t address, uint8_t* data, uint32_t len) override
     {
-        DriverStatus status = storage.readPage(address, data, len);
+        DriverStatus status = memory_read(address, data, len);
         if (status == DRIVER_BUSY) {
             return STORAGE_BUSY;
         }
@@ -160,7 +161,21 @@ public:
     }
 	StorageStatus write(uint32_t address, uint8_t* data, uint32_t len) override
     {
-        DriverStatus status = storage.writePage(address, data, len);
+        DriverStatus status = memory_write(address, data, len);
+        if (status == DRIVER_BUSY) {
+            return STORAGE_BUSY;
+        }
+        if (status == DRIVER_OOM) {
+            return STORAGE_OOM;
+        }
+        if (status == DRIVER_ERROR) {
+            return STORAGE_ERROR;
+        }
+        return STORAGE_OK;
+    }
+    StorageStatus erase(const uint32_t* addresses, const uint32_t len) override
+    {
+        DriverStatus status = memory_erase(addresses, len);
         if (status == DRIVER_BUSY) {
             return STORAGE_BUSY;
         }
