@@ -155,15 +155,15 @@ void StorageEmulator::showReadWrite()
         unsigned sectorIndex = i / StorageMacroblock::PAGES_COUNT;
         if (i % StorageMacroblock::PAGES_COUNT == 0) {
             std::cout << "|============ " << sectorIndex << " ";
-            for (unsigned j = 0; j < 17 - std::to_string(sectorIndex).length(); j++)
+            for (unsigned j = 0; j < 16 - std::to_string(sectorIndex).length(); j++)
                 std::cout << "=";
             std::cout << "|" << std::endl;
         } else if (i % StorageMacroblock::PAGES_COUNT == StorageMacroblock::RESERVED_PAGES_COUNT) {
-            std::cout << "|-------------------------------|" << std::endl;
+            std::cout << "|------------------------------|" << std::endl;
         }
         std::cout << "| " << (i % StorageMacroblock::PAGES_COUNT) << "\tpage:\tr-" << requestsCount[i].read << "\tw-" << requestsCount[i].write << "\t|" <<std::endl;
     }
-    std::cout << "|===============================|" << std::endl;
+    std::cout << "|==============================|" << std::endl;
 }
 
 void StorageEmulator::showPage(uint32_t address)
