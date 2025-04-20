@@ -1,4 +1,4 @@
-/* Copyright © 2023 Georgy E. All rights reserved. */
+/* Copyright © 2025 Georgy E. All rights reserved. */
 
 #include "StorageAT.h"
 
@@ -11,6 +11,7 @@
 #include "StorageData.h"
 #include "StorageType.h"
 #include "StorageSearch.h"
+#include "StorageService.hpp"
 #include "StorageMacroblock.h"
 
 
@@ -28,7 +29,16 @@ StorageAT::StorageAT(
 	m_driver       = driver;
 	m_minEraseSize = minEraseSize;
 
-	while (minEraseSize > STORAGE_DEFAULT_MIN_ERASE_SIZE);
+	if (m_minEraseSize > STORAGE_DEFAULT_MIN_ERASE_SIZE) {
+        m_minEraseSize = STORAGE_DEFAULT_MIN_ERASE_SIZE;
+    }
+
+    StorageService::init();
+}
+
+void StorageAT::tick()
+{
+    StorageService::tick();
 }
 
 StorageStatus StorageAT::find(
@@ -63,6 +73,25 @@ StorageStatus StorageAT::find(
         return STORAGE_ERROR;
     }
 }
+
+StorageStatus StorageAT::asyncFind(
+    StorageFindMode mode,
+    uint32_t*       address,
+    const char*     prefix = "",
+    uint32_t        id = 0,
+    void            (*callback) (StorageStatus status)
+) {
+    if (!address) {
+        return STORAGE_ERROR;
+    }
+
+    if (mode != FIND_MODE_EMPTY && !prefix) {
+        return STORAGE_ERROR;
+    }
+
+    return StorageService::asyncFind(mode, address, prefix, id);
+}
+
 
 StorageStatus StorageAT::load(uint32_t address, uint8_t* data, uint32_t len)
 {

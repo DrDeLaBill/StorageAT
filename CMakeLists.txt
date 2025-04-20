@@ -46,6 +46,13 @@ target_include_directories(
     ${${PROJECT_NAME}_INCLUDES}
 )
 
+if (NOT TARGET utilslib)
+    add_subdirectory(Utils)
+endif()
+target_link_libraries(
+    ${PROJECT_NAME}
+    utilslib
+)
 
 if(${CMAKE_CURRENT_SOURCE_DIR} STREQUAL ${CMAKE_SOURCE_DIR})
     

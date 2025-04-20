@@ -1,4 +1,4 @@
-/* Copyright © 2023 Georgy E. All rights reserved. */
+/* Copyright © 2025 Georgy E. All rights reserved. */
 
 #ifndef _STORAGE_AT_H_
 #define _STORAGE_AT_H_
@@ -35,6 +35,8 @@ public:
 class StorageAT
 {
 private:
+	using callback_t = void (*) (StorageStatus);
+
 	/* Storage pages count */
 	static uint32_t m_pagesCount;
 
@@ -43,6 +45,9 @@ private:
 
 	/* Storage minimum erase size */
 	static uint32_t m_minEraseSize;
+
+	// TODO
+	static callback_t callback;
 
 public:
 	/* Max available address for StorageFS */
@@ -62,6 +67,11 @@ public:
 	);
 
 	/*
+	 * Storage async process
+	 */
+	void tick();
+
+	/*
 	 * Find data in storage
 	 * 
 	 * @param mode    Current search mode
@@ -75,6 +85,23 @@ public:
 		uint32_t*       address,
 		const char*     prefix = "",
 		uint32_t        id = 0
+	);
+
+	/*
+	 * Asynchronous find data in storage 
+	 * 
+	 * @param mode    Current search mode
+	 * @param address Pointer that used to find needed page address
+	 * @param prefix  String page prefix of header that needed to be found in storage
+	 * @param id      Integer page prefix of header that needed to be found in storage
+	 * @return        Returns STORAGE_OK if the data was found
+	 */
+	StorageStatus asyncFind(
+		StorageFindMode mode,
+		uint32_t*       address,
+		const char*     prefix = "",
+		uint32_t        id = 0,
+		void            (*callback) (StorageStatus status)
 	);
 
 

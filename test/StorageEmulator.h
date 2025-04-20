@@ -1,4 +1,4 @@
-/* Copyright © 2023 Georgy E. All rights reserved. */
+/* Copyright © 2025 Georgy E. All rights reserved. */
 
 #pragma once
 
