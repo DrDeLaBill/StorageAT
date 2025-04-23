@@ -15,21 +15,24 @@
 #include "StorageMacroblock.h"
 
 
-uint32_t StorageAT::m_pagesCount = 0;
-IStorageDriver* StorageAT::m_driver = nullptr;
-uint32_t StorageAT::m_minEraseSize = 0;
+using namespace prvt_st_at;
+
+
+uint32_t              StorageAT::m_pagesCount    = 0;
+IStorageDriver*       StorageAT::m_driver        = nullptr;
+uint32_t              StorageAT::m_minEraseSize  = 0;
 
 
 StorageAT::StorageAT(
-	uint32_t        pagesCount,
-	IStorageDriver* driver,
-	uint32_t        minEraseSize
+    uint32_t        pagesCount,
+    IStorageDriver* driver,
+    uint32_t        minEraseSize
 ) {
-	m_pagesCount   = pagesCount;
-	m_driver       = driver;
-	m_minEraseSize = minEraseSize;
+    m_pagesCount   = pagesCount;
+    m_driver       = driver;
+    m_minEraseSize = minEraseSize;
 
-	if (m_minEraseSize > STORAGE_DEFAULT_MIN_ERASE_SIZE) {
+    if (m_minEraseSize > STORAGE_DEFAULT_MIN_ERASE_SIZE) {
         m_minEraseSize = STORAGE_DEFAULT_MIN_ERASE_SIZE;
     }
 
@@ -39,6 +42,11 @@ StorageAT::StorageAT(
 void StorageAT::tick()
 {
     StorageService::tick();
+}
+
+void StorageAT::callback(StorageStatus status)
+{
+    StorageService::callback(status);
 }
 
 StorageStatus StorageAT::find(
@@ -77,19 +85,11 @@ StorageStatus StorageAT::find(
 StorageStatus StorageAT::asyncFind(
     StorageFindMode mode,
     uint32_t*       address,
-    const char*     prefix = "",
-    uint32_t        id = 0,
-    void            (*callback) (StorageStatus status)
+    callback_t      callback,
+    const char*     prefix,
+    uint32_t        id
 ) {
-    if (!address) {
-        return STORAGE_ERROR;
-    }
-
-    if (mode != FIND_MODE_EMPTY && !prefix) {
-        return STORAGE_ERROR;
-    }
-
-    return StorageService::asyncFind(mode, address, prefix, id);
+    return StorageService::asyncFind(mode, address, callback, prefix, id);
 }
 
 
@@ -107,6 +107,11 @@ StorageStatus StorageAT::load(uint32_t address, uint8_t* data, uint32_t len)
 
     StorageData storageData(address);
     return storageData.load(data, len);
+}
+
+StorageStatus StorageAT::asyncLoad(uint32_t address, uint8_t* data, uint32_t len, callback_t callback)
+{
+    return StorageService::asyncLoad(address, data, len, callback);
 }
 
 StorageStatus StorageAT::save(
@@ -136,6 +141,16 @@ StorageStatus StorageAT::save(
     return storageData.save(tmpPrefix, id, data, len);
 }
 
+StorageStatus asyncSave(
+    uint32_t    address,
+    const char* prefix,
+    uint32_t    id,
+    uint8_t*    data,
+    uint32_t    len,
+    callback_t  callback
+) {
+    return StorageService::asyncSave(address, prefix, id, data, len, callback);
+}
 
 
 StorageStatus StorageAT::rewrite(
@@ -165,6 +180,17 @@ StorageStatus StorageAT::rewrite(
     return storageData.rewrite(tmpPrefix, id, data, len);
 }
 
+StorageStatus asyncRewrite(
+    uint32_t    address,
+    const char* prefix,
+    uint32_t    id,
+    uint8_t*    data,
+    uint32_t    len,
+    callback_t  callback
+) {
+    return StorageService::asyncRewrite(address, prefix, id, data, len, callback);
+}
+
 StorageStatus StorageAT::format()
 {
     for (unsigned i = 0; i < StorageMacroblock::getMacroblocksCount(); i++) {
@@ -186,12 +212,12 @@ StorageStatus StorageAT::deleteData(const char* prefix, const uint32_t index)
 
 StorageStatus StorageAT::clearAddress(const uint32_t address)
 {
-	return StorageData(0).clearAddress(address);
+    return StorageData(0).clearAddress(address);
 }
 
 void StorageAT::setPagesCount(const uint32_t pagesCount)
 {
-	m_pagesCount = pagesCount;
+    m_pagesCount = pagesCount;
 }
 
 uint32_t StorageAT::getStoragePagesCount()
@@ -226,5 +252,5 @@ IStorageDriver* StorageAT::driverCallback()
 
 uint32_t StorageAT::getMinEraseSize()
 {
-	return m_minEraseSize;
+    return m_minEraseSize;
 }
