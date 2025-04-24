@@ -127,16 +127,16 @@ public:
      */
     void setNextAddress(uint32_t address);
 
-protected:
-    /* Page address */
-    uint32_t address;
-
     /*
      * Validates the page data
      *
      * @return Returns true if the page data is correct
      */
     virtual bool validate();
+
+protected:
+    /* Page address */
+    uint32_t address;
 
     /*
      * Calculates the page data CRC16
@@ -166,12 +166,6 @@ private:
     static const uint8_t STATUS_BITS_COUNT = 2;
 
 protected:
-    /*
-     * Validates the header data
-     *
-     * @return Returns true if the header data is correct
-     */
-    bool validate() override;
 
 public:
     /* Header page statuses */
@@ -340,6 +334,13 @@ public:
      * @return Returns header macroblock index in memory
      */
     uint32_t getMacroblockIndex();
+
+    /*
+     * Validates the header data
+     *
+     * @return Returns true if the header data is correct
+     */
+    bool validate() override;
 
 };
 

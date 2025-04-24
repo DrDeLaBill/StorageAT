@@ -18,6 +18,8 @@ namespace prvt_st_at {
 class StorageService 
 {
 public:
+	using AT = StorageAT;
+
     enum status_t {
         ST_READY = 0,
         ST_FIND,
@@ -38,11 +40,11 @@ public:
         uint8_t*        dst;
         uint8_t*        src;
         StorageFindMode mode;
-        uint32_t        tmp;
+        uint32_t        sub_cnt;
     };
 
     static utl::GQueue<16, route_t> m_queue;
-    static uint32_t                 m_addrs[STORAGE_DEFAULT_MIN_ERASE_SIZE / STORAGE_PAGE_SIZE];
+    static uint32_t                 m_addrs[Header::PAGES_COUNT];
     static Page                     m_page;
     static Header                   m_header;
     static utl::Timer               m_timer;
@@ -72,21 +74,21 @@ public:
     static StorageStatus asyncLoad(uint32_t address, uint8_t* data, uint32_t len, StorageAT::callback_t callback);
     
     StorageStatus asyncSave(
-        uint32_t    address,
-        const char* prefix,
-        uint32_t    id,
-        uint8_t*    data,
-        uint32_t    len,
-        callback_t  callback
+        uint32_t       address,
+        const char*    prefix,
+        uint32_t       id,
+        uint8_t*       data,
+        uint32_t       len,
+		AT::callback_t callback
     );
     
     StorageStatus asyncRewrite(
-        uint32_t    address,
-        const char* prefix,
-        uint32_t    id,
-        uint8_t*    data,
-        uint32_t    len,
-        callback_t  callback
+        uint32_t       address,
+        const char*    prefix,
+        uint32_t       id,
+        uint8_t*       data,
+        uint32_t       len,
+		AT::callback_t callback
     );
 };
 
