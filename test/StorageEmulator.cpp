@@ -188,7 +188,7 @@ void StorageEmulator::showPage(uint32_t address)
                 break;
             }
             char c = this->memory[i * cols_count + j];
-            if (c > 31 && c < 0xFF) {
+            if (c > 31) {
                 printf("%c", (char)c);
             } else {
                 printf(".");
