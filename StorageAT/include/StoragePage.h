@@ -53,6 +53,11 @@ public:
     virtual StorageStatus load(bool startPage = false);
 
     /*
+     * Prepares the page for saving
+     */
+    void prepareSave();
+
+    /*
      * Saves page to memory
      *
      * @return Returns STORAGE_OK if page was loaded successfully

@@ -45,6 +45,13 @@ public:
 	static uint32_t getMacroblocksCount();
 
 	/*
+	 * Calculates macroblock size in memory
+	 *
+	 * @return Returns macroblock size
+	 */
+	static uint32_t getMacroblocksSize();
+
+	/*
 	 * Calculates page address
 	 *
 	 * @param macroblockIndex Macroblock index in memory

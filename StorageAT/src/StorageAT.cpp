@@ -18,9 +18,9 @@
 using namespace prvt_st_at;
 
 
-uint32_t              StorageAT::m_pagesCount    = 0;
-IStorageDriver*       StorageAT::m_driver        = nullptr;
-uint32_t              StorageAT::m_minEraseSize  = 0;
+uint32_t        StorageAT::m_pagesCount    = 0;
+IStorageDriver* StorageAT::m_driver        = nullptr;
+uint32_t        StorageAT::m_minEraseSize  = 0;
 
 
 StorageAT::StorageAT(
@@ -141,7 +141,7 @@ StorageStatus StorageAT::save(
     return storageData.save(tmpPrefix, id, data, len);
 }
 
-StorageStatus asyncSave(
+StorageStatus StorageAT::asyncSave(
     uint32_t    address,
     const char* prefix,
     uint32_t    id,
@@ -180,7 +180,7 @@ StorageStatus StorageAT::rewrite(
     return storageData.rewrite(tmpPrefix, id, data, len);
 }
 
-StorageStatus asyncRewrite(
+StorageStatus StorageAT::asyncRewrite(
     uint32_t    address,
     const char* prefix,
     uint32_t    id,

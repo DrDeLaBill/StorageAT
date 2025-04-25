@@ -66,6 +66,10 @@ public:
         }
         return STORAGE_OK;
     }
+
+    StorageStatus asyncRead(const uint32_t, uint8_t*, const uint32_t) { return STORAGE_ERROR;  }
+    StorageStatus asyncWrite(const uint32_t, const uint8_t*, const uint32_t) { return STORAGE_ERROR; }
+    StorageStatus asyncErase(const uint32_t*, const uint32_t) { return STORAGE_ERROR; }
 };
 
 
@@ -91,6 +95,27 @@ public:
     MOCK_METHOD(
         StorageStatus,
         erase,
+        (const uint32_t*, const uint32_t),
+        (override)
+    );
+
+    MOCK_METHOD(
+        StorageStatus,
+        asyncRead,
+        (const uint32_t, uint8_t*, const uint32_t),
+        (override)
+    );
+
+    MOCK_METHOD(
+        StorageStatus,
+        asyncWrite,
+        (const uint32_t, const uint8_t*, const uint32_t),
+        (override)
+    );
+
+    MOCK_METHOD(
+        StorageStatus,
+        asyncErase,
         (const uint32_t*, const uint32_t),
         (override)
     );
@@ -1219,6 +1244,44 @@ TEST_F(StorageFixture, ClearAddressWithInvalidHeader) {
     ASSERT_EQ(sat->find(FIND_MODE_EQUAL, &address, shortPrefix, 1), STORAGE_NOT_FOUND);
 }
 
+TEST_F(StorageFixture, UnknownBrokenPage1) {
+    uint8_t wdata[4 * STORAGE_PAGE_PAYLOAD_SIZE] = { 1, 2, 3, 4, 5 };
+    uint8_t rdata[sizeof(wdata)] = {};
+
+    for (unsigned i = 0; i < STORAGE_PAGE_SIZE; i++) {
+        storage.setBlocked(StorageMacroblock::RESERVED_PAGES_COUNT * STORAGE_PAGE_SIZE + i, true);
+    }
+    
+    // Сохраняем данные
+    ASSERT_EQ(sat->find(FIND_MODE_EMPTY, &address), STORAGE_OK);
+    ASSERT_EQ(sat->save(address, shortPrefix, 1, wdata, sizeof(wdata)), STORAGE_OK);
+
+    // Сохраняем данные
+    ASSERT_EQ(sat->find(FIND_MODE_EQUAL, &address, shortPrefix, 1), STORAGE_OK);
+    ASSERT_EQ(sat->load(address, rdata, sizeof(rdata)), STORAGE_OK);
+
+    ASSERT_FALSE(memcmp(wdata, rdata, sizeof(rdata)));
+}
+
+TEST_F(StorageFixture, UnknownBrokenPage2) {
+    uint8_t wdata[4 * STORAGE_PAGE_PAYLOAD_SIZE] = { 1, 2, 3, 4, 5 };
+    uint8_t rdata[sizeof(wdata)] = {};
+
+    for (unsigned i = 0; i < STORAGE_PAGE_SIZE; i++) {
+        storage.setBlocked((1 + StorageMacroblock::RESERVED_PAGES_COUNT) * STORAGE_PAGE_SIZE + i, true);
+    }
+    
+    // Сохраняем данные
+    ASSERT_EQ(sat->find(FIND_MODE_EMPTY, &address), STORAGE_OK);
+    ASSERT_EQ(sat->save(address, shortPrefix, 1, wdata, sizeof(wdata)), STORAGE_OK);
+
+    // Сохраняем данные
+    ASSERT_EQ(sat->find(FIND_MODE_EQUAL, &address, shortPrefix, 1), STORAGE_OK);
+    ASSERT_EQ(sat->load(address, rdata, sizeof(rdata)), STORAGE_OK);
+
+    ASSERT_FALSE(memcmp(wdata, rdata, sizeof(rdata)));
+}
+
 TEST_F(StorageFixture, FormatMacroblock) {
     uint32_t macroblockIndex = 0;
     ASSERT_EQ(StorageMacroblock::formatMacroblock(macroblockIndex), STORAGE_OK);
@@ -1295,7 +1358,7 @@ TEST_F(StorageFixture, FillMemoryWithLongDataBreakFirstPayloadAndDeleteSaveNew) 
     uint8_t* longData = new uint8_t[longDataSize];
     memset(longData, 0xAA, longDataSize); // Заполняем данные значением 0xAA
 
-    uint32_t address = 0;
+    address = 0;
     EXPECT_EQ(sat->find(FIND_MODE_EMPTY, &address), STORAGE_OK);
     EXPECT_EQ(sat->save(address, shortPrefix, 1, longData, longDataSize), STORAGE_OK);
 

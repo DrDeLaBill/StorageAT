@@ -29,6 +29,11 @@ uint32_t StorageMacroblock::getMacroblocksCount()
     return AT::getStoragePagesCount() / PAGES_COUNT;
 }
 
+uint32_t StorageMacroblock::getMacroblocksSize()
+{
+    return PAGES_COUNT * STORAGE_PAGE_SIZE;
+}
+
 uint32_t StorageMacroblock::getPageAddressByIndex(uint32_t macroblockIndex, uint32_t pageIndex)
 {
     return getMacroblockAddress(macroblockIndex) + (RESERVED_PAGES_COUNT + pageIndex) * STORAGE_PAGE_SIZE;

@@ -41,6 +41,7 @@ public:
         uint8_t*        src;
         StorageFindMode mode;
         uint32_t        sub_cnt;
+        uint32_t        sub_addr;
     };
 
     static utl::GQueue<16, route_t> m_queue;
@@ -73,7 +74,7 @@ public:
 
     static StorageStatus asyncLoad(uint32_t address, uint8_t* data, uint32_t len, StorageAT::callback_t callback);
     
-    StorageStatus asyncSave(
+    static StorageStatus asyncSave(
         uint32_t       address,
         const char*    prefix,
         uint32_t       id,
@@ -82,7 +83,7 @@ public:
 		AT::callback_t callback
     );
     
-    StorageStatus asyncRewrite(
+    static StorageStatus asyncRewrite(
         uint32_t       address,
         const char*    prefix,
         uint32_t       id,

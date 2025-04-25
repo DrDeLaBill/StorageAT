@@ -133,14 +133,20 @@ StorageStatus Page::load(bool startPage)
     return STORAGE_OK;
 }
 
+void Page::prepareSave()
+{
+    page.header.magic = STORAGE_MAGIC;
+    page.header.version = STORAGE_VERSION;
+    page.crc = this->getCRC16(reinterpret_cast<uint8_t*>(&page), sizeof(page) - sizeof(page.crc));
+}
+
 StorageStatus Page::save()
 {
     if (this->address + sizeof(page) > StorageAT::getStorageSize()) {
         return STORAGE_OOM;
     }
-    page.header.magic = STORAGE_MAGIC;
-    page.header.version = STORAGE_VERSION;
-    page.crc = this->getCRC16(reinterpret_cast<uint8_t*>(&page), sizeof(page) - sizeof(page.crc));
+
+    this->prepareSave();
 
     Page checkPage(this->address);
     StorageStatus status = checkPage.load();
