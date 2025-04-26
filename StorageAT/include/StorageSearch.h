@@ -23,7 +23,7 @@ public:
 	 *
 	 * @param startSearchAddress The address from which the search begins
 	 */
-	StorageSearchBase(uint32_t startSearchAddress = 0): startSearchAddress(startSearchAddress) {}
+	StorageSearchBase(uint32_t startSearchAddress = 0);
 
 	/*
 	 * StorageSearchBase destructor
@@ -44,32 +44,6 @@ public:
 		uint32_t*      resAddress
 	);
 
-protected:
-	/* Start search address */
-	uint32_t startSearchAddress;
-
-	/* Flag that indicates that the needed prefix (and id) was found in memory */
-	bool     foundOnce;
-	
-	/* Flag that indicates that the needed prefix (and id) was found in current macroblock */
-	bool     foundInMacroblock;
-
-	/* Previously result of search */
-	uint32_t prevAddress;
-
-	/* Previously header ID of search */
-	uint32_t prevId;
-
-	/*
-	 * @return Returns current mode start search address
-	 */
-	virtual uint32_t getStartCmpId() { return 0; }
-
-	/*
-	 * @return Returns true if current mode needed first result
-	 */
-	virtual bool isNeededFirstResult() { return false; }
-
 	/*
 	 * Searches data in current macroblock
 	 * 
@@ -83,6 +57,32 @@ protected:
 		const uint8_t  prefix[STORAGE_PAGE_PREFIX_SIZE],
 		const uint32_t id
 	);
+
+	/*
+	 * @return Returns true if current mode needed first result
+	 */
+	virtual bool isNeededFirstResult() { return false; }
+
+protected:
+	/* Start search address */
+	static uint32_t startSearchAddress;
+
+	/* Flag that indicates that the needed prefix (and id) was found in memory */
+	static bool     foundOnce;
+	
+	/* Flag that indicates that the needed prefix (and id) was found in current macroblock */
+	static bool     foundInMacroblock;
+
+	/* Previously result of search */
+	static uint32_t prevAddress;
+
+	/* Previously header ID of search */
+	static uint32_t prevId;
+
+	/*
+	 * @return Returns current mode start search address
+	 */
+	virtual uint32_t getStartCmpId() { return 0; }
 
 	/*
 	 * @return Returns true if current header ids matches the mode condition
@@ -106,11 +106,12 @@ public:
 	 */
 	StorageSearchEqual(uint32_t startSearchAddress = 0): StorageSearchBase(startSearchAddress) {}
 
-protected:
 	/*
 	 * @return Returns true if current mode needed first result
 	 */
 	bool isNeededFirstResult() override { return true; }
+
+protected:
 
 	/*
 	 * @return Returns true if current header ids matches the mode condition
@@ -213,11 +214,12 @@ public:
 	 */
 	StorageSearchEmpty(uint32_t startSearchAddress = 0): StorageSearchBase(startSearchAddress) {}
 
-protected:
 	/*
 	 * @return Returns true if current mode needed first result
 	 */
 	bool isNeededFirstResult() override { return true; }
+
+protected:
 
 	/*
 	 * Searches data in current macroblock

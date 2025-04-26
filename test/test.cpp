@@ -10,6 +10,8 @@
 #include "StorageAT.h"
 #include "StorageEmulator.h"
 
+#include "Timer.h"
+
 
 const int SECTORS_COUNT = 20;
 const int PAGES_COUNT   = StorageMacroblock::PAGES_COUNT * SECTORS_COUNT;
@@ -67,9 +69,20 @@ public:
         return STORAGE_OK;
     }
 
-    StorageStatus asyncRead(const uint32_t, uint8_t*, const uint32_t) { return STORAGE_ERROR;  }
-    StorageStatus asyncWrite(const uint32_t, const uint8_t*, const uint32_t) { return STORAGE_ERROR; }
-    StorageStatus asyncErase(const uint32_t*, const uint32_t) { return STORAGE_ERROR; }
+	StorageStatus asyncRead(const uint32_t address, uint8_t* data, const uint32_t len) override
+    { 
+        return read(address, data, len);  
+    }
+
+	StorageStatus asyncWrite(const uint32_t address, const uint8_t* data, const uint32_t len) override
+    {
+        return write(address, data, len);
+    }
+    
+	StorageStatus asyncErase(const uint32_t* addresses, const uint32_t count) override
+    {
+        return erase(addresses, count);
+    }
 };
 
 
@@ -130,15 +143,21 @@ protected:
     static constexpr char brokenPrefix[5] = { 't', 'e', 's', 't', 's' };
 
 public: 
-    uint32_t address = 0;
+    uint32_t address;
     StorageDriver driver;
     std::unique_ptr<StorageAT> sat;
+    
+    static utl::Timer timer;
+    static bool asyncReady;
+    static StorageStatus status;
 
     void SetUp() override
     {
         storage.clear();
         storage.setBusy(false);
         address = 0;
+        asyncReady = false;
+        timer.changeDelay(10);
         sat = std::make_unique<StorageAT>(
             storage.getPagesCount(),
             &driver,
@@ -150,7 +169,17 @@ public:
     {
         sat.reset();
     }
+
+    static void asyncCallback(StorageStatus status)
+    {
+        status = status;
+        asyncReady = true;
+    }
 };
+
+utl::Timer StorageFixture::timer(10);
+bool StorageFixture::asyncReady = false;
+StorageStatus StorageFixture::status = STORAGE_OK; 
 
 
 STORAGE_PACK(typedef struct, _TmpStruct {
@@ -371,6 +400,43 @@ TEST_F(StorageFixture, UseWrongPrefix)
     ASSERT_EQ(sat->save(address, brokenPrefix, 1, wdata, sizeof(wdata)), STORAGE_OK);
     ASSERT_EQ(sat->find(FIND_MODE_EQUAL, &address, brokenPrefix, 1), STORAGE_OK);
     ASSERT_EQ(sat->load(address, rdata, sizeof(rdata)), STORAGE_OK);
+    ASSERT_FALSE(memcmp(wdata, rdata, sizeof(wdata)));
+}
+
+TEST_F(StorageFixture, AsyncUseWrongPrefix)
+{
+    uint8_t wdata[100] = {};
+    uint8_t rdata[100] = {};
+
+    asyncReady = false;
+    ASSERT_EQ(sat->asyncFind(FIND_MODE_EMPTY, &address, asyncCallback), STORAGE_OK);
+    timer.start();
+    while (timer.wait() && !asyncReady) {
+        sat->tick();
+    }
+    ASSERT_EQ(status, STORAGE_OK);
+    
+    ASSERT_EQ(sat->asyncSave(address, brokenPrefix, 1, wdata, sizeof(wdata), asyncCallback), STORAGE_OK);
+    timer.start();
+    while (timer.wait() && !asyncReady) {
+        sat->tick();
+    }
+    ASSERT_EQ(status, STORAGE_OK);
+
+    ASSERT_EQ(sat->asyncFind(FIND_MODE_EQUAL, &address, asyncCallback, brokenPrefix, 1), STORAGE_OK);
+    timer.start();
+    while (timer.wait() && !asyncReady) {
+        sat->tick();
+    }
+    ASSERT_EQ(status, STORAGE_OK);
+
+    ASSERT_EQ(sat->asyncLoad(address, rdata, sizeof(rdata), asyncCallback), STORAGE_OK);
+    timer.start();
+    while (timer.wait() && !asyncReady) {
+        sat->tick();
+    }
+    ASSERT_EQ(status, STORAGE_OK);
+
     ASSERT_FALSE(memcmp(wdata, rdata, sizeof(wdata)));
 }
 

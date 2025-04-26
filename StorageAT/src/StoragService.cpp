@@ -3,6 +3,7 @@
 #include "StorageService.hpp"
 
 #include "StorageAT.h"
+#include "StorageSearch.h"
 
 #include "gutils.h"
 #include "fsm_gc.h"
@@ -477,13 +478,46 @@ void _find_header_s()
 
 void _find_check_a()
 {
-    // TODO
+    SV::route_t& route = SV::m_queue.back();
+    StorageSearchBase search;
+    switch (route.mode) {
+    case FIND_MODE_EQUAL:
+        search = StorageSearchEqual(0);
+        break;
+    case FIND_MODE_NEXT:
+        search = StorageSearchNext(0);
+        break;
+    case FIND_MODE_MIN:
+        search = StorageSearchMin(0);
+        break;
+    case FIND_MODE_MAX:
+        search = StorageSearchMax(0);
+        break;
+    case FIND_MODE_EMPTY:
+        search = StorageSearchEmpty(0);
+        break;
+    default:
+        fsm_gc_push_event(&st_at_find_fsm, &error_e);
+        return;
+    }
+    StorageStatus status = search.searchPageAddressInMacroblock(&SV::m_header, (uint8_t*)route.prefix, route.id);
+    if (status == STORAGE_BUSY) {
+        fsm_gc_push_event(&st_at_find_fsm, &error_e);
+        return;
+    }
+    if (search.isNeededFirstResult()) {
+        fsm_gc_push_event(&st_at_find_fsm, &done_e);
+        return;
+    }
+    if (route.addr + SM::getMacroblocksSize() >= AT::getStorageSize()) {
+        SV::m_result = STORAGE_NOT_FOUND;
+        fsm_gc_push_event(&st_at_find_fsm, &error_e);
+        return;
+    }
+    fsm_gc_push_event(&st_at_find_fsm, &next_e);
 }
 
-void _find_check_s()
-{
-
-}
+void _find_check_s() {}
 
 void _find_success_a()
 {
