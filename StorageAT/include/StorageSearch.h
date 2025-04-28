@@ -63,6 +63,10 @@ public:
 	 */
 	virtual bool isNeededFirstResult() { return false; }
 
+	// TODO: docs
+	static bool found();
+	static uint32_t getAddress();
+
 protected:
 	/* Start search address */
 	static uint32_t startSearchAddress;
@@ -218,8 +222,6 @@ public:
 	 * @return Returns true if current mode needed first result
 	 */
 	bool isNeededFirstResult() override { return true; }
-
-protected:
 
 	/*
 	 * Searches data in current macroblock

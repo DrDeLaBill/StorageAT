@@ -263,7 +263,6 @@ StorageStatus StorageData::rewrite(
         // Registrate page in header
         memcpy((*metaUnitPtr).prefix, prefix, STORAGE_PAGE_PREFIX_SIZE);
         (*metaUnitPtr).id = id;
-        header.setPageStatus(pageIndex, Header::PAGE_OK);
 
 
         // Update current values
@@ -308,7 +307,7 @@ StorageStatus StorageData::deleteData(const uint8_t prefix[STORAGE_PAGE_PREFIX_S
 	        Header::MetaUnit* metaUnitPtr = &(header.data->metaUnits[pageIndex]);
 	        memset((*metaUnitPtr).prefix, 0, STORAGE_PAGE_PREFIX_SIZE);
 	        (*metaUnitPtr).id = 0;
-	        header.setPageStatus(pageIndex, Header::PAGE_EMPTY);
+            header.isAddressEmpty((pageIndex + StorageMacroblock::RESERVED_PAGES_COUNT) * STORAGE_PAGE_SIZE);
 		}
 
 		status = header.save();

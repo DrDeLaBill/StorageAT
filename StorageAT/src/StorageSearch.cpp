@@ -70,12 +70,8 @@ StorageStatus StorageSearchBase::searchPageAddressInMacroblock(
 
     Header::MetaUnit *metUnitPtr = header->data->metaUnits;
     for (; pageIndex < Header::PAGES_COUNT; pageIndex++, metUnitPtr++) {
-        if (!header->isPageStatus(pageIndex, Header::PAGE_OK)) {
+        if (header->isAddressBlocked((pageIndex + StorageMacroblock::RESERVED_PAGES_COUNT) * STORAGE_PAGE_SIZE)) {
             continue;
-        }
-
-        if (header->isPageStatus(pageIndex, Header::PAGE_EMPTY)) {
-            break;
         }
 
         if (
@@ -106,6 +102,16 @@ StorageStatus StorageSearchBase::searchPageAddressInMacroblock(
     }
 
     return foundInMacroblock ? STORAGE_OK : STORAGE_NOT_FOUND;
+}
+
+bool StorageSearchBase::found()
+{
+    return foundOnce;
+}
+
+uint32_t StorageSearchBase::getAddress()
+{
+    return prevAddress;
 }
 
 bool StorageSearchEqual::isIdFound(
@@ -148,13 +154,14 @@ StorageStatus StorageSearchEmpty::searchPageAddressInMacroblock(
     uint32_t pageIndex = StorageMacroblock::getPageIndexByAddress(startSearchAddress);
     Header::MetaUnit* metaUnitPtr = &(header->data->metaUnits[pageIndex]);
     for (; pageIndex < Header::PAGES_COUNT; pageIndex++, metaUnitPtr++) {
-        if (header->isPageStatus(pageIndex, Header::PAGE_BLOCKED)) {
+        if (header->isAddressBlocked((pageIndex + StorageMacroblock::RESERVED_PAGES_COUNT) * STORAGE_PAGE_SIZE)) {
             continue;
         }
 
         uint32_t address = StorageMacroblock::getPageAddressByIndex(header->getMacroblockIndex(), pageIndex);
 
-        if (header->isPageStatus(pageIndex, Header::PAGE_EMPTY)) {
+
+        if (header->isAddressEmpty((pageIndex + StorageMacroblock::RESERVED_PAGES_COUNT) * STORAGE_PAGE_SIZE)) {
             foundOnce     = true;
             foundInMacroblock = true;
             prevAddress   = address;

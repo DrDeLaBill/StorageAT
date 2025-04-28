@@ -49,14 +49,17 @@ typedef enum _StorageFindMode {
 /* Page structure validator */
 #define STORAGE_MAGIC                  (0xBEDAC0DE)
 
-/* Current page structure version */
-#define STORAGE_VERSION                (0x06)
-
-/* Current page structure version v5 */
-#define STORAGE_VERSION_V6             (0x06)
-
 /* Current page structure version v5 */
 #define STORAGE_VERSION_V5             (0x05)
+
+/* Current page structure version v6 */
+#define STORAGE_VERSION_V6             (0x06)
+
+/* Current page structure version v7 */
+#define STORAGE_VERSION_V7             (0x07)
+
+/* Current page structure version */
+#define STORAGE_VERSION                (STORAGE_VERSION_V7)
 
 /* Available page title bytes in block header */
 #define STORAGE_PAGE_PREFIX_SIZE       (3)
@@ -82,6 +85,15 @@ STORAGE_PACK(typedef struct, _PageMeta {
 } PageMeta);
 
 
+/* Header page meta data structure */
+STORAGE_PACK(typedef struct, _HeaderMeta {
+	 // Special code
+    uint32_t magic;
+    // StorageAT library version
+    uint8_t  version;
+} HeaderMeta);
+
+
 /* Available payload bytes in page structure */
 #define STORAGE_PAGE_PAYLOAD_SIZE (STORAGE_PAGE_SIZE - sizeof(struct _PageMeta) - sizeof(uint16_t))
 
@@ -94,6 +106,20 @@ STORAGE_PACK(typedef struct, _PageStruct {
     // Page CRC16
     uint16_t crc;
 } PageStruct);
+
+
+/* Available payload bytes in page structure */
+#define STORAGE_HEADER_PAYLOAD_SIZE (STORAGE_PAGE_SIZE - sizeof(struct _HeaderMeta) - sizeof(uint16_t))
+
+/* Page structure */
+STORAGE_PACK(typedef struct, _HeaderStruct {
+	// Header meta data
+    HeaderMeta header;
+    // User payload data
+    uint8_t  payload[STORAGE_HEADER_PAYLOAD_SIZE];
+    // Page CRC16
+    uint16_t crc;
+} HeaderStruct);
 
 
 bool storage_at_data_success(StorageStatus status);

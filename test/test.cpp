@@ -20,6 +20,7 @@ const int PAGE_LEN      = STORAGE_PAGE_SIZE;
 uint32_t minMemoryEraseSize = STORAGE_PAGE_SIZE;
 
 StorageEmulator storage(PAGES_COUNT);
+std::unique_ptr<StorageAT> sat;
 
 
 class StorageDriver: public IStorageDriver
@@ -71,17 +72,23 @@ public:
 
 	StorageStatus asyncRead(const uint32_t address, uint8_t* data, const uint32_t len) override
     { 
-        return read(address, data, len);  
+        StorageStatus status = read(address, data, len);
+        sat->callback(status);
+        return status;
     }
 
 	StorageStatus asyncWrite(const uint32_t address, const uint8_t* data, const uint32_t len) override
     {
-        return write(address, data, len);
+        StorageStatus status = write(address, data, len);
+        sat->callback(status);
+        return status;
     }
     
 	StorageStatus asyncErase(const uint32_t* addresses, const uint32_t count) override
     {
-        return erase(addresses, count);
+        StorageStatus status = erase(addresses, count);
+        sat->callback(status);
+        return status;
     }
 };
 
@@ -135,6 +142,10 @@ public:
 };
 
 
+
+StorageDriver driver;
+
+
 class StorageFixture: public testing::Test
 {
 protected:
@@ -144,9 +155,7 @@ protected:
 
 public: 
     uint32_t address;
-    StorageDriver driver;
-    std::unique_ptr<StorageAT> sat;
-    
+
     static utl::Timer timer;
     static bool asyncReady;
     static StorageStatus status;
@@ -157,7 +166,7 @@ public:
         storage.setBusy(false);
         address = 0;
         asyncReady = false;
-        timer.changeDelay(10);
+        timer.changeDelay(10000);
         sat = std::make_unique<StorageAT>(
             storage.getPagesCount(),
             &driver,
@@ -172,12 +181,12 @@ public:
 
     static void asyncCallback(StorageStatus status)
     {
-        status = status;
+        StorageFixture::status = status;
         asyncReady = true;
     }
 };
 
-utl::Timer StorageFixture::timer(10);
+utl::Timer StorageFixture::timer(0);
 bool StorageFixture::asyncReady = false;
 StorageStatus StorageFixture::status = STORAGE_OK; 
 
@@ -199,7 +208,6 @@ TEST(PageSuite, Struct)
 TEST(HeaderSuite, Struct)
 {
     ASSERT_EQ(sizeof(struct Header::_MetaUnit), 7);
-    ASSERT_EQ(sizeof(struct Header::_MetaStatus), 1);
     ASSERT_EQ(sizeof(struct Header::_HeaderMeta), 232);
 }
 
@@ -334,9 +342,9 @@ TEST(StorageDriver, RequestExists)
 {
     storage.clear();
     MockStorageDriver mockDriver;
-    StorageAT sat(
+    sat = std::make_unique<StorageAT>(
         storage.getPagesCount(),
-        &mockDriver,
+        &driver,
         minMemoryEraseSize
     );
     uint32_t address = 0;
@@ -347,7 +355,7 @@ TEST(StorageDriver, RequestExists)
     EXPECT_CALL(mockDriver, write)
         .Times(::testing::AtLeast(1));
 
-    ASSERT_EQ(sat.find(FIND_MODE_EMPTY, &address), STORAGE_OK);
+    ASSERT_EQ(sat->find(FIND_MODE_EMPTY, &address), STORAGE_OK);
 }
 
 TEST_F(StorageFixture, BadFindRequest)
@@ -411,11 +419,12 @@ TEST_F(StorageFixture, AsyncUseWrongPrefix)
     asyncReady = false;
     ASSERT_EQ(sat->asyncFind(FIND_MODE_EMPTY, &address, asyncCallback), STORAGE_OK);
     timer.start();
-    while (timer.wait() && !asyncReady) {
+    while (!asyncReady) {
         sat->tick();
     }
     ASSERT_EQ(status, STORAGE_OK);
-    
+
+    asyncReady = false;
     ASSERT_EQ(sat->asyncSave(address, brokenPrefix, 1, wdata, sizeof(wdata), asyncCallback), STORAGE_OK);
     timer.start();
     while (timer.wait() && !asyncReady) {
@@ -423,6 +432,7 @@ TEST_F(StorageFixture, AsyncUseWrongPrefix)
     }
     ASSERT_EQ(status, STORAGE_OK);
 
+    asyncReady = false;
     ASSERT_EQ(sat->asyncFind(FIND_MODE_EQUAL, &address, asyncCallback, brokenPrefix, 1), STORAGE_OK);
     timer.start();
     while (timer.wait() && !asyncReady) {
@@ -430,6 +440,7 @@ TEST_F(StorageFixture, AsyncUseWrongPrefix)
     }
     ASSERT_EQ(status, STORAGE_OK);
 
+    asyncReady = false;
     ASSERT_EQ(sat->asyncLoad(address, rdata, sizeof(rdata), asyncCallback), STORAGE_OK);
     timer.start();
     while (timer.wait() && !asyncReady) {
@@ -690,7 +701,6 @@ TEST_F(StorageFixture, IsSetStatusesInHeader)
 
     for (unsigned i = 0; i < Header::PAGES_COUNT; i++) {
         uint32_t targetAddress = StorageMacroblock::getPageAddressByIndex(0, i);
-        ASSERT_TRUE(header.isPageStatus(i, Header::PAGE_EMPTY));
         ASSERT_TRUE(header.isAddressEmpty(targetAddress));
     }
 }
@@ -703,8 +713,8 @@ TEST_F(StorageFixture, SetStatusesInHeader)
     ASSERT_EQ(header.load(), STORAGE_OK);
 
     for (unsigned i = 0; i < Header::PAGES_COUNT; i++) {
-        header.setPageStatus(i, Header::PAGE_OK);
-        ASSERT_TRUE(header.isPageStatus(i, Header::PAGE_OK));
+        memcpy(header.data->metaUnits[i].prefix, shortPrefix, sizeof(shortPrefix));
+        ASSERT_FALSE(header.isAddressEmpty((i + StorageMacroblock::RESERVED_PAGES_COUNT) * STORAGE_PAGE_SIZE));
     }
 }
 
@@ -718,7 +728,7 @@ TEST_F(StorageFixture, SetBlockStatusesInHeader)
     for (unsigned i = 0; i < Header::PAGES_COUNT; i++) {
         uint32_t targetAddress = StorageMacroblock::getPageAddressByIndex(0, i);
         header.setAddressBlocked(targetAddress);
-        ASSERT_TRUE(header.isPageStatus(i, Header::PAGE_BLOCKED));
+        ASSERT_TRUE(header.isAddressBlocked(targetAddress));
     }
 }
 
@@ -803,7 +813,7 @@ TEST_F(StorageFixture, FindAllData)
     uint8_t wdata[STORAGE_PAGE_PAYLOAD_SIZE] = { 1, 2, 3, 4, 5 };
     uint8_t rdata[STORAGE_PAGE_PAYLOAD_SIZE] = { 0 };
 
-    StorageStatus status = STORAGE_OK;
+    status = STORAGE_OK;
     uint32_t pagesCount = 0;
     while (status == STORAGE_OK) {
         status = sat->find(FIND_MODE_EMPTY, &address);
@@ -994,11 +1004,11 @@ TEST_F(StorageFixture, SaveDataOnBlockedPage)
     ASSERT_EQ(StorageMacroblock::loadHeader(&header), STORAGE_OK);
 
     uint32_t pageIndex = StorageMacroblock::getPageIndexByAddress(address);
-    ASSERT_TRUE(header.isPageStatus(pageIndex, Header::PAGE_BLOCKED));
+    ASSERT_TRUE(header.isAddressBlocked((pageIndex + StorageMacroblock:: RESERVED_PAGES_COUNT) * STORAGE_PAGE_SIZE));
     ASSERT_EQ(sat->find(FIND_MODE_EQUAL, &tmpAddress, shortPrefix, 1), STORAGE_OK);
     ASSERT_NE(address, tmpAddress);
     ASSERT_EQ(header.load(), STORAGE_OK);
-    ASSERT_TRUE(header.isPageStatus(pageIndex, Header::PAGE_BLOCKED));
+    ASSERT_TRUE(header.isAddressBlocked((pageIndex + StorageMacroblock::RESERVED_PAGES_COUNT) * STORAGE_PAGE_SIZE));
 }
 
 TEST_F(StorageFixture, SaveDataOnBlockedSector)
@@ -1016,12 +1026,12 @@ TEST_F(StorageFixture, SaveDataOnBlockedSector)
     ASSERT_EQ(StorageMacroblock::loadHeader(&header), STORAGE_OK);
 
     for (unsigned i = 0; i < Header::PAGES_COUNT; i++) {
-        ASSERT_TRUE(header.isPageStatus(i, Header::PAGE_BLOCKED));
+        ASSERT_TRUE(header.isAddressBlocked((i + StorageMacroblock::RESERVED_PAGES_COUNT) * STORAGE_PAGE_SIZE));
     }
     ASSERT_EQ(sat->find(FIND_MODE_EQUAL, &tmpAddress, shortPrefix, 1), STORAGE_OK);
     ASSERT_NE(address, tmpAddress);
     ASSERT_EQ(header.load(), STORAGE_OK);
-    ASSERT_TRUE(header.isPageStatus(StorageMacroblock::getPageIndexByAddress(address), Header::PAGE_BLOCKED));
+    ASSERT_TRUE(header.isAddressBlocked(address));
 }
 
 TEST_F(StorageFixture, BlockAllMemory)
@@ -1354,7 +1364,7 @@ TEST_F(StorageFixture, FormatMacroblock) {
 
     Header header(StorageMacroblock::getMacroblockAddress(macroblockIndex));
     ASSERT_EQ(header.load(), STORAGE_OK);
-    ASSERT_TRUE(header.isPageStatus(0, Header::PAGE_EMPTY));
+    ASSERT_TRUE(header.isAddressEmpty(0));
 }
 
 TEST_F(StorageFixture, FormatMacroblockWithInvalidHeader) {
@@ -1377,7 +1387,7 @@ TEST_F(StorageFixture, FillMemoryBreakFirstPayloadAndDeleteSaveNew) {
     uint8_t rdata[STORAGE_PAGE_PAYLOAD_SIZE] = { 0 };
 
     // Шаг 1: Заполняем всю память одинаковыми данными
-    StorageStatus status = STORAGE_OK;
+    status = STORAGE_OK;
     uint32_t pagesCount = 0;
     while (status == STORAGE_OK) {
         status = sat->find(FIND_MODE_EMPTY, &address);

@@ -8,7 +8,7 @@
 #include "StorageType.h"
 
 #include "Timer.h"
-#include "GQueue.hpp"
+#include "GStack.hpp"
 
 #include "fsm_gc.h"
 
@@ -42,13 +42,13 @@ public:
         StorageFindMode mode;
         uint32_t        sub_cnt;
         uint32_t        sub_addr;
+        utl::Timer      timer;
     };
 
-    static utl::GQueue<16, route_t> m_queue;
+    static utl::GStack<16, route_t> m_queue;
     static uint32_t                 m_addrs[Header::PAGES_COUNT];
     static Page                     m_page;
     static Header                   m_header;
-    static utl::Timer               m_timer;
     static StorageStatus            m_result;
 	static StorageAT::callback_t    m_callback;
     
@@ -63,6 +63,8 @@ public:
     static void reset();
 
     static void route(route_t& route);
+
+    static void routeRes(fsm_gc_t* fsm);
 
     static StorageStatus asyncFind(
 		StorageFindMode       mode,

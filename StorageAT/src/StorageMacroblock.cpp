@@ -64,8 +64,8 @@ StorageStatus StorageMacroblock::formatMacroblock(uint32_t macroblockIndex)
     for (uint32_t pageIndex = 0; pageIndex < Header::PAGES_COUNT; pageIndex++, metaUnitPtr++) {
         memset((*metaUnitPtr).prefix, 0, STORAGE_PAGE_PREFIX_SIZE);
         (*metaUnitPtr).id = 0;
-        if (!header.isPageStatus(pageIndex, Header::PAGE_BLOCKED)) {
-            header.setPageStatus(pageIndex, Header::PAGE_EMPTY);
+        if (!header.isAddressBlocked((pageIndex + RESERVED_PAGES_COUNT) * STORAGE_PAGE_SIZE)) {
+            header.setAddressEmpty((pageIndex + RESERVED_PAGES_COUNT) * STORAGE_PAGE_SIZE);
         }
     }
     status = header.save();
