@@ -154,8 +154,7 @@ protected:
     static constexpr char brokenPrefix[5] = { 't', 'e', 's', 't', 's' };
 
 public: 
-    uint32_t address;
-
+    static uint32_t address;
     static utl::Timer timer;
     static bool asyncReady;
     static StorageStatus status;
@@ -179,13 +178,14 @@ public:
         sat.reset();
     }
 
-    static void asyncCallback(StorageStatus status)
+    static void asyncCallback(StorageStatus _status)
     {
-        StorageFixture::status = status;
+        StorageFixture::status = _status;
         asyncReady = true;
     }
 };
 
+uint32_t StorageFixture::address = 0;
 utl::Timer StorageFixture::timer(0);
 bool StorageFixture::asyncReady = false;
 StorageStatus StorageFixture::status = STORAGE_OK; 
@@ -338,6 +338,7 @@ TEST(StorageMacroblockSuite, CheckSectorAddresses)
     }
 }
 
+void passFunc(StorageStatus) {}
 TEST(StorageDriver, RequestExists)
 {
     storage.clear();
@@ -355,7 +356,23 @@ TEST(StorageDriver, RequestExists)
     EXPECT_CALL(mockDriver, write)
         .Times(::testing::AtLeast(1));
 
+    EXPECT_CALL(mockDriver, erase)
+        .Times(::testing::AtLeast(1));
+
     ASSERT_EQ(sat->find(FIND_MODE_EMPTY, &address), STORAGE_OK);
+
+    storage.clear();
+
+    EXPECT_CALL(mockDriver, asyncRead)
+        .Times(::testing::AtLeast(1));
+
+    EXPECT_CALL(mockDriver, asyncWrite)
+        .Times(::testing::AtLeast(1));
+
+    EXPECT_CALL(mockDriver, asyncErase)
+        .Times(::testing::AtLeast(1));
+
+    ASSERT_EQ(sat->asyncFind(FIND_MODE_EMPTY, &address, passFunc), STORAGE_OK);
 }
 
 TEST_F(StorageFixture, BadFindRequest)
@@ -419,13 +436,13 @@ TEST_F(StorageFixture, AsyncUseWrongPrefix)
     asyncReady = false;
     ASSERT_EQ(sat->asyncFind(FIND_MODE_EMPTY, &address, asyncCallback), STORAGE_OK);
     timer.start();
-    while (!asyncReady) {
+    while (timer.wait() && !asyncReady) {
         sat->tick();
     }
     ASSERT_EQ(status, STORAGE_OK);
 
     asyncReady = false;
-    ASSERT_EQ(sat->asyncSave(address, brokenPrefix, 1, wdata, sizeof(wdata), asyncCallback), STORAGE_OK);
+    ASSERT_EQ(sat->asyncSave(address, shortPrefix, 1, wdata, sizeof(wdata), asyncCallback), STORAGE_OK);
     timer.start();
     while (timer.wait() && !asyncReady) {
         sat->tick();
@@ -433,7 +450,7 @@ TEST_F(StorageFixture, AsyncUseWrongPrefix)
     ASSERT_EQ(status, STORAGE_OK);
 
     asyncReady = false;
-    ASSERT_EQ(sat->asyncFind(FIND_MODE_EQUAL, &address, asyncCallback, brokenPrefix, 1), STORAGE_OK);
+    ASSERT_EQ(sat->asyncFind(FIND_MODE_EQUAL, &address, asyncCallback, shortPrefix, 1), STORAGE_OK);
     timer.start();
     while (timer.wait() && !asyncReady) {
         sat->tick();
@@ -713,7 +730,7 @@ TEST_F(StorageFixture, SetStatusesInHeader)
     ASSERT_EQ(header.load(), STORAGE_OK);
 
     for (unsigned i = 0; i < Header::PAGES_COUNT; i++) {
-        memcpy(header.data->metaUnits[i].prefix, shortPrefix, sizeof(shortPrefix));
+        memcpy(header.data->metaUnits[i].prefix, shortPrefix, STORAGE_PAGE_PREFIX_SIZE);
         ASSERT_FALSE(header.isAddressEmpty((i + StorageMacroblock::RESERVED_PAGES_COUNT) * STORAGE_PAGE_SIZE));
     }
 }

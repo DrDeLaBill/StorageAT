@@ -27,7 +27,6 @@ typedef enum _StorageStatus {
 	STORAGE_NOT_FOUND      = (0x04), // Data was not found on physical drive
 	STORAGE_DATA_EXISTS    = (0x05), // Data already exists on current address
 	STORAGE_HEADER_ERROR   = (0x06), // Error with header data saving
-	STORAGE_NOTVALID_ERROR = (0x07), // Error with not valid page
 } StorageStatus;
 
 

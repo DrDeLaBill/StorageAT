@@ -139,6 +139,9 @@ public:
      */
     bool validate();
 
+    // TODO: docs
+    bool empty();
+
 protected:
     /* Page address */
     uint32_t address;
@@ -161,13 +164,12 @@ private:
 /*
  * Header is a table of contents of the storage macroblock
  */
-class Header: public Page
+class Header: protected Page
 {
 private:
     // TODO: docs
     static constexpr uint8_t EMPTY_PREFIX[] = { 0xFF, 0xFF, 0xFF };
     static constexpr uint8_t BLOCK_PREFIX[] = { 0x00, 0x00, 0x00 };
-    HeaderStruct* header;
 
     /* Header macroblock index in memory */
     uint32_t m_macroblockIndex;
@@ -182,13 +184,16 @@ public:
     } MetaUnit);
 
     /* Pages in block that header page contains */
-    static const uint32_t PAGES_COUNT = (STORAGE_HEADER_PAYLOAD_SIZE * 8) / sizeof(struct _MetaUnit);
+    static const uint32_t PAGES_COUNT = STORAGE_HEADER_PAYLOAD_SIZE / sizeof(struct _MetaUnit);
 
     /* Header page payload data */
     STORAGE_PACK(typedef struct, _HeaderMeta {
         // Macroblock page meta units
         MetaUnit   metaUnits[PAGES_COUNT];
     } HeaderMeta);
+
+    // TODO: docs
+    HeaderStruct* header;
 
     /* Pointer to payload header data */
     HeaderMeta* data;
@@ -293,6 +298,21 @@ public:
      * @return Returns header macroblock index in memory
      */
     uint32_t getMacroblockIndex();
+
+    /*
+     * Validates the header data
+     *
+     * @return Returns true if the page data is correct
+     */
+    bool validate();
+
+    /*
+     * @return Returns the header address
+     */
+    uint32_t getAddress();
+
+    // TODO: docs
+    void prepareSave();
 
 };
 

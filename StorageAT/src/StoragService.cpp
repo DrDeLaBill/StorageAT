@@ -568,13 +568,11 @@ void _find_error_a()
 
 FSM_GC_CREATE_ACTION(read_read_a,    _read_read_a)
 FSM_GC_CREATE_ACTION(read_check_a,   _read_check_a)
-FSM_GC_CREATE_ACTION(read_delete_a,  _read_delete_a)
 FSM_GC_CREATE_ACTION(read_success_a, _read_success_a)
 FSM_GC_CREATE_ACTION(read_error_a,   _read_error_a)
  
 FSM_GC_CREATE_STATE(read_init_s,     _read_init_s)
 FSM_GC_CREATE_STATE(read_read_s,     _read_read_s)
-FSM_GC_CREATE_STATE(read_delete_s,   _read_delete_s)
 
 FSM_GC_CREATE_TABLE(
     st_at_read_fsm_table,
@@ -583,10 +581,7 @@ FSM_GC_CREATE_TABLE(
     {&read_read_s,   &success_e, &read_init_s,   &read_success_a},
     {&read_read_s,   &done_e,    &read_read_s,   &read_check_a},
     {&read_read_s,   &next_e,    &read_read_s,   &read_read_a},
-    {&read_read_s,   &delete_e,  &read_delete_s, &read_delete_a},
     {&read_read_s,   &error_e,   &read_init_s,   &read_error_a},
-
-    {&read_delete_s, &done_e,    &read_init_s,   &read_error_a},
 )
 
 
@@ -636,12 +631,11 @@ void _read_check_a()
         // TODO: SV::m_page.repair();
     }
     if (!SV::m_page.validate()) {
-        SV::m_result = STORAGE_NOTVALID_ERROR;
-        fsm_gc_push_event(&st_at_read_fsm, &delete_e);
+        fsm_gc_push_event(&st_at_read_fsm, &error_e);
         return;
     }
     if (!route.cnt && !SV::m_page.isStart()) {
-        fsm_gc_push_event(&st_at_read_fsm, &delete_e);
+        fsm_gc_push_event(&st_at_read_fsm, &error_e);
         return;
     }
     if (!route.cnt) {
@@ -649,11 +643,11 @@ void _read_check_a()
         route.id = SV::m_page.page.header.id;
     }
     if (memcmp(route.prefix, SV::m_page.page.header.prefix, sizeof(route.prefix))) {
-        fsm_gc_push_event(&st_at_read_fsm, &delete_e);
+        fsm_gc_push_event(&st_at_read_fsm, &error_e);
         return;
     }
     if (route.id != SV::m_page.page.header.id) {
-        fsm_gc_push_event(&st_at_read_fsm, &delete_e);
+        fsm_gc_push_event(&st_at_read_fsm, &error_e);
         return;
     }
     uint32_t cnt = __min(sizeof(SV::m_page), route.len - route.cnt);
@@ -662,7 +656,7 @@ void _read_check_a()
     if (route.cnt == route.len && SV::m_page.isEnd()) {
         fsm_gc_push_event(&st_at_read_fsm, &success_e);
     } else if (route.cnt >= route.len) {
-        fsm_gc_push_event(&st_at_read_fsm, &delete_e);
+        fsm_gc_push_event(&st_at_read_fsm, &error_e);
         return;
     }
     route.addr = SV::m_page.page.header.next_addr;
@@ -676,29 +670,6 @@ void _read_read_s()
         return;
     }
     fsm_gc_push_event(&st_at_read_fsm, &error_e);
-}
-
-void _read_delete_a()
-{
-    SV::route_t& route = SV::m_queue.peek();
-    SV::route_t _delete{
-        SV::ST_DELETE,
-        route.addr,
-        0,
-        0,
-        {},
-        0,
-        nullptr,
-        nullptr,
-        (StorageFindMode)0,
-		0
-    };
-    SV::route(_delete);
-}
-
-void _read_delete_s()
-{
-    fsm_gc_push_event(&st_at_read_fsm, &done_e);
 }
 
 void _read_success_a()
@@ -786,11 +757,10 @@ void _write_read_s()
 void _write_setup_a()
 {
     SV::route_t& route = SV::m_queue.peek();
-    Header::MetaUnit* metaUnitPtr = &SV::m_header.data->metaUnits[SM::getPageIndexByAddress(route.addr)];
-    if ((*metaUnitPtr).prefix[0] > 0 || (*metaUnitPtr).id) {
-        fsm_gc_push_event(&st_at_write_fsm, &error_e);
-    } else {
+    if (SV::m_header.isAddressEmpty(route.addr)) {
         fsm_gc_push_event(&st_at_write_fsm, &success_e);
+    } else {
+        fsm_gc_push_event(&st_at_write_fsm, &error_e);
     }
 }
 
@@ -805,12 +775,13 @@ void _write_rewrite_a()
         STORAGE_PAGE_SIZE,
         0,
         {},
-        0,
+        route.id,
         nullptr,
         route.src,
         (StorageFindMode)0,
 		0
     };
+    memcpy(rewrite.prefix, route.prefix, STORAGE_PAGE_PREFIX_SIZE);
     SV::route(rewrite);
 }
 
@@ -976,8 +947,8 @@ void _rewrite_find_a()
         0,
         {},
         0,
-        nullptr,
         (uint8_t*)&route.sub_cnt,
+        nullptr,
         FIND_MODE_EMPTY,
 		0
     };
@@ -1016,15 +987,23 @@ void _rewrite_save_a()
 {
     SV::route_t& route = SV::m_queue.peek();
 
-    if (route.cnt + STORAGE_PAGE_PAYLOAD_SIZE < route.len) {
+    uint32_t itr_len = STORAGE_PAGE_PAYLOAD_SIZE;
+    uint8_t* ptr = SV::m_page.page.payload;
+    if (SM::isMacroblockAddress(route.addr)) {
+        itr_len = STORAGE_HEADER_PAYLOAD_SIZE;
+        ptr = ((HeaderStruct*)&SV::m_page.page)->payload;
+    }
+    if (route.cnt + itr_len < route.len) {
         SV::m_page.setNextAddress(route.sub_cnt);
     } else {
         SV::m_page.setNextAddress(route.addr);
     }
-    memcpy(SV::m_page.page.header.prefix, route.prefix, STORAGE_PAGE_PREFIX_SIZE);
-    SV::m_page.page.header.id = route.id;
-    memset(SV::m_page.page.payload, 0, STORAGE_PAGE_PAYLOAD_SIZE);
-    memcpy(SV::m_page.page.payload, route.src + route.cnt, __min(STORAGE_PAGE_PAYLOAD_SIZE, route.len - route.cnt));
+    if (!SM::isMacroblockAddress(route.addr)) {
+        memcpy(SV::m_page.page.header.prefix, route.prefix, STORAGE_PAGE_PREFIX_SIZE);
+        SV::m_page.page.header.id = route.id;
+    }
+    memset(ptr, 0, itr_len);
+    memcpy(ptr, route.src + route.cnt, __min(itr_len, route.len - route.cnt));
     SV::m_page.prepareSave();
     
     StorageStatus status = AT::driverCallback()->asyncWrite(route.addr, (uint8_t*)&SV::m_page.page, STORAGE_PAGE_SIZE);
@@ -1048,14 +1027,18 @@ void _rewrite_save_s()
 void _rewrite_setup_a()
 {
     SV::route_t& route = SV::m_queue.peek();
-    route.cnt += __min(STORAGE_PAGE_PAYLOAD_SIZE, route.len - route.cnt);
+    if (SM::isMacroblockAddress(route.addr)) {
+        route.cnt += STORAGE_HEADER_PAYLOAD_SIZE;
+    } else {
+        route.cnt += __min(STORAGE_PAGE_PAYLOAD_SIZE, route.len - route.cnt);
+    }
     if (SM::isMacroblockAddress(route.addr)) {
         fsm_gc_push_event(&st_at_rewrite_fsm, &done_e);
         return;
     }
     uint32_t addr1 = __rm_mod(route.addr, SM::getMacroblocksSize());
     uint32_t addr2 = __rm_mod(route.sub_cnt, SM::getMacroblocksSize());
-    if (addr1 != addr2) {
+    if (route.cnt < route.len && addr1 != addr2) {
         fsm_gc_push_event(&st_at_rewrite_fsm, &header_e);
         return;
     }
@@ -1087,6 +1070,9 @@ void _rewrite_setup_s() {}
 void _rewrite_hd_save_a()
 {
     SV::route_t& route = SV::m_queue.peek();
+    uint32_t idx = SM::getPageIndexByAddress(route.addr);
+    SV::m_header.data->metaUnits[idx].id = route.id;
+    memcpy(SV::m_header.data->metaUnits[idx].prefix, route.prefix, STORAGE_PAGE_PREFIX_SIZE);
     SV::route_t header{
         SV::ST_HEADER,
         route.addr,
@@ -1095,7 +1081,7 @@ void _rewrite_hd_save_a()
         {},
         0,
         nullptr,
-        (uint8_t*)&SV::m_header.page,
+        (uint8_t*)SV::m_header.header,
         (StorageFindMode)0,
 		0
     };
@@ -1152,6 +1138,7 @@ void _rewrite_error_a()
 FSM_GC_CREATE_ACTION(delete_find_a,      _delete_find_a)
 FSM_GC_CREATE_ACTION(delete_found_a,     _delete_found_a)
 FSM_GC_CREATE_ACTION(delete_header_a,    _delete_header_a)
+FSM_GC_CREATE_ACTION(delete_empty_a,     _delete_empty_a)
 FSM_GC_CREATE_ACTION(delete_hd_next_a,   _delete_hd_next_a)
 FSM_GC_CREATE_ACTION(delete_save_a,      _delete_save_a)
 FSM_GC_CREATE_ACTION(delete_rd_erase_a,  _delete_rd_erase_a)
@@ -1162,13 +1149,14 @@ FSM_GC_CREATE_ACTION(delete_sv_check_a,  _delete_sv_check_a)
 FSM_GC_CREATE_ACTION(delete_success_a,   _delete_success_a)
 FSM_GC_CREATE_ACTION(delate_error_a,     _delete_error_a)
 
-FSM_GC_CREATE_STATE(delete_init_s,       _delete_init_s)
-FSM_GC_CREATE_STATE(delete_find_s,       _delete_find_s)
-FSM_GC_CREATE_STATE(delete_header_s,     _delete_header_s)
-FSM_GC_CREATE_STATE(delete_save_s,       _delete_save_s)
-FSM_GC_CREATE_STATE(delete_rd_erase_s,   _delete_rd_erase_s)
-FSM_GC_CREATE_STATE(delete_sv_erase_s,   _delete_sv_erase_s)
-FSM_GC_CREATE_STATE(delete_sv_check_s,   _delete_sv_check_s)
+FSM_GC_CREATE_STATE(delete_init_s,     _delete_init_s)
+FSM_GC_CREATE_STATE(delete_find_s,     _delete_find_s)
+FSM_GC_CREATE_STATE(delete_header_s,   _delete_header_s)
+FSM_GC_CREATE_STATE(delete_empty_s,    _delete_empty_s)
+FSM_GC_CREATE_STATE(delete_save_s,     _delete_save_s)
+FSM_GC_CREATE_STATE(delete_rd_erase_s, _delete_rd_erase_s)
+FSM_GC_CREATE_STATE(delete_sv_erase_s, _delete_sv_erase_s)
+FSM_GC_CREATE_STATE(delete_sv_check_s, _delete_sv_check_s)
 
 FSM_GC_CREATE_TABLE(
     st_at_delete_fsm_table,
@@ -1176,10 +1164,12 @@ FSM_GC_CREATE_TABLE(
     {&delete_init_s,     &header_e,  &delete_sv_erase_s, &delete_sv_header_a},
     {&delete_init_s,     &find_e,    &delete_header_s,   &delete_header_a},
 
-    {&delete_find_s,     &done_e,    &delete_header_s,   &delete_found_a},
+    {&delete_find_s,     &done_e,    &delete_empty_s,    &delete_empty_a},
     {&delete_find_s,     &error_e,   &delete_sv_erase_s, &delete_sv_erase_a},
+    
+    {&delete_empty_s,    &success_e, &delete_init_s,     &delete_success_a},
+    {&delete_empty_s,    &done_e,    &delete_header_s,   &delete_found_a},
 
-    {&delete_header_s,   &success_e, &delete_init_s,     &delete_success_a},
     {&delete_header_s,   &done_e,    &delete_save_s,     &delete_save_a},
     {&delete_header_s,   &error_e,   &delete_rd_erase_s, &delete_rd_erase_a},
 
@@ -1196,9 +1186,9 @@ FSM_GC_CREATE_TABLE(
 
     {&delete_sv_check_s, &success_e, &delete_header_s,   &delete_hd_next_a},
     {&delete_sv_check_s, &header_e,  &delete_init_s,     &delete_success_a},
-)
+    )
 
-void _delete_a() {}
+    void _delete_a() {}
 
 void _delete_s()
 {
@@ -1210,6 +1200,19 @@ void _delete_s()
     fsm_gc_process(&st_at_delete_fsm);
 }
 
+static void _delete_read(uint32_t addr)
+{
+    SV::route_t& route = SV::m_queue.peek();
+    StorageStatus status = AT::driverCallback()->asyncRead(addr, (uint8_t*)&SV::m_page.page, sizeof(SV::m_page.page));
+    if (status == STORAGE_OK) {
+        route.timer.start(STORAGE_DELAY_MS);
+    }
+    else {
+        SV::m_result = status;
+        fsm_gc_push_event(&st_at_read_fsm, &error_e);
+    }
+}
+
 void _delete_init_s()
 {
     SV::route_t& route = SV::m_queue.peek();
@@ -1218,7 +1221,8 @@ void _delete_init_s()
     if (route.prefix[0] == 0) {
         if (SM::isMacroblockAddress(route.addr)) {
             fsm_gc_push_event(&st_at_delete_fsm, &header_e);
-        } else {
+        }
+        else {
             fsm_gc_push_event(&st_at_delete_fsm, &success_e);
         }
     } else {
@@ -1230,38 +1234,41 @@ void _delete_init_s()
 void _delete_find_a()
 {
     SV::route_t& route = SV::m_queue.peek();
-    SV::route_t read{
-        SV::ST_READ,
-        route.addr,
-        STORAGE_PAGE_SIZE,
-        0,
-        {},
-        0,
-        (uint8_t*)&SV::m_page.page,
-        nullptr,
-        (StorageFindMode)0,
-		0
-    };
-    SV::route(read);
+    _delete_read(route.addr);
 }
 
 void _delete_find_s()
 {
-    SV::routeRes(&st_at_delete_fsm);
+    SV::route_t& route = SV::m_queue.peek();
+    if (route.timer.wait()) {
+        return;
+    }
+    fsm_gc_push_event(&st_at_delete_fsm, &error_e);
 }
+
+void _delete_empty_a()
+{
+    SV::route_t& route = SV::m_queue.peek();
+    if (SV::m_page.empty()) {
+        fsm_gc_push_event(&st_at_delete_fsm, &success_e);
+    } else {
+        fsm_gc_push_event(&st_at_delete_fsm, &done_e);
+    }
+}
+
+void _delete_empty_s() {}
 
 void _delete_found_a()
 {
     SV::route_t& route = SV::m_queue.peek();
-    memcpy(route.prefix, SV::m_header.page.header.prefix, STORAGE_PAGE_PREFIX_SIZE);
-    route.id = SV::m_header.page.header.id;
+    memcpy(route.prefix, SV::m_page.page.header.prefix, STORAGE_PAGE_PREFIX_SIZE);
+    route.id = SV::m_page.page.header.id;
     _delete_header_a();
 }
 
 void _delete_header_a()
 {
     SV::route_t& route = SV::m_queue.peek();
-    route.timer.start(STORAGE_DELAY_MS);
     SV::route_t header{
         SV::ST_HEADER,
         route.addr,
@@ -1270,7 +1277,7 @@ void _delete_header_a()
         {},
         0,
         nullptr,
-        (uint8_t*)&SV::m_header.page,
+        nullptr,
         (StorageFindMode)0,
 		0
     };
@@ -1280,9 +1287,8 @@ void _delete_header_a()
 void _delete_hd_next_a()
 {
     SV::route_t& route = SV::m_queue.peek();
-    route.timer.start(STORAGE_DELAY_MS);
-    route.addr += SM::PAGES_COUNT * STORAGE_PAGE_SIZE;
-    if (route.addr >= SM::getMacroblocksCount() * SM::PAGES_COUNT * STORAGE_PAGE_SIZE) {
+    route.addr += SM::getMacroblocksSize();
+    if (route.addr >= SM::getMacroblocksCount() * SM::getMacroblocksSize()) {
         fsm_gc_push_event(&st_at_delete_fsm, &success_e);
         return;
     }
@@ -1291,6 +1297,7 @@ void _delete_hd_next_a()
 
 void _delete_header_s()
 {
+    SV::route_t& route = SV::m_queue.peek();
     SV::routeRes(&st_at_delete_fsm);
 }
 
@@ -1307,14 +1314,14 @@ void _delete_save_a()
         }
     }
     SV::route_t save{
-        SV::ST_REWRITE,
+        SV::ST_HEADER,
         SV::m_header.getAddress(),
         STORAGE_PAGE_SIZE,
         0,
         {},
         0,
-        (uint8_t*)&SV::m_header.page,
         nullptr,
+        (uint8_t*)SV::m_header.header,
         (StorageFindMode)0,
 		0
     };
@@ -1331,19 +1338,7 @@ void _delete_rd_erase_a()
 {
     SV::route_t& route = SV::m_queue.peek();
     route.cnt = __rm_mod(route.addr, SM::PAGES_COUNT * STORAGE_PAGE_SIZE) + SM::RESERVED_PAGES_COUNT * STORAGE_PAGE_SIZE;
-    SV::route_t read{
-        SV::ST_READ,
-        route.cnt,
-        STORAGE_PAGE_SIZE,
-        0,
-        {},
-        0,
-		(uint8_t*)&SV::m_page.page,
-        nullptr,
-        (StorageFindMode)0,
-		0
-    };
-    SV::route(read);
+    _delete_read(route.cnt);
 }
 
 void _delete_rd_next_a()
@@ -1359,24 +1354,16 @@ void _delete_rd_next_a()
         fsm_gc_push_event(&st_at_delete_fsm, &next_e);
         return;
     }
-    SV::route_t read{
-        SV::ST_READ,
-        route.cnt,
-        STORAGE_PAGE_SIZE,
-        0,
-        {},
-        0,
-		(uint8_t*)&SV::m_page.page,
-        nullptr,
-        (StorageFindMode)0,
-		0
-    };
-    SV::route(read);
+    _delete_read(route.cnt);
 }
 
 void _delete_rd_erase_s()
 {
-    SV::routeRes(&st_at_delete_fsm);
+    SV::route_t& route = SV::m_queue.peek();
+    if (route.timer.wait()) {
+        return;
+    }
+    fsm_gc_push_event(&st_at_delete_fsm, &error_e);
 }
 
 void _delete_sv_erase_a()
@@ -1488,6 +1475,7 @@ void _header_s()
 void _header_init_s()
 {
     SV::route_t& route = SV::m_queue.peek();
+    route.addr = __rm_mod(route.addr, SM::getMacroblocksSize());
     if (route.src) {
         fsm_gc_push_event(&st_at_header_fsm, &write_e);
     } else {
@@ -1516,7 +1504,7 @@ void _header_read_a()
     SV::route_t& route = SV::m_queue.peek();
     route.cnt = 0;
     route.addr = SM::getMacroblockAddress(SM::getMacroblockIndex(route.addr));
-    _header_read(route.addr, (uint8_t*)&SV::m_header.page);
+    _header_read(route.addr, (uint8_t*)SV::m_header.header);
 }
 
 void _header_next_a()
@@ -1528,13 +1516,13 @@ void _header_next_a()
         fsm_gc_push_event(&st_at_header_fsm, &end_e);
         return;
     }
-    _header_read(addr, (uint8_t*)&SV::m_header.page);
+    _header_read(addr, (uint8_t*)SV::m_header.header);
 }
 
 void _header_check_a()
 {
     if (!SV::m_header.validate()) {
-        SV::m_result = STORAGE_NOTVALID_ERROR;
+        SV::m_result = STORAGE_HEADER_ERROR;
         fsm_gc_push_event(&st_at_header_fsm, &error_e);
         return;
     }
@@ -1589,20 +1577,15 @@ void _header_create_s()
 
 static void _header_save(const uint32_t address)
 {
+    SV::m_header.prepareSave();
     SV::route_t& route = SV::m_queue.peek();
-    SV::route_t save{
-        SV::ST_REWRITE,
-        address,
-        STORAGE_PAGE_SIZE,
-        0,
-        {},
-        0,
-        nullptr,
-        (uint8_t*)&SV::m_header.page,
-        (StorageFindMode)0,
-		0
-    };
-    SV::route(save);
+    StorageStatus status = AT::driverCallback()->asyncWrite(address,  (uint8_t*)SV::m_header.header, STORAGE_PAGE_SIZE);
+    if (status == STORAGE_OK) {
+        route.timer.start(STORAGE_DELAY_MS);
+    } else {
+        SV::m_result = status;
+        fsm_gc_push_event(&st_at_header_fsm, &error_e);
+    }
 }
 
 void _header_save_a()
@@ -1629,7 +1612,10 @@ void _header_save_s()
     if (route.cnt >= SM::RESERVED_PAGES_COUNT) {
         return;
     }
-    SV::routeRes(&st_at_header_fsm);
+    if (route.timer.wait()) {
+        return;
+    }
+    fsm_gc_push_event(&st_at_rewrite_fsm, &error_e);
 }
 
 void _header_success_a()

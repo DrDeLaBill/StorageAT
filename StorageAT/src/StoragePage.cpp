@@ -188,6 +188,16 @@ bool Page::validate()
     return true;
 }
 
+bool Page::empty()
+{
+    for (unsigned i = 0; i < STORAGE_PAGE_SIZE; i++) {
+        if (((uint8_t*)&page)[i] != 0xFF) {
+            return false;
+        }
+    }
+    return true;
+}
+
 uint16_t Page::getCRC16(uint8_t* buf, uint16_t len) {
     uint16_t crc = 0;
     for (uint16_t i = 1; i < len; i++) {
@@ -288,6 +298,7 @@ Header& Header::operator=(const Header& other)
 
     this->m_macroblockIndex = other.m_macroblockIndex;
 
+    this->header = (HeaderStruct*)&page;
     memcpy(header->payload, other.header->payload, STORAGE_HEADER_PAYLOAD_SIZE);
     this->data = (HeaderMeta*)header->payload;
 
@@ -439,4 +450,19 @@ StorageStatus Header::save()
     }
     
     return status;
+}
+
+bool Header::validate()
+{
+    return Page::validate();
+}
+
+uint32_t Header::getAddress()
+{
+    return Page::getAddress();
+}
+
+void Header::prepareSave()
+{
+    Page::prepareSave();
 }

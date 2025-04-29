@@ -44,6 +44,7 @@ uint32_t StorageMacroblock::getPageIndexByAddress(uint32_t address)
     if (StorageMacroblock::isMacroblockAddress(address)) {
         return 0;
     }
+    address %= getMacroblocksSize();
     return ((address / STORAGE_PAGE_SIZE) % (PAGES_COUNT)) - RESERVED_PAGES_COUNT;
 }
 
