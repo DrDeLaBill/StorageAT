@@ -119,6 +119,13 @@ public:
     uint32_t getAddress();
 
     /*
+     * Sets page address of the data
+     *
+     * @param address page address
+     */
+    void setAddress(uint32_t address);
+
+    /*
      * Sets previously page address of the data
      *
      * @param address previously page address
@@ -188,8 +195,10 @@ public:
 
     /* Header page payload data */
     STORAGE_PACK(typedef struct, _HeaderMeta {
+        // Header block flag
+        uint8_t  block;
         // Macroblock page meta units
-        MetaUnit   metaUnits[PAGES_COUNT];
+        MetaUnit metaUnits[PAGES_COUNT];
     } HeaderMeta);
 
     // TODO: docs
@@ -230,7 +239,7 @@ public:
      * @return Returns STORAGE_OK if the header was loaded successfully
      */
     StorageStatus load();
-    StorageStatus load(bool) override { return this->load(); };
+    // StorageStatus load(bool) override { return this->load(); };
 
     /*
      * Saves the header to memory

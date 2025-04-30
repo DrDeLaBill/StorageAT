@@ -240,6 +240,11 @@ uint32_t Page::getAddress()
     return this->address;
 }
 
+void Page::setAddress(uint32_t address)
+{
+    this->address = address;
+}
+
 void Page::setPrevAddress(uint32_t prevAddress)
 {
     this->page.header.prev_addr = prevAddress;
@@ -348,6 +353,7 @@ uint32_t Header::getMacroblockStartAddress(uint32_t address)
 StorageStatus Header::create()
 {
     StorageStatus status = STORAGE_OK;
+    this->data->block = 0xFF;
     MetaUnit* metaUnitPtr = this->data->metaUnits;
     for (unsigned  i = 0; i < Header::PAGES_COUNT; i++, metaUnitPtr++) {
         Page tmpPage(StorageMacroblock::getPageAddressByIndex(this->m_macroblockIndex, i));
@@ -378,14 +384,12 @@ StorageStatus Header::create()
             return STORAGE_BUSY;
         }
         if (status != STORAGE_OK) {
+            memset((uint8_t*)metaUnitPtr, 0xFF, sizeof(MetaUnit));
             continue;
         }
 
-        if (status == STORAGE_OK) {
-            HeaderStruct* tmp = (HeaderStruct*)&tmpPage.page;
-            memcpy((*metaUnitPtr).prefix, tmpPage.page.header.prefix, sizeof(tmpPage.page.header.prefix));
-            (*metaUnitPtr).id = tmpPage.page.header.id;
-        }
+        memcpy((*metaUnitPtr).prefix, tmpPage.page.header.prefix, sizeof(tmpPage.page.header.prefix));
+        (*metaUnitPtr).id = tmpPage.page.header.id;
     }
 
     status = this->save();
@@ -404,12 +408,12 @@ StorageStatus Header::load()
     for (uint8_t i = 0; i < StorageMacroblock::RESERVED_PAGES_COUNT; i++) {
         this->address = startAddress + static_cast<uint32_t>(i * STORAGE_PAGE_SIZE);
 
-        status = Page::load();
+        status = Page::load(false);
         if (status == STORAGE_BUSY) {
             return STORAGE_BUSY;
         }
         if (status == STORAGE_OK) {
-            return STORAGE_OK;
+            break;
         }
     }
 
@@ -439,6 +443,8 @@ StorageStatus Header::save()
         if (status == STORAGE_OK) {
             return STORAGE_OK;
         }
+        static uint8_t block = 0;
+        AT::driverCallback()->write(address + sizeof(HeaderMeta), &block, sizeof(block));
     }
 
     if (!this->validate()) {
@@ -454,6 +460,9 @@ StorageStatus Header::save()
 
 bool Header::validate()
 {
+    if (this->data->block != 0xFF) {
+        return false;
+    }
     return Page::validate();
 }
 
@@ -464,5 +473,6 @@ uint32_t Header::getAddress()
 
 void Header::prepareSave()
 {
+    this->data->block = 0xFF;
     Page::prepareSave();
 }

@@ -185,6 +185,7 @@ StorageStatus StorageData::rewrite(
     uint32_t curLen = 0;
     uint32_t curAddr = pageAddress;
     uint32_t prevAddr = pageAddress;
+    uint32_t findAddr = pageAddress;
     uint32_t macroblockAddress = STORAGE_PAGE_SIZE + 1;
     bool headerLoaded = false;
     while (curLen < len) {
@@ -200,7 +201,7 @@ StorageStatus StorageData::rewrite(
 
         // Search
         uint32_t nextAddr = 0;
-        status = StorageSearchEmpty(/*startSearchAddress=*/curAddr + STORAGE_PAGE_SIZE).searchPageAddress(prefix, id, &nextAddr);
+        status = StorageSearchEmpty(/*startSearchAddress=*/findAddr + STORAGE_PAGE_SIZE).searchPageAddress(prefix, id, &nextAddr);
         if (status != STORAGE_OK) {
             nextAddr = curAddr + STORAGE_PAGE_SIZE;
         }
@@ -255,7 +256,19 @@ StorageStatus StorageData::rewrite(
         Header::MetaUnit* metaUnitPtr = &(header.data->metaUnits[pageIndex]);
         if (status == STORAGE_ERROR) {
             header.setAddressBlocked(curAddr);
-            curAddr = nextAddr;
+            if (page.isStart()) {
+                curAddr  = nextAddr;
+                findAddr = nextAddr;
+                continue;
+            }
+            curAddr  = prevAddr;
+            findAddr = nextAddr;
+            curLen  -= STORAGE_PAGE_PAYLOAD_SIZE;
+            page.setAddress(curAddr);
+            if (page.load() != STORAGE_OK) {
+                break;
+            }
+            prevAddr = page.page.header.prev_addr;
             continue;
         }
 
@@ -268,6 +281,7 @@ StorageStatus StorageData::rewrite(
         // Update current values
         prevAddr = curAddr;
         curAddr  = nextAddr;
+        findAddr = nextAddr;
         curLen  += neededLen;
     }
 
@@ -305,8 +319,7 @@ StorageStatus StorageData::deleteData(const uint8_t prefix[STORAGE_PAGE_PREFIX_S
 			}
 
 	        Header::MetaUnit* metaUnitPtr = &(header.data->metaUnits[pageIndex]);
-	        memset((*metaUnitPtr).prefix, 0, STORAGE_PAGE_PREFIX_SIZE);
-	        (*metaUnitPtr).id = 0;
+	        memset((uint8_t*)metaUnitPtr, 0xFF, STORAGE_PAGE_PREFIX_SIZE);
             header.isAddressEmpty((pageIndex + StorageMacroblock::RESERVED_PAGES_COUNT) * STORAGE_PAGE_SIZE);
 		}
 
@@ -419,7 +432,7 @@ StorageStatus StorageData::findEndAddress(uint32_t* address)
         return status;
     }
 
-    status = page.load(/*startPage=*/true);
+    status = page.load(/*startPage=*/false);
     if (status != STORAGE_OK) {
         return status;
     }

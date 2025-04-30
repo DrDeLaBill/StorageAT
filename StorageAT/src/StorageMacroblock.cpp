@@ -63,11 +63,10 @@ StorageStatus StorageMacroblock::formatMacroblock(uint32_t macroblockIndex)
 
     Header::MetaUnit* metaUnitPtr = header.data->metaUnits;
     for (uint32_t pageIndex = 0; pageIndex < Header::PAGES_COUNT; pageIndex++, metaUnitPtr++) {
-        memset((*metaUnitPtr).prefix, 0, STORAGE_PAGE_PREFIX_SIZE);
-        (*metaUnitPtr).id = 0;
-        if (!header.isAddressBlocked((pageIndex + RESERVED_PAGES_COUNT) * STORAGE_PAGE_SIZE)) {
-            header.setAddressEmpty((pageIndex + RESERVED_PAGES_COUNT) * STORAGE_PAGE_SIZE);
+        if (header.isAddressBlocked((pageIndex + RESERVED_PAGES_COUNT) * STORAGE_PAGE_SIZE)) {
+            continue;
         }
+        memset((uint8_t*)metaUnitPtr, 0xFF, sizeof(Header::MetaUnit));
     }
     status = header.save();
     if (status == STORAGE_HEADER_ERROR) {

@@ -102,9 +102,16 @@ FSM_GC_CREATE_TABLE(
 
 void SV::init()
 {
+    fsm_gc_disable_messages(&st_at_fsm);
+    fsm_gc_disable_messages(&st_at_find_fsm);
+    fsm_gc_disable_messages(&st_at_read_fsm);
+    fsm_gc_disable_messages(&st_at_write_fsm);
+    fsm_gc_disable_messages(&st_at_rewrite_fsm);
+    fsm_gc_disable_messages(&st_at_delete_fsm);
+    fsm_gc_disable_messages(&st_at_header_fsm);
     fsm_gc_init(&st_at_fsm, st_at_fsm_table, __arr_len(st_at_fsm_table));
-    // fsm_gc_disable_messages(&st_at_fsm); // TODO: uncomment 
     reset();
+    // fsm_gc_enable_messages(&st_at_fsm); // TODO: remove 
 }
 
 void SV::tick()
@@ -176,18 +183,21 @@ void SV::reset()
     if (st_at_header_fsm._initialized) {
         fsm_gc_reset(&st_at_header_fsm);
     }
+    m_queue.clear();
     tick();
 }
 
 void SV::route(route_t& route)
 {
-    if (SV::m_queue.full()) {
-        SV::m_result = STORAGE_ERROR;
+    if (m_queue.full()) {
+        m_result = STORAGE_ERROR;
         fsm_gc_push_event(&st_at_fsm, &done_e);
     } else {
-        printTagLog("STSV", "push: %lu", SV::m_queue.count() + 1);
-        SV::m_queue.push(route);
-        fsm_gc_push_event(&st_at_fsm, &router_e);
+        printTagLog("STSV", "push: %lu", m_queue.count() + 1);
+        m_queue.push(route);
+        if (!fsm_gc_is_state(&st_at_fsm, &router_s)) {
+            fsm_gc_push_event(&st_at_fsm, &router_e);
+        }
     }
 }
 
@@ -216,7 +226,7 @@ StorageStatus SV::asyncFind(
     if (mode != FIND_MODE_EMPTY && (!prefix || !prefix[0])) {
         return STORAGE_ERROR;
     }
-    if (mode > FIND_MODE_EMPTY) {
+    if (mode > FIND_MODE_EMPTY || mode == 0) {
         return STORAGE_ERROR;
     }
     m_callback = callback;
@@ -398,13 +408,6 @@ void _callback_a()
 {
     printTagLog("STSV", "count: %lu", SV::m_queue.count());
     SV::route_t route = SV::m_queue.pop();
-    // if (SV::m_result != STORAGE_OK && SV::m_queue.count() == 1) { // TODO
-    //     while (SV::m_queue.count() > 1) {
-    //         SV::m_queue.pop();
-    //     }
-    //     route = SV::m_queue.pop();
-    //     SV::reset();
-    // }
     switch (route.status) {
     case SV::ST_FIND:
     case SV::ST_READ:
@@ -616,6 +619,7 @@ void _read_read_a()
         StorageStatus status = AT::driverCallback()->asyncRead(route.addr, (uint8_t*)&SV::m_page.page, sizeof(SV::m_page.page));
         if (status == STORAGE_OK) {
             route.timer.start(STORAGE_DELAY_MS);
+            SV::m_page.setAddress(route.addr);
         } else {
             SV::m_result = status;
             fsm_gc_push_event(&st_at_read_fsm, &error_e);
@@ -650,11 +654,12 @@ void _read_check_a()
         fsm_gc_push_event(&st_at_read_fsm, &error_e);
         return;
     }
-    uint32_t cnt = __min(sizeof(SV::m_page), route.len - route.cnt);
-    memcpy(route.dst + route.cnt, (uint8_t*)(&SV::m_page), cnt);
+    uint32_t cnt = __min(STORAGE_PAGE_PAYLOAD_SIZE, route.len - route.cnt);
+    memcpy(route.dst + route.cnt, (uint8_t*)(&SV::m_page.page.payload), cnt);
     route.cnt += cnt;
     if (route.cnt == route.len && SV::m_page.isEnd()) {
         fsm_gc_push_event(&st_at_read_fsm, &success_e);
+        return;
     } else if (route.cnt >= route.len) {
         fsm_gc_push_event(&st_at_read_fsm, &error_e);
         return;
@@ -772,7 +777,7 @@ void _write_rewrite_a()
     SV::route_t rewrite{
         SV::ST_REWRITE,
         route.addr,
-        STORAGE_PAGE_SIZE,
+        route.len,
         0,
         {},
         route.id,
@@ -1002,7 +1007,7 @@ void _rewrite_save_a()
         memcpy(SV::m_page.page.header.prefix, route.prefix, STORAGE_PAGE_PREFIX_SIZE);
         SV::m_page.page.header.id = route.id;
     }
-    memset(ptr, 0, itr_len);
+    memset(ptr, 0xFF, itr_len);
     memcpy(ptr, route.src + route.cnt, __min(itr_len, route.len - route.cnt));
     SV::m_page.prepareSave();
     
@@ -1532,6 +1537,10 @@ void _header_check_a()
 void _header_read_s()
 {
     SV::route_t& route = SV::m_queue.peek();
+    uint32_t addr = route.addr + route.cnt * STORAGE_PAGE_SIZE;
+    if (!SM::isMacroblockAddress(addr)) {
+        return;
+    }
     if (route.timer.wait()) {
         return;
     }

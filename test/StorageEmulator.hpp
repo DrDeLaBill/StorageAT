@@ -1,6 +1,7 @@
 /* Copyright © 2025 Georgy E. All rights reserved. */
 
-#pragma once
+#ifndef _STORAGE_EMULATOR_HPP_
+#define _STORAGE_EMULATOR_HPP_
 
 
 #include <memory>
@@ -21,7 +22,8 @@ private:
     uint32_t pagesCount;
     uint32_t size;
     std::unique_ptr<uint8_t[]> memory;
-    std::unique_ptr<bool[]> blocked;
+    std::unique_ptr<bool[]> write;
+    std::unique_ptr<bool[]> read;
 
     bool isBusy;
 
@@ -44,7 +46,8 @@ public:
     uint32_t getPagesCount();
 
     void setBusy(bool busy);
-    void setBlocked(uint32_t idx, bool blockState);
+    void writeBlock(uint32_t idx, bool blockState);
+    void readBlock(uint32_t idx, bool blockState);
     void setByte(uint32_t idx, uint8_t byte);
 
     void clear();
@@ -52,3 +55,6 @@ public:
     void showReadWrite();
     void showPage(uint32_t address);
 };
+
+
+#endif
