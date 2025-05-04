@@ -320,6 +320,13 @@ public:
      */
     uint32_t getAddress();
 
+    /*
+     * Sets header address
+     *
+     * @param address header address
+     */
+    void setAddress(uint32_t address);
+
     // TODO: docs
     void prepareSave();
 

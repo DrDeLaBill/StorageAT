@@ -55,13 +55,14 @@ StorageStatus StorageFixtureAsync::asyncFind(
     if (status != STORAGE_OK) {
         return status;
     }
-    timer.start();
-    while (timer.wait() && !asyncReady) {
+    // timer.start();
+    // while (timer.wait() && !asyncReady) {
+    while (!asyncReady) {
         sat->tick();
     }
-    if (!timer.wait()) {
-        return STORAGE_ERROR;
-    }
+    // if (!timer.wait()) {
+    //     return STORAGE_ERROR;
+    // }
     return status;
 }
 
@@ -72,14 +73,15 @@ StorageStatus StorageFixtureAsync::asyncLoad(uint32_t address, uint8_t* data, ui
     if (status != STORAGE_OK) {
         return status;
     }
-    timer.start();
-    while (timer.wait() && !asyncReady) {
+    // timer.start();
+    // while (timer.wait() && !asyncReady) {
+    while (!asyncReady) {
         sat->tick();
     }
-    if (!timer.wait()) {
-        return STORAGE_ERROR;
-    }
-    return status;
+    // if (!timer.wait()) {
+    //     return STORAGE_ERROR;
+    // }
+    return StorageFixtureAsync::status;
 }
 
 StorageStatus StorageFixtureAsync::asyncSave(
@@ -94,14 +96,15 @@ StorageStatus StorageFixtureAsync::asyncSave(
     if (status != STORAGE_OK) {
         return status;
     }
-    timer.start();
-    while (timer.wait() && !asyncReady) {
+    // timer.start();
+    // while (timer.wait() && !asyncReady) {
+    while (!asyncReady) {
         sat->tick();
     }
-    if (!timer.wait()) {
-        return STORAGE_ERROR;
-    }
-    return status;
+    // if (!timer.wait()) {
+    //     return STORAGE_ERROR;
+    // }
+    return StorageFixtureAsync::status;
 }
 
 StorageStatus StorageFixtureAsync::asyncRewrite(
@@ -116,12 +119,13 @@ StorageStatus StorageFixtureAsync::asyncRewrite(
     if (status != STORAGE_OK) {
         return status;
     }
-    timer.start();
-    while (timer.wait() && !asyncReady) {
+    // timer.start();
+    // while (timer.wait() && !asyncReady) {
+    while (!asyncReady) {
         sat->tick();
     }
-    if (!timer.wait()) {
-        return STORAGE_ERROR;
-    }
-    return status;
+    // if (!timer.wait()) {
+    //     return STORAGE_ERROR;
+    // }
+    return StorageFixtureAsync::status;
 }

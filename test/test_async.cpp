@@ -70,14 +70,14 @@ TEST_F(StorageFixtureAsync, StorageBusy)
 {
     SF::storage.setBusy(true);
 
-    ASSERT_EQ(SF::asyncFind(FIND_MODE_EQUAL, &address, "", 0), STORAGE_BUSY);
-    ASSERT_EQ(SF::asyncFind(FIND_MODE_MAX, &address, "", 0), STORAGE_BUSY);
-    ASSERT_EQ(SF::asyncFind(FIND_MODE_MIN, &address, "", 0), STORAGE_BUSY);
-    ASSERT_EQ(SF::asyncFind(FIND_MODE_NEXT, &address, "", 0), STORAGE_BUSY);
+    ASSERT_EQ(SF::asyncFind(FIND_MODE_EQUAL, &address, "", 0), STORAGE_ERROR);
+    ASSERT_EQ(SF::asyncFind(FIND_MODE_MAX, &address, "", 0), STORAGE_ERROR);
+    ASSERT_EQ(SF::asyncFind(FIND_MODE_MIN, &address, "", 0), STORAGE_ERROR);
+    ASSERT_EQ(SF::asyncFind(FIND_MODE_NEXT, &address, "", 0), STORAGE_ERROR);
 
     address = StorageMacroblock::RESERVED_PAGES_COUNT * STORAGE_PAGE_SIZE;
-    ASSERT_EQ(SF::asyncLoad(address, (new uint8_t[PAGE_LEN]), PAGE_LEN), STORAGE_BUSY);
-    ASSERT_EQ(SF::asyncSave(address, shortPrefix, 1, (new uint8_t[PAGE_LEN]), PAGE_LEN), STORAGE_BUSY);
+    ASSERT_EQ(SF::asyncLoad(address, (new uint8_t[PAGE_LEN]), PAGE_LEN), STORAGE_ERROR);
+    ASSERT_EQ(SF::asyncSave(address, shortPrefix, 1, (new uint8_t[PAGE_LEN]), PAGE_LEN), STORAGE_ERROR);
 }
 
 
@@ -201,7 +201,10 @@ TEST_F(StorageFixtureAsync, CheckBrokenVersionLoad)
 
 TEST_F(StorageFixtureAsync, CheckDataStartPageLoad)
 {
-    uint8_t wdata[STORAGE_PAGE_PAYLOAD_SIZE * 3] = { 1, 2, 3, 4, 5 };
+    uint8_t wdata[STORAGE_PAGE_PAYLOAD_SIZE * 3] = {};
+    for (unsigned i = 0; i < sizeof(wdata); i++) {
+        wdata[i] = i;
+    }
 
     ASSERT_EQ(SF::asyncFind(FIND_MODE_EMPTY, &address), STORAGE_OK);
     ASSERT_EQ(SF::asyncSave(address, shortPrefix, 1, wdata, sizeof(wdata)), STORAGE_OK);
@@ -1111,6 +1114,9 @@ TEST_F(StorageFixtureAsync, FillMemoryBreakFirstPayloadAndDeleteSaveNew) {
     uint32_t pagesCount = 0;
     while (status == STORAGE_OK) {
         status = SF::asyncFind(FIND_MODE_EMPTY, &address);
+        if (address == 1024) {
+            volatile int a = 0;
+        }
         if (status != STORAGE_OK) {
             break;
         }

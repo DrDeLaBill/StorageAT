@@ -15,10 +15,10 @@ class StorageMacroblock
 {
 public:
 	/* Macroblock pages count that reserved for header page at the beginning of the macroblock */
-	static const uint32_t RESERVED_PAGES_COUNT = 4;
+	static constexpr uint32_t RESERVED_PAGES_COUNT = 4;
 
 	/* Macroblock pages count */
-	static const uint32_t PAGES_COUNT = RESERVED_PAGES_COUNT + Header::PAGES_COUNT;
+	static constexpr uint32_t PAGES_COUNT = RESERVED_PAGES_COUNT + Header::PAGES_COUNT;
 
 
 	/*

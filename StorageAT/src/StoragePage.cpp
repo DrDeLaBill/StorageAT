@@ -471,6 +471,11 @@ uint32_t Header::getAddress()
     return Page::getAddress();
 }
 
+void Header::setAddress(uint32_t address)
+{
+    Page::setAddress(address);
+}
+
 void Header::prepareSave()
 {
     this->data->block = 0xFF;
