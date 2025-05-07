@@ -104,7 +104,7 @@ FSM_GC_CREATE_TABLE(
 
 void SV::init()
 {
-    // fsm_gc_disable_messages(&st_at_fsm);
+    // fsm_gc_disable_messages(&st_at_fsm); TODO
     // fsm_gc_disable_messages(&st_at_find_fsm);
     // fsm_gc_disable_messages(&st_at_read_fsm);
     // fsm_gc_disable_messages(&st_at_write_fsm);
@@ -765,7 +765,7 @@ void _read_check_a()
         // TODO: SV::m_page.repair();
     }
     if (!SV::m_page.validate()) {
-        // if (SV::m_result == STORAGE_OK) {
+        // if (SV::m_result == STORAGE_OK) { // TODO
         //     SV::m_result = STORAGE_NOT_FOUND;
         // }
         fsm_gc_push_event(&st_at_read_fsm, &error_e);
@@ -794,7 +794,7 @@ void _read_check_a()
         fsm_gc_push_event(&st_at_read_fsm, &success_e);
         return;
     } else if (route.cnt >= route.len) {
-        // if (SV::m_result == STORAGE_OK) {
+        // if (SV::m_result == STORAGE_OK) { // TODO
         //     SV::m_result = STORAGE_NOT_FOUND;
         // }
         fsm_gc_push_event(&st_at_read_fsm, &error_e);
@@ -1228,7 +1228,7 @@ void _rewrite_setup_a()
     if (SM::isMacroblockAddress(route.addr)) {
         route.cnt += STORAGE_HEADER_PAYLOAD_SIZE;
     }
-    // if (SM::isMacroblockAddress(route.addr)) {
+    // if (SM::isMacroblockAddress(route.addr)) { // TODO
     //     fsm_gc_push_event(&st_at_rewrite_fsm, &done_e);
     //     return;
     // }
