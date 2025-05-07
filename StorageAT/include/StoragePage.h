@@ -160,6 +160,9 @@ protected:
      */
     uint16_t getCRC16(uint8_t* buf, uint16_t len);
 
+    // TODO: docs
+    Page() {}
+
 private:
     /*
      * Tries to repair the page
@@ -183,23 +186,45 @@ private:
 
 public:
     /* Single page meta data structure */
-    STORAGE_PACK(typedef struct, _MetaUnit {
-    	// String page prefix for searching
+#ifdef __GNUC__
+    typedef struct __attribute__((__packed__)) _MetaUnit {
+        // String page prefix for searching
         uint8_t  prefix[STORAGE_PAGE_PREFIX_SIZE];
         // ID for searching// ID for searching
         uint32_t id;
-    } MetaUnit);
+    } MetaUnit;
+#elif _MSC_VER
+#   pragma pack(push, 1)
+    typedef struct _MetaUnit {
+        // String page prefix for searching
+        uint8_t  prefix[STORAGE_PAGE_PREFIX_SIZE];
+        // ID for searching// ID for searching
+        uint32_t id;
+    } MetaUnit;
+#   pragma pack(pop)
+#endif
 
     /* Pages in block that header page contains */
     static const uint32_t PAGES_COUNT = STORAGE_HEADER_PAYLOAD_SIZE / sizeof(struct _MetaUnit);
 
     /* Header page payload data */
-    STORAGE_PACK(typedef struct, _HeaderMeta {
+#ifdef __GNUC__
+    typedef struct __attribute__((__packed__)) _HeaderMeta {
         // Header block flag
         uint8_t  block;
         // Macroblock page meta units
         MetaUnit metaUnits[PAGES_COUNT];
-    } HeaderMeta);
+    } HeaderMeta;
+#elif _MSC_VER
+#   pragma pack(push, 1)
+    typedef struct _HeaderMeta {
+        // Header block flag
+        uint8_t  block;
+        // Macroblock page meta units
+        MetaUnit metaUnits[PAGES_COUNT];
+    } HeaderMeta;
+#   pragma pack(pop)
+#endif
 
     // TODO: docs
     HeaderStruct* header;
@@ -329,7 +354,7 @@ public:
 
     // TODO: docs
     void prepareSave();
-
+    bool exists(uint32_t address);
 };
 
 

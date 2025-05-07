@@ -5,6 +5,8 @@
 #include <string.h>
 #include <stdint.h>
 
+#include "gutils.h"
+
 #include "StorageAT.h"
 #include "StoragePage.h"
 #include "StorageType.h"
@@ -21,7 +23,10 @@ uint32_t StorageMacroblock::getMacroblockAddress(uint32_t macroblockIndex)
 
 uint32_t StorageMacroblock::getMacroblockIndex(uint32_t macroblockAddress)
 {
-    return macroblockAddress / STORAGE_PAGE_SIZE / StorageMacroblock::PAGES_COUNT;
+    if (macroblockAddress % getMacroblockSize() == 0) {
+        return macroblockAddress / STORAGE_PAGE_SIZE / StorageMacroblock::PAGES_COUNT;
+    }
+    return __rm_mod(macroblockAddress, getMacroblockSize()) / STORAGE_PAGE_SIZE / StorageMacroblock::PAGES_COUNT;
 }
 
 uint32_t StorageMacroblock::getMacroblocksCount()
@@ -29,7 +34,7 @@ uint32_t StorageMacroblock::getMacroblocksCount()
     return AT::getStoragePagesCount() / PAGES_COUNT;
 }
 
-uint32_t StorageMacroblock::getMacroblocksSize()
+uint32_t StorageMacroblock::getMacroblockSize()
 {
     return PAGES_COUNT * STORAGE_PAGE_SIZE;
 }
@@ -44,7 +49,7 @@ uint32_t StorageMacroblock::getPageIndexByAddress(uint32_t address)
     if (StorageMacroblock::isMacroblockAddress(address)) {
         return 0;
     }
-    address %= getMacroblocksSize();
+    address %= getMacroblockSize();
     return ((address / STORAGE_PAGE_SIZE) % (PAGES_COUNT)) - RESERVED_PAGES_COUNT;
 }
 

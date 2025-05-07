@@ -5,7 +5,10 @@
 #include <string.h>
 #include <stdint.h>
 
+#include "gutils.h"
+
 #include "StorageAT.h"
+#include "StorageType.h"
 #include "StorageData.h"
 #include "StoragePage.h"
 #include "StorageMacroblock.h"
@@ -274,12 +277,15 @@ void Page::repair()
     }
 }
 
-Header::Header(uint32_t address): Page(address)
+Header::Header(uint32_t address): Page()
 {
-    this->header            = (HeaderStruct*)&page;
-    this->address           = Header::getMacroblockStartAddress(address);
-    this->data              = (HeaderMeta*)header->payload;
-    this->m_macroblockIndex = StorageMacroblock::getMacroblockIndex(address);
+    this->page.header.magic   = STORAGE_MAGIC;
+    this->page.header.version = STORAGE_VERSION;
+    this->header              = (HeaderStruct*)&page;
+    this->address             = Header::getMacroblockStartAddress(address);
+    this->data                = (HeaderMeta*)header->payload;
+    this->m_macroblockIndex   = StorageMacroblock::getMacroblockIndex(address);
+    memset(header->payload, 0xFF, STORAGE_HEADER_PAYLOAD_SIZE);
 }
 
 Header::Header(const Header& other): Page(other)
@@ -289,7 +295,7 @@ Header::Header(const Header& other): Page(other)
     this->m_macroblockIndex = other.m_macroblockIndex;
 
     memcpy(header->payload, other.header->payload, STORAGE_HEADER_PAYLOAD_SIZE);
-    this->data = reinterpret_cast<HeaderMeta*>(header->payload);
+    this->data = (HeaderMeta*)header->payload;
 }
 
 Header::~Header()
@@ -312,37 +318,52 @@ Header& Header::operator=(const Header& other)
 
 void Header::setAddressBlocked(uint32_t targetAddress)
 {
+    if (!exists(targetAddress)) {
+        return;
+    }
     uint32_t pageIndex = StorageMacroblock::getPageIndexByAddress(targetAddress);
     memcpy(this->data->metaUnits[pageIndex].prefix, BLOCK_PREFIX, sizeof(BLOCK_PREFIX));
 }
 
 bool Header::isAddressBlocked(uint32_t targetAddress)
 {
+    if (!exists(targetAddress)) {
+        return false;
+    }
     uint32_t pageIndex = StorageMacroblock::getPageIndexByAddress(targetAddress);
     return !memcmp(this->data->metaUnits[pageIndex].prefix, BLOCK_PREFIX, sizeof(BLOCK_PREFIX));
 }
 
 void Header::setAddressEmpty(uint32_t targetAddress)
 {
+    if (!exists(targetAddress)) {
+        return;
+    }
     uint32_t pageIndex = StorageMacroblock::getPageIndexByAddress(targetAddress);
     memcpy(this->data->metaUnits[pageIndex].prefix, EMPTY_PREFIX, sizeof(EMPTY_PREFIX));
 }
 
 bool Header::isAddressEmpty(uint32_t targetAddress)
 {
+    if (!exists(targetAddress)) {
+        return false;
+    }
     uint32_t pageIndex = StorageMacroblock::getPageIndexByAddress(targetAddress);
     return !memcmp(this->data->metaUnits[pageIndex].prefix, EMPTY_PREFIX, sizeof(EMPTY_PREFIX));
 }
 
 bool Header::isSameMeta(uint32_t pageIndex, const uint8_t* prefix, uint32_t id)
 {
+    if (pageIndex >= Header::PAGES_COUNT) {
+        return false;
+    }
     MetaUnit* metaUnitPtr = &(data->metaUnits[pageIndex]);
     return !memcmp(this->data->metaUnits[pageIndex].prefix, prefix, STORAGE_PAGE_PREFIX_SIZE) && (*metaUnitPtr).id == id;
 }
 
 uint32_t Header::getMacroblockIndex()
 {
-    return this->m_macroblockIndex;
+    return StorageMacroblock::getMacroblockIndex(this->address);
 }
 
 uint32_t Header::getMacroblockStartAddress(uint32_t address)
@@ -444,7 +465,7 @@ StorageStatus Header::save()
             return STORAGE_OK;
         }
         static uint8_t block = 0;
-        AT::driverCallback()->write(address + sizeof(HeaderMeta), &block, sizeof(block));
+        AT::driverCallback()->write(address + sizeof(HeaderMetaData), &block, sizeof(block));
     }
 
     if (!this->validate()) {
@@ -480,4 +501,9 @@ void Header::prepareSave()
 {
     this->data->block = 0xFF;
     Page::prepareSave();
+}
+
+bool Header::exists(uint32_t address)
+{
+    return address >= this->address && address < __rm_mod(this->address, StorageMacroblock::getMacroblockSize()) + StorageMacroblock::getMacroblockSize();
 }

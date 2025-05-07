@@ -15,7 +15,7 @@ uint32_t StorageSearchBase::prevAddress        = 0;
 uint32_t StorageSearchBase::prevId             = 0;
 
 
-StorageSearchBase::StorageSearchBase(uint32_t startSearchAddress) 
+StorageSearchBase::StorageSearchBase(uint32_t startSearchAddress)
 {
     StorageSearchBase::startSearchAddress = startSearchAddress;
 }
@@ -63,7 +63,8 @@ StorageStatus StorageSearchBase::searchPageAddress(
 StorageStatus StorageSearchBase::searchPageAddressInMacroblock(
     Header*        header,
     const uint8_t  prefix[STORAGE_PAGE_PREFIX_SIZE],
-    const uint32_t id
+    const uint32_t id,
+    const bool     start
 ) {
     uint32_t pageIndex = StorageMacroblock::getPageIndexByAddress(startSearchAddress);
     foundInMacroblock = false;
@@ -85,10 +86,12 @@ StorageStatus StorageSearchBase::searchPageAddressInMacroblock(
             continue;
         }
 
-        Page page(StorageMacroblock::getPageAddressByIndex(header->getMacroblockIndex(), pageIndex));
-        StorageStatus status = page.load(/*startPage=*/true);
-        if (status != STORAGE_OK) {
-            continue;
+        if (start) {
+            Page page(StorageMacroblock::getPageAddressByIndex(header->getMacroblockIndex(), pageIndex));
+            StorageStatus status = page.load(/*startPage=*/true);
+            if (status != STORAGE_OK) {
+                continue;
+            }
         }
 
         foundOnce         = true;
@@ -112,6 +115,11 @@ bool StorageSearchBase::found()
 uint32_t StorageSearchBase::getAddress()
 {
     return prevAddress;
+}
+
+void StorageSearchBase::setAddress(const uint32_t address)
+{
+    prevAddress = address;
 }
 
 bool StorageSearchEqual::isIdFound(
@@ -148,7 +156,8 @@ bool StorageSearchMax::isIdFound(
 StorageStatus StorageSearchEmpty::searchPageAddressInMacroblock(
     Header*        header,
     const uint8_t[STORAGE_PAGE_PREFIX_SIZE],
-    const uint32_t
+    const uint32_t,
+    const bool
 ) {
     foundInMacroblock = false;
     uint32_t pageIndex = StorageMacroblock::getPageIndexByAddress(startSearchAddress);
@@ -159,9 +168,7 @@ StorageStatus StorageSearchEmpty::searchPageAddressInMacroblock(
         }
 
         uint32_t address = StorageMacroblock::getPageAddressByIndex(header->getMacroblockIndex(), pageIndex);
-
-
-        if (header->isAddressEmpty((pageIndex + StorageMacroblock::RESERVED_PAGES_COUNT) * STORAGE_PAGE_SIZE)) {
+        if (header->isAddressEmpty(address)) {
             foundOnce     = true;
             foundInMacroblock = true;
             prevAddress   = address;

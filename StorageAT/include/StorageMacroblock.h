@@ -49,7 +49,7 @@ public:
 	 *
 	 * @return Returns macroblock size
 	 */
-	static uint32_t getMacroblocksSize();
+	static uint32_t getMacroblockSize();
 
 	/*
 	 * Calculates page address

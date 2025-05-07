@@ -55,7 +55,8 @@ public:
 	virtual StorageStatus searchPageAddressInMacroblock(
 		Header*        header,
 		const uint8_t  prefix[STORAGE_PAGE_PREFIX_SIZE],
-		const uint32_t id
+		const uint32_t id,
+		const bool     start = true
 	);
 
 	/*
@@ -63,9 +64,15 @@ public:
 	 */
 	virtual bool isNeededFirstResult() { return false; }
 
+	/*
+	 * @return Returns current mode start search address
+	 */
+	virtual uint32_t getStartCmpId() { return 0; }
+
 	// TODO: docs
 	static bool found();
 	static uint32_t getAddress();
+	static void setAddress(const uint32_t address);
 
 protected:
 	/* Start search address */
@@ -82,11 +89,6 @@ protected:
 
 	/* Previously header ID of search */
 	static uint32_t prevId;
-
-	/*
-	 * @return Returns current mode start search address
-	 */
-	virtual uint32_t getStartCmpId() { return 0; }
 
 	/*
 	 * @return Returns true if current header ids matches the mode condition
@@ -139,11 +141,12 @@ public:
 	 */
 	StorageSearchNext(uint32_t startSearchAddress = 0): StorageSearchBase(startSearchAddress) {}
 
-protected:
 	/*
 	 * @return Returns current mode start search address
 	 */
 	uint32_t getStartCmpId() override { return StorageAT::MAX_ADDRESS; }
+
+protected:
 
 	/*
 	 * @return Returns true if current header ids matches the mode condition
@@ -167,11 +170,12 @@ public:
 	 */
 	StorageSearchMin(uint32_t startSearchAddress = 0): StorageSearchBase(startSearchAddress) {}
 
-protected:
 	/*
 	 * @return Returns current mode start search address
 	 */
 	uint32_t getStartCmpId() override { return StorageAT::MAX_ADDRESS; }
+
+protected:
 
 	/*
 	 * @return Returns true if current header ids matches the mode condition
@@ -234,7 +238,8 @@ public:
 	StorageStatus searchPageAddressInMacroblock(
 		Header*        header,
 		const uint8_t  prefix[STORAGE_PAGE_PREFIX_SIZE],
-		const uint32_t id
+		const uint32_t id,
+		const bool     start = true
 	) override;
 };
 

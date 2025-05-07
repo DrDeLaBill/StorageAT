@@ -63,7 +63,7 @@ StorageStatus StorageFixtureAsync::asyncFind(
     // if (!timer.wait()) {
     //     return STORAGE_ERROR;
     // }
-    return status;
+    return StorageFixtureAsync::status;
 }
 
 StorageStatus StorageFixtureAsync::asyncLoad(uint32_t address, uint8_t* data, uint32_t len)

@@ -7,15 +7,6 @@
 #include <stdint.h>
 
 
-#ifndef STORAGE_PACK
-#   ifdef __GNUC__
-#       define STORAGE_PACK( __Type__, __Declaration__ )  __Type__ __attribute__((__packed__)) __Declaration__
-#   elif _MSC_VER
-#       define STORAGE_PACK( __Type__, __Declaration__ ) __pragma(pack(push, 1) ) __Type__ __Declaration__ __pragma(pack(pop))
-#   endif
-#endif
-
-
 /* 
  * StorageAT method exit codes 
  */
@@ -68,8 +59,9 @@ typedef enum _StorageFindMode {
 
 
 /* Packed page header meta data structure */
-STORAGE_PACK(typedef struct, _PageMeta {
-	 // Special code
+#ifdef __GNUC__
+typedef struct __attribute__((__packed__)) _PageMeta {
+    // Special code
     uint32_t magic;
     // StorageAT library version
     uint8_t  version;
@@ -81,44 +73,99 @@ STORAGE_PACK(typedef struct, _PageMeta {
     uint8_t  prefix[STORAGE_PAGE_PREFIX_SIZE];
     // ID for searching
     uint32_t id;
-} PageMeta);
-
-
-/* Header page meta data structure */
-STORAGE_PACK(typedef struct, _HeaderMeta {
-	 // Special code
+} PageMeta;
+#elif _MSC_VER
+#   pragma pack(push, 1)
+typedef struct _PageMeta {
+    // Special code
     uint32_t magic;
     // StorageAT library version
     uint8_t  version;
-} HeaderMeta);
+    // Previously data address
+    uint32_t prev_addr;
+    // Next data address
+    uint32_t next_addr;
+    // String page prefix for searching
+    uint8_t  prefix[STORAGE_PAGE_PREFIX_SIZE];
+    // ID for searching
+    uint32_t id;
+} PageMeta;
+#   pragma pack(pop)
+#endif
+
+
+/* Header page meta data structure */
+#ifdef __GNUC__
+typedef struct __attribute__((__packed__)) _HeaderMetaData {
+    // Special code
+   uint32_t magic;
+   // StorageAT library version
+   uint8_t  version;
+} HeaderMetaData;
+#elif _MSC_VER
+#   pragma pack(push, 1)
+typedef struct  _HeaderMetaData {
+    // Special code
+   uint32_t magic;
+   // StorageAT library version
+   uint8_t  version;
+} HeaderMetaData;
+#   pragma pack(pop)
+#endif
 
 
 /* Available payload bytes in page structure */
 #define STORAGE_PAGE_PAYLOAD_SIZE (STORAGE_PAGE_SIZE - sizeof(struct _PageMeta) - sizeof(uint16_t))
 
 /* Page structure */
-STORAGE_PACK(typedef struct, _PageStruct {
+#ifdef __GNUC__
+typedef struct __attribute__((__packed__)) _PageStruct {
 	// Page meta data
     PageMeta header;
     // User payload data
     uint8_t  payload[STORAGE_PAGE_PAYLOAD_SIZE];
     // Page CRC16
     uint16_t crc;
-} PageStruct);
+} PageStruct;
+#elif _MSC_VER
+#   pragma pack(push, 1)
+typedef struct _PageStruct {
+	// Page meta data
+    PageMeta header;
+    // User payload data
+    uint8_t  payload[STORAGE_PAGE_PAYLOAD_SIZE];
+    // Page CRC16
+    uint16_t crc;
+} PageStruct;
+#   pragma pack(pop)
+#endif
 
 
 /* Available payload bytes in page structure */
-#define STORAGE_HEADER_PAYLOAD_SIZE (STORAGE_PAGE_SIZE - sizeof(struct _HeaderMeta) - sizeof(uint16_t))
+#define STORAGE_HEADER_PAYLOAD_SIZE (STORAGE_PAGE_SIZE - sizeof(struct _HeaderMetaData) - sizeof(uint16_t))
 
 /* Page structure */
-STORAGE_PACK(typedef struct, _HeaderStruct {
+#ifdef __GNUC__
+typedef struct __attribute__((__packed__)) _HeaderStruct {
 	// Header meta data
-    HeaderMeta header;
+    HeaderMetaData header;
     // User payload data
-    uint8_t  payload[STORAGE_HEADER_PAYLOAD_SIZE];
+    uint8_t        payload[STORAGE_HEADER_PAYLOAD_SIZE];
     // Page CRC16
-    uint16_t crc;
-} HeaderStruct);
+    uint16_t       crc;
+} HeaderStruct;
+#elif _MSC_VER
+#   pragma pack(push, 1)
+typedef struct _HeaderStruct {
+	// Header meta data
+    HeaderMetaData header;
+    // User payload data
+    uint8_t        payload[STORAGE_HEADER_PAYLOAD_SIZE];
+    // Page CRC16
+    uint16_t       crc;
+} HeaderStruct;
+#   pragma pack(pop)
+#endif
 
 
 bool storage_at_data_success(StorageStatus status);
