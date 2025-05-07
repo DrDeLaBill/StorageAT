@@ -72,7 +72,8 @@ public:
 	// TODO: docs
 	static bool found();
 	static uint32_t getAddress();
-	static void setAddress(const uint32_t address);
+	static void setStartId(const uint32_t id);
+	static void reset();
 
 protected:
 	/* Start search address */

@@ -209,8 +209,8 @@ TEST_F(StorageFixtureAsync, CheckDataStartPageLoad)
 
     ASSERT_EQ(SF::asyncFind(FIND_MODE_EMPTY, &address), STORAGE_OK);
     ASSERT_EQ(SF::asyncSave(address, shortPrefix, 1, wdata, sizeof(wdata)), STORAGE_OK);
+    
     Page page(address);
-
     ASSERT_EQ(page.load(/*startPage=*/true), STORAGE_OK);
     ASSERT_EQ(page.load(), STORAGE_OK);
     ASSERT_FALSE(memcmp(page.page.payload, wdata, sizeof(page.page.payload)));
@@ -220,9 +220,33 @@ TEST_F(StorageFixtureAsync, CheckDataStartPageLoad)
     ASSERT_FALSE(page.validatePrevAddress());
     ASSERT_TRUE(page.validateNextAddress());
     ASSERT_EQ(page.loadPrev(), STORAGE_NOT_FOUND);
-    Page tmpPage(address);
-    ASSERT_EQ(tmpPage.load(), STORAGE_OK);
-    ASSERT_EQ(tmpPage.loadNext(), STORAGE_OK);
+
+    ASSERT_EQ(page.loadNext(), STORAGE_OK);
+    ASSERT_EQ(page.loadPrev(), STORAGE_OK);
+
+    address += STORAGE_PAGE_SIZE;
+    page.setAddress(address);
+    ASSERT_EQ(page.load(/*startPage=*/true), STORAGE_ERROR);
+    ASSERT_EQ(page.load(), STORAGE_OK);
+    ASSERT_FALSE(memcmp(page.page.payload, wdata + STORAGE_PAGE_PAYLOAD_SIZE, sizeof(page.page.payload)));
+    ASSERT_FALSE(page.isStart());
+    ASSERT_TRUE(page.isMiddle());
+    ASSERT_FALSE(page.isEnd());
+    ASSERT_TRUE(page.validatePrevAddress());
+    ASSERT_TRUE(page.validateNextAddress());
+    ASSERT_EQ(page.loadPrev(), STORAGE_OK);
+
+    address += STORAGE_PAGE_SIZE;
+    page.setAddress(address);
+    ASSERT_EQ(page.load(/*startPage=*/true), STORAGE_ERROR);
+    ASSERT_EQ(page.load(), STORAGE_OK);
+    ASSERT_FALSE(memcmp(page.page.payload, wdata + 2 * STORAGE_PAGE_PAYLOAD_SIZE, sizeof(page.page.payload)));
+    ASSERT_FALSE(page.isStart());
+    ASSERT_FALSE(page.isMiddle());
+    ASSERT_TRUE(page.isEnd());
+    ASSERT_TRUE(page.validatePrevAddress());
+    ASSERT_FALSE(page.validateNextAddress());
+    ASSERT_EQ(page.loadPrev(), STORAGE_OK);
 }
 
 TEST_F(StorageFixtureAsync, CheckDataMiddlePageLoad)
@@ -436,37 +460,38 @@ TEST_F(StorageFixtureAsync, WriteAllStorageBytes)
 
 TEST_F(StorageFixtureAsync, FindAllData)
 {
-    // uint8_t wdata[STORAGE_PAGE_PAYLOAD_SIZE] = { 1, 2, 3, 4, 5 }; TODO
-    // uint8_t rdata[STORAGE_PAGE_PAYLOAD_SIZE] = { 0 };
+    uint8_t wdata[STORAGE_PAGE_PAYLOAD_SIZE] = { 1, 2, 3, 4, 5 };
+    uint8_t rdata[STORAGE_PAGE_PAYLOAD_SIZE] = { 0 };
 
-    // status = STORAGE_OK;
-    // uint32_t pagesCount = 0;
-    // while (status == STORAGE_OK) {
-    //     address = 0;
-    //     status = SF::asyncFind(FIND_MODE_EMPTY, &address);
-    //     if (status != STORAGE_OK) {
-    //         break;
-    //     }
-    //     status = SF::asyncSave(address, shortPrefix, pagesCount + 1, wdata, sizeof(wdata));
-    //     ASSERT_EQ(status, STORAGE_OK);
-    //     memset(rdata, 0, sizeof(rdata));
-    //     status = SF::asyncLoad(address, rdata, sizeof(rdata));
-    //     ASSERT_EQ(status, STORAGE_OK);
-    //     ASSERT_FALSE(memcmp(wdata, rdata, sizeof(wdata)));
+    status = STORAGE_OK;
+    uint32_t pagesCount = 0;
+    while (status == STORAGE_OK) {
+        address = 0;
+        status = SF::asyncFind(FIND_MODE_EMPTY, &address);
+        if (status != STORAGE_OK) {
+            break;
+        }
+        status = SF::asyncSave(address, shortPrefix, pagesCount + 1, wdata, sizeof(wdata));
+        ASSERT_EQ(status, STORAGE_OK);
+        memset(rdata, 0, sizeof(rdata));
+        status = SF::asyncLoad(address, rdata, sizeof(rdata));
+        ASSERT_EQ(status, STORAGE_OK);
+        ASSERT_FALSE(memcmp(wdata, rdata, sizeof(wdata)));
 
-    //     pagesCount++;
-    // }
+        pagesCount++;
+    }
 
-    // ASSERT_EQ(pagesCount, StorageAT::getPayloadPagesCount());
-    // for (unsigned i = 0; i < pagesCount; i++) {
-    //     ASSERT_EQ(SF::asyncFind(FIND_MODE_EQUAL, &address, shortPrefix, i + 1), STORAGE_OK);
-    // }
-    // ASSERT_EQ(SF::asyncFind(FIND_MODE_MIN, &address, shortPrefix), STORAGE_OK);
-    // ASSERT_EQ(address, STORAGE_PAGE_SIZE * StorageMacroblock::RESERVED_PAGES_COUNT);
-    // ASSERT_EQ(SF::asyncFind(FIND_MODE_MAX, &address, shortPrefix), STORAGE_OK);
-    // ASSERT_EQ(address, STORAGE_PAGE_SIZE * (StorageAT::getStoragePagesCount() - 1));
-    // ASSERT_EQ(SF::asyncFind(FIND_MODE_NEXT, &address, shortPrefix, 1), STORAGE_OK);
-    // ASSERT_EQ(address, STORAGE_PAGE_SIZE * (StorageMacroblock::RESERVED_PAGES_COUNT + 1));
+    ASSERT_EQ(pagesCount, StorageAT::getPayloadPagesCount());
+    for (unsigned i = 0; i < pagesCount; i++) {
+        ASSERT_EQ(SF::asyncFind(FIND_MODE_EQUAL, &address, shortPrefix, i + 1), STORAGE_OK);
+    }
+
+    ASSERT_EQ(SF::asyncFind(FIND_MODE_MIN, &address, shortPrefix), STORAGE_OK);
+    ASSERT_EQ(address, STORAGE_PAGE_SIZE * StorageMacroblock::RESERVED_PAGES_COUNT);
+    ASSERT_EQ(SF::asyncFind(FIND_MODE_MAX, &address, shortPrefix), STORAGE_OK);
+    ASSERT_EQ(address, STORAGE_PAGE_SIZE * (StorageAT::getStoragePagesCount() - 1));
+    ASSERT_EQ(SF::asyncFind(FIND_MODE_NEXT, &address, shortPrefix, 1), STORAGE_OK);
+    ASSERT_EQ(address, STORAGE_PAGE_SIZE * (StorageMacroblock::RESERVED_PAGES_COUNT + 1));
 }
 
 TEST_F(StorageFixtureAsync, SaveDataWithMaxSize) {

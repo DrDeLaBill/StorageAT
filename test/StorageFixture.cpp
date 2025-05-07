@@ -8,7 +8,7 @@ uint32_t StorageFixture::address = 0;
 StorageStatus StorageFixture::status = STORAGE_OK; 
 StorageDriver StorageFixture::driver;
 std::unique_ptr<StorageAT> StorageFixture::sat;
-StorageEmulator StorageFixture::storage(PAGES_COUNT);
+StorageEmulator StorageFixture::storage(StorageFixture::PAGES_COUNT);
 
 utl::Timer StorageFixtureAsync::timer(0);
 bool StorageFixtureAsync::asyncReady = false;

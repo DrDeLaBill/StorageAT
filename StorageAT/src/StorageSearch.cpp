@@ -117,9 +117,18 @@ uint32_t StorageSearchBase::getAddress()
     return prevAddress;
 }
 
-void StorageSearchBase::setAddress(const uint32_t address)
+void StorageSearchBase::setStartId(const uint32_t id)
 {
-    prevAddress = address;
+    prevId = id;
+}
+
+void StorageSearchBase::reset()
+{
+    startSearchAddress = 0;
+    foundOnce = false;
+    foundInMacroblock = false;
+    prevAddress = 0;
+    prevId = 0;
 }
 
 bool StorageSearchEqual::isIdFound(
