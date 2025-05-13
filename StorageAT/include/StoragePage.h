@@ -140,6 +140,16 @@ public:
     void setNextAddress(uint32_t address);
 
     /*
+     * @return Returns previously page address
+     */
+    uint32_t getPrevAddress();
+
+    /*
+     * @param Returns next page address
+     */
+    uint32_t getNextAddress();
+
+    /*
      * Validates the page data
      *
      * @return Returns true if the page data is correct

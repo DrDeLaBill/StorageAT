@@ -911,6 +911,29 @@ TEST_F(StorageFixture, SaveDataOnBlockedSector)
     ASSERT_TRUE(header.isAddressBlocked(address));
 }
 
+TEST_F(StorageFixture, SaveDataOnPartiedBlockedSector)
+{
+    address = 0;
+    uint8_t wdata[STORAGE_PAGE_PAYLOAD_SIZE * 3] = { 1, 2, 3, 4, 5 };
+    Header header(address);
+    uint32_t tmpAddress = 0;
+
+    for (unsigned i = STORAGE_PAGE_SIZE; i < Header::PAGES_COUNT * STORAGE_PAGE_SIZE; i++) {
+        SF::storage.writeBlock(address + i, true);
+    }
+
+    ASSERT_EQ(SF::sat->save(address, shortPrefix, 1, wdata, sizeof(wdata)), STORAGE_OK);
+    ASSERT_EQ(StorageMacroblock::loadHeader(&header), STORAGE_OK);
+
+    for (unsigned i = 1; i < Header::PAGES_COUNT; i++) {
+        ASSERT_TRUE(header.isAddressBlocked((i + StorageMacroblock::RESERVED_PAGES_COUNT) * STORAGE_PAGE_SIZE));
+    }
+    ASSERT_EQ(SF::sat->find(FIND_MODE_EQUAL, &tmpAddress, shortPrefix, 1), STORAGE_OK);
+    ASSERT_NE(address, tmpAddress);
+    ASSERT_EQ(header.load(), STORAGE_OK);
+    ASSERT_TRUE(header.isAddressBlocked(address));
+}
+
 TEST_F(StorageFixture, BlockAllMemory)
 {
     uint8_t wdata[STORAGE_PAGE_PAYLOAD_SIZE] = { 1, 2, 3, 4, 5 };

@@ -581,7 +581,7 @@ TEST_F(StorageFixtureAsync, SavePageWithFindEmptyAddressWithOverwrite)
 
     ASSERT_EQ(SF::asyncFind(FIND_MODE_EMPTY, &address), STORAGE_OK);
     ASSERT_EQ(SF::asyncSave(address, shortPrefix, 1, wdata, sizeof(wdata)), STORAGE_OK);
-    ASSERT_EQ(SF::asyncSave(address, shortPrefix, 1, wdata, sizeof(wdata)), STORAGE_OK);
+    ASSERT_EQ(SF::asyncSave(address, shortPrefix, 1, wdata, sizeof(wdata)), STORAGE_DATA_EXISTS);
     ASSERT_EQ(SF::asyncSave(address, shortPrefix, 2, wdata, sizeof(wdata)), STORAGE_DATA_EXISTS);
 }
 
@@ -611,7 +611,7 @@ TEST_F(StorageFixtureAsync, SaveMultiPageWithFindEmptyAddressWithOverwrite)
 
     ASSERT_EQ(SF::asyncFind(FIND_MODE_EMPTY, &address), STORAGE_OK);
     ASSERT_EQ(SF::asyncSave(address, shortPrefix, 1, wdata, sizeof(wdata)), STORAGE_OK);
-    ASSERT_EQ(SF::asyncSave(address, shortPrefix, 1, wdata, sizeof(wdata)), STORAGE_OK);
+    ASSERT_EQ(SF::asyncSave(address, shortPrefix, 1, wdata, sizeof(wdata)), STORAGE_DATA_EXISTS);
     ASSERT_EQ(SF::asyncSave(address, shortPrefix, 2, wdata, sizeof(wdata)), STORAGE_DATA_EXISTS);
 }
 
@@ -668,11 +668,131 @@ TEST_F(StorageFixtureAsync, SaveDataOnBlockedPage)
 TEST_F(StorageFixtureAsync, SaveDataOnBlockedSector)
 {
     address = StorageMacroblock::RESERVED_PAGES_COUNT * STORAGE_PAGE_SIZE;
-    uint8_t wdata[STORAGE_PAGE_PAYLOAD_SIZE] = { 1, 2, 3, 4, 5 };
+    uint8_t wdata[STORAGE_PAGE_PAYLOAD_SIZE] = {};
+    uint8_t rdata[STORAGE_PAGE_PAYLOAD_SIZE] = {};
     Header header(address);
     uint32_t tmpAddress = 0;
+    for (unsigned i = 0; i < sizeof(wdata); i++) {
+        wdata[i] = (uint8_t)i;
+    }
 
-    for (unsigned i = 0; i < Header::PAGES_COUNT * STORAGE_PAGE_SIZE; i++) {
+    for (unsigned i = 0; i < StorageMacroblock::PAGES_COUNT * STORAGE_PAGE_SIZE; i++) {
+        SF::storage.writeBlock(i, true);
+    }
+
+    ASSERT_EQ(SF::asyncSave(address, shortPrefix, 1, wdata, sizeof(wdata)), STORAGE_OK);
+    ASSERT_EQ(StorageMacroblock::loadHeader(&header), STORAGE_OK);
+
+    for (unsigned i = 0; i < Header::PAGES_COUNT; i++) {
+        ASSERT_FALSE(header.isAddressBlocked((i + StorageMacroblock::RESERVED_PAGES_COUNT) * STORAGE_PAGE_SIZE));
+    }
+    ASSERT_EQ(SF::asyncFind(FIND_MODE_EQUAL, &tmpAddress, shortPrefix, 1), STORAGE_OK);
+    ASSERT_EQ(SF::asyncLoad(tmpAddress, rdata, sizeof(rdata)), STORAGE_OK);
+    ASSERT_NE(address, tmpAddress);
+    ASSERT_EQ(header.load(), STORAGE_HEADER_ERROR);
+}
+
+TEST_F(StorageFixtureAsync, SaveDataOnPartiedBlockedSector1)
+{
+    address = StorageMacroblock::RESERVED_PAGES_COUNT * STORAGE_PAGE_SIZE;
+    uint8_t wdata[STORAGE_PAGE_PAYLOAD_SIZE * 3] = {};
+    uint8_t rdata[STORAGE_PAGE_PAYLOAD_SIZE * 3] = {};
+    Header header(address);
+    uint32_t tmpAddress = 0;
+    for (unsigned i = 0; i < sizeof(wdata); i++) {
+        wdata[i] = (uint8_t)i;
+    }
+
+    for (unsigned i = STORAGE_PAGE_SIZE; i < Header::PAGES_COUNT * STORAGE_PAGE_SIZE; i++) {
+        SF::storage.writeBlock(address + i, true);
+    }
+
+    ASSERT_EQ(SF::asyncSave(address, shortPrefix, 1, wdata, sizeof(wdata)), STORAGE_OK);
+    ASSERT_EQ(StorageMacroblock::loadHeader(&header), STORAGE_OK);
+
+    ASSERT_FALSE(header.isAddressBlocked((StorageMacroblock::RESERVED_PAGES_COUNT) * STORAGE_PAGE_SIZE));
+    for (unsigned i = 1; i < Header::PAGES_COUNT; i++) {
+        ASSERT_TRUE(header.isAddressBlocked((i + StorageMacroblock::RESERVED_PAGES_COUNT) * STORAGE_PAGE_SIZE));
+    }
+    ASSERT_EQ(SF::asyncFind(FIND_MODE_EQUAL, &tmpAddress, shortPrefix, 1), STORAGE_OK);
+    ASSERT_EQ(SF::asyncLoad(tmpAddress, rdata, sizeof(rdata)), STORAGE_OK);
+    ASSERT_FALSE(memcmp(wdata, rdata, sizeof(wdata)));
+    ASSERT_EQ(address, tmpAddress);
+}
+
+TEST_F(StorageFixtureAsync, SaveDataOnPartiedBlockedSector2) // TODO: add to test.cpp
+{
+    address = StorageMacroblock::RESERVED_PAGES_COUNT * STORAGE_PAGE_SIZE;
+    uint8_t wdata[STORAGE_PAGE_PAYLOAD_SIZE * 3] = {};
+    uint8_t rdata[STORAGE_PAGE_PAYLOAD_SIZE * 3] = {};
+    Header header(address);
+    uint32_t tmpAddress = 0;
+    for (unsigned i = 0; i < sizeof(wdata); i++) {
+        wdata[i] = (uint8_t)i;
+    }
+
+    for (unsigned i = 0; i < STORAGE_PAGE_SIZE; i++) {
+        SF::storage.writeBlock(address + i, true);
+    }
+    for (unsigned i = 2 * STORAGE_PAGE_SIZE; i < Header::PAGES_COUNT * STORAGE_PAGE_SIZE; i++) {
+        SF::storage.writeBlock(address + i, true);
+    }
+
+    ASSERT_EQ(SF::asyncSave(address, shortPrefix, 1, wdata, sizeof(wdata)), STORAGE_OK);
+    ASSERT_EQ(StorageMacroblock::loadHeader(&header), STORAGE_OK);
+
+    ASSERT_TRUE(header.isAddressBlocked(StorageMacroblock::RESERVED_PAGES_COUNT * STORAGE_PAGE_SIZE));
+    ASSERT_FALSE(header.isAddressBlocked(StorageMacroblock::RESERVED_PAGES_COUNT * STORAGE_PAGE_SIZE + STORAGE_PAGE_SIZE));
+    for (unsigned i = 1; i < Header::PAGES_COUNT; i++) {
+        ASSERT_TRUE(header.isAddressBlocked((i + StorageMacroblock::RESERVED_PAGES_COUNT) * STORAGE_PAGE_SIZE));
+    }
+    ASSERT_EQ(SF::asyncFind(FIND_MODE_EQUAL, &tmpAddress, shortPrefix, 1), STORAGE_OK);
+    ASSERT_EQ(SF::asyncLoad(tmpAddress, rdata, sizeof(rdata)), STORAGE_OK);
+    ASSERT_FALSE(memcmp(wdata, rdata, sizeof(wdata)));
+    ASSERT_EQ(address, tmpAddress);
+}
+
+TEST_F(StorageFixtureAsync, SaveDataOnPartiedBlockedSector3) // TODO: add to test.cpp
+{
+    address = StorageMacroblock::RESERVED_PAGES_COUNT * STORAGE_PAGE_SIZE;
+    uint8_t wdata[STORAGE_PAGE_PAYLOAD_SIZE * 3] = {};
+    uint8_t rdata[STORAGE_PAGE_PAYLOAD_SIZE * 3] = {};
+    Header header(address);
+    uint32_t tmpAddress = 0;
+    for (unsigned i = 0; i < sizeof(wdata); i++) {
+        wdata[i] = (uint8_t)i;
+    }
+
+    for (unsigned i = STORAGE_PAGE_SIZE; i < (Header::PAGES_COUNT - 1) * STORAGE_PAGE_SIZE; i++) {
+        SF::storage.writeBlock(address + i, true);
+    }
+
+    ASSERT_EQ(SF::asyncSave(address, shortPrefix, 1, wdata, sizeof(wdata)), STORAGE_OK);
+    ASSERT_EQ(StorageMacroblock::loadHeader(&header), STORAGE_OK);
+
+    ASSERT_FALSE(header.isAddressBlocked((StorageMacroblock::RESERVED_PAGES_COUNT) * STORAGE_PAGE_SIZE));
+    ASSERT_FALSE(header.isAddressBlocked((StorageMacroblock::PAGES_COUNT - 1) * STORAGE_PAGE_SIZE));
+    for (unsigned i = 1; i < Header::PAGES_COUNT - 1; i++) {
+        ASSERT_TRUE(header.isAddressBlocked((i + StorageMacroblock::RESERVED_PAGES_COUNT) * STORAGE_PAGE_SIZE));
+    }
+    ASSERT_EQ(SF::asyncFind(FIND_MODE_EQUAL, &tmpAddress, shortPrefix, 1), STORAGE_OK);
+    ASSERT_EQ(SF::asyncLoad(tmpAddress, rdata, sizeof(rdata)), STORAGE_OK);
+    ASSERT_FALSE(memcmp(wdata, rdata, sizeof(wdata)));
+    ASSERT_EQ(address, tmpAddress);
+}
+
+TEST_F(StorageFixtureAsync, SaveDataOnPartiedBlockedSector4) // TODO: add to test.cpp
+{
+    address = StorageMacroblock::RESERVED_PAGES_COUNT * STORAGE_PAGE_SIZE;
+    uint8_t wdata[STORAGE_PAGE_PAYLOAD_SIZE * 3] = {};
+    uint8_t rdata[STORAGE_PAGE_PAYLOAD_SIZE * 3] = {};
+    Header header(address);
+    uint32_t tmpAddress = 0;
+    for (unsigned i = 0; i < sizeof(wdata); i++) {
+        wdata[i] = (uint8_t)i;
+    }
+
+    for (unsigned i = 0; i < StorageMacroblock::PAGES_COUNT * STORAGE_PAGE_SIZE; i++) {
         SF::storage.writeBlock(address + i, true);
     }
 
@@ -683,9 +803,36 @@ TEST_F(StorageFixtureAsync, SaveDataOnBlockedSector)
         ASSERT_TRUE(header.isAddressBlocked((i + StorageMacroblock::RESERVED_PAGES_COUNT) * STORAGE_PAGE_SIZE));
     }
     ASSERT_EQ(SF::asyncFind(FIND_MODE_EQUAL, &tmpAddress, shortPrefix, 1), STORAGE_OK);
+    ASSERT_EQ(SF::asyncLoad(tmpAddress, rdata, sizeof(rdata)), STORAGE_OK);
+    ASSERT_FALSE(memcmp(wdata, rdata, sizeof(wdata)));
     ASSERT_NE(address, tmpAddress);
-    ASSERT_EQ(header.load(), STORAGE_OK);
-    ASSERT_TRUE(header.isAddressBlocked(address));
+}
+
+TEST_F(StorageFixtureAsync, SaveDataOnPartiedBlockedSector5) // TODO: add to test.cpp
+{
+    address = StorageMacroblock::RESERVED_PAGES_COUNT * STORAGE_PAGE_SIZE;
+    uint8_t wdata[STORAGE_PAGE_PAYLOAD_SIZE * 3] = {};
+    uint8_t rdata[STORAGE_PAGE_PAYLOAD_SIZE * 3] = {};
+    Header header(address);
+    uint32_t tmpAddress = 0;
+    for (unsigned i = 0; i < sizeof(wdata); i++) {
+        wdata[i] = (uint8_t)i;
+    }
+
+    for (unsigned i = 0; i < StorageMacroblock::PAGES_COUNT * STORAGE_PAGE_SIZE; i++) {
+        SF::storage.writeBlock(i, true);
+    }
+
+    ASSERT_EQ(SF::asyncSave(address, shortPrefix, 1, wdata, sizeof(wdata)), STORAGE_OK);
+    ASSERT_EQ(StorageMacroblock::loadHeader(&header), STORAGE_ERROR);
+
+    for (unsigned i = 0; i < Header::PAGES_COUNT; i++) {
+        ASSERT_TRUE(header.isAddressBlocked((i + StorageMacroblock::RESERVED_PAGES_COUNT) * STORAGE_PAGE_SIZE));
+    }
+    ASSERT_EQ(SF::asyncFind(FIND_MODE_EQUAL, &tmpAddress, shortPrefix, 1), STORAGE_OK);
+    ASSERT_EQ(SF::asyncLoad(tmpAddress, rdata, sizeof(rdata)), STORAGE_OK);
+    ASSERT_FALSE(memcmp(wdata, rdata, sizeof(wdata)));
+    ASSERT_NE(address, tmpAddress);
 }
 
 TEST_F(StorageFixtureAsync, BlockAllMemory)

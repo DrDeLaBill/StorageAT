@@ -248,6 +248,16 @@ void Page::setAddress(uint32_t address)
     this->address = address;
 }
 
+uint32_t Page::getPrevAddress()
+{
+    return this->page.header.prev_addr;
+}
+
+uint32_t Page::getNextAddress()
+{
+    return this->page.header.next_addr;
+}
+
 void Page::setPrevAddress(uint32_t prevAddress)
 {
     this->page.header.prev_addr = prevAddress;
@@ -341,6 +351,7 @@ void Header::setAddressEmpty(uint32_t targetAddress)
     }
     uint32_t pageIndex = StorageMacroblock::getPageIndexByAddress(targetAddress);
     memcpy(this->data->metaUnits[pageIndex].prefix, EMPTY_PREFIX, sizeof(EMPTY_PREFIX));
+    this->data->metaUnits[pageIndex].id = std::numeric_limits<uint32_t>::max();
 }
 
 bool Header::isAddressEmpty(uint32_t targetAddress)
