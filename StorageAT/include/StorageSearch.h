@@ -62,7 +62,7 @@ public:
 	/*
 	 * @return Returns true if current mode needed first result
 	 */
-	virtual bool isNeededFirstResult() { return false; }
+	virtual bool isNeededFirstResult(const uint8_t* prefix = nullptr) { return false; }
 
 	/*
 	 * @return Returns current mode start search address
@@ -116,7 +116,7 @@ public:
 	/*
 	 * @return Returns true if current mode needed first result
 	 */
-	bool isNeededFirstResult() override { return true; }
+	bool isNeededFirstResult(const uint8_t* prefix = nullptr) override { return true; }
 
 protected:
 
@@ -146,6 +146,27 @@ public:
 	 * @return Returns current mode start search address
 	 */
 	uint32_t getStartCmpId() override { return StorageAT::MAX_ADDRESS; }
+
+	/*
+	 * Searches data in current macroblock
+	 * 
+	 * @param header Current macroblock header
+	 * @param prefix String page prefix of header
+	 * @param id     Integer page prefix of header
+	 * @return       Returns STORAGE_OK if data was found
+	 */
+	StorageStatus searchPageAddressInMacroblock(
+		Header*        header,
+		const uint8_t  prefix[STORAGE_PAGE_PREFIX_SIZE],
+		const uint32_t id,
+		const bool     start = true
+	) override;
+
+
+	/*
+	 * @return Returns true if current mode needed first result
+	 */
+	bool isNeededFirstResult(const uint8_t* prefix = nullptr) override;
 
 protected:
 
@@ -226,7 +247,7 @@ public:
 	/*
 	 * @return Returns true if current mode needed first result
 	 */
-	bool isNeededFirstResult() override { return true; }
+	bool isNeededFirstResult(const uint8_t* prefix = nullptr) override { return true; }
 
 	/*
 	 * Searches data in current macroblock

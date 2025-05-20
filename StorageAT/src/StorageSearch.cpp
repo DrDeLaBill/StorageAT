@@ -47,7 +47,7 @@ StorageStatus StorageSearchBase::searchPageAddress(
             continue;
         }
 
-        if (isNeededFirstResult()) {
+        if (isNeededFirstResult(prefix)) {
             break;
         }
     }
@@ -99,7 +99,7 @@ StorageStatus StorageSearchBase::searchPageAddressInMacroblock(
         prevId            = (*metUnitPtr).id;
         prevAddress       = StorageMacroblock::getPageAddressByIndex(header->getMacroblockIndex(), pageIndex);
 
-        if (isNeededFirstResult()) {
+        if (isNeededFirstResult(prefix)) {
             break;
         }
     }
@@ -136,6 +136,60 @@ bool StorageSearchEqual::isIdFound(
     const uint32_t targetId
 ) {
     return targetId == headerId;
+}
+
+StorageStatus StorageSearchNext::searchPageAddressInMacroblock(
+    Header*        header,
+    const uint8_t  prefix[STORAGE_PAGE_PREFIX_SIZE],
+    const uint32_t id,
+    const bool     start
+) {
+    uint32_t pageIndex = StorageMacroblock::getPageIndexByAddress(startSearchAddress);
+    foundInMacroblock = false;
+
+    Header::MetaUnit *metUnitPtr = header->data->metaUnits;
+    for (; pageIndex < Header::PAGES_COUNT; pageIndex++, metUnitPtr++) {
+        if (header->isAddressBlocked((pageIndex + StorageMacroblock::RESERVED_PAGES_COUNT) * STORAGE_PAGE_SIZE)) {
+            continue;
+        }
+
+        if (strlen(reinterpret_cast<const char*>(prefix)) && id) {
+            if (memcmp((*metUnitPtr).prefix, prefix, STORAGE_PAGE_PREFIX_SIZE)) {
+                continue;
+            }
+
+            if (!isIdFound((*metUnitPtr).id, id)) {
+                continue;
+            }
+        }
+
+        if (start) {
+            Page page(StorageMacroblock::getPageAddressByIndex(header->getMacroblockIndex(), pageIndex));
+            StorageStatus status = page.load(/*startPage=*/true);
+            if (status != STORAGE_OK) {
+                continue;
+            }
+        }
+
+        foundOnce         = true;
+        foundInMacroblock = true;
+        prevId            = (*metUnitPtr).id;
+        prevAddress       = StorageMacroblock::getPageAddressByIndex(header->getMacroblockIndex(), pageIndex);
+
+        if (isNeededFirstResult(prefix)) {
+            break;
+        }
+    }
+
+    return foundInMacroblock ? STORAGE_OK : STORAGE_NOT_FOUND;
+}
+
+bool StorageSearchNext::isNeededFirstResult(const uint8_t* prefix) 
+{
+    if (!prefix || !prefix[0]) {
+        return true;
+    }
+    return false; 
 }
 
 bool StorageSearchNext::isIdFound(

@@ -482,7 +482,7 @@ TEST_F(StorageFixtureAsync, FindAllData)
     }
 
     ASSERT_EQ(pagesCount, StorageAT::getPayloadPagesCount());
-    for (unsigned i = 0; i < pagesCount; i++) {
+    for (unsigned i = 0; i < pagesCount; i++) {\
         ASSERT_EQ(SF::asyncFind(FIND_MODE_EQUAL, &address, shortPrefix, i + 1), STORAGE_OK);
     }
 
@@ -688,7 +688,7 @@ TEST_F(StorageFixtureAsync, SaveDataOnBlockedSector)
     }
     ASSERT_EQ(SF::asyncFind(FIND_MODE_EQUAL, &tmpAddress, shortPrefix, 1), STORAGE_OK);
     ASSERT_EQ(SF::asyncLoad(tmpAddress, rdata, sizeof(rdata)), STORAGE_OK);
-    ASSERT_NE(address, tmpAddress);
+    ASSERT_NE(address, tmpAddress); // 1024 11008
     ASSERT_EQ(header.load(), STORAGE_HEADER_ERROR);
 }
 
@@ -718,6 +718,7 @@ TEST_F(StorageFixtureAsync, SaveDataOnPartiedBlockedSector1)
     ASSERT_EQ(SF::asyncLoad(tmpAddress, rdata, sizeof(rdata)), STORAGE_OK);
     ASSERT_FALSE(memcmp(wdata, rdata, sizeof(wdata)));
     ASSERT_EQ(address, tmpAddress);
+    ASSERT_EQ(address, StorageMacroblock::RESERVED_PAGES_COUNT * STORAGE_PAGE_SIZE);
 }
 
 TEST_F(StorageFixtureAsync, SaveDataOnPartiedBlockedSector2) // TODO: add to test.cpp
@@ -743,13 +744,15 @@ TEST_F(StorageFixtureAsync, SaveDataOnPartiedBlockedSector2) // TODO: add to tes
 
     ASSERT_TRUE(header.isAddressBlocked(StorageMacroblock::RESERVED_PAGES_COUNT * STORAGE_PAGE_SIZE));
     ASSERT_FALSE(header.isAddressBlocked(StorageMacroblock::RESERVED_PAGES_COUNT * STORAGE_PAGE_SIZE + STORAGE_PAGE_SIZE));
-    for (unsigned i = 1; i < Header::PAGES_COUNT; i++) {
+    for (unsigned i = 2; i < Header::PAGES_COUNT; i++) {
         ASSERT_TRUE(header.isAddressBlocked((i + StorageMacroblock::RESERVED_PAGES_COUNT) * STORAGE_PAGE_SIZE));
     }
     ASSERT_EQ(SF::asyncFind(FIND_MODE_EQUAL, &tmpAddress, shortPrefix, 1), STORAGE_OK);
     ASSERT_EQ(SF::asyncLoad(tmpAddress, rdata, sizeof(rdata)), STORAGE_OK);
     ASSERT_FALSE(memcmp(wdata, rdata, sizeof(wdata)));
-    ASSERT_EQ(address, tmpAddress);
+    ASSERT_NE(address, tmpAddress);
+    ASSERT_EQ(address, StorageMacroblock::RESERVED_PAGES_COUNT * STORAGE_PAGE_SIZE);
+    ASSERT_EQ(tmpAddress, (StorageMacroblock::RESERVED_PAGES_COUNT + 1) * STORAGE_PAGE_SIZE);
 }
 
 TEST_F(StorageFixtureAsync, SaveDataOnPartiedBlockedSector3) // TODO: add to test.cpp
@@ -779,6 +782,7 @@ TEST_F(StorageFixtureAsync, SaveDataOnPartiedBlockedSector3) // TODO: add to tes
     ASSERT_EQ(SF::asyncLoad(tmpAddress, rdata, sizeof(rdata)), STORAGE_OK);
     ASSERT_FALSE(memcmp(wdata, rdata, sizeof(wdata)));
     ASSERT_EQ(address, tmpAddress);
+    ASSERT_EQ(address, StorageMacroblock::RESERVED_PAGES_COUNT * STORAGE_PAGE_SIZE);
 }
 
 TEST_F(StorageFixtureAsync, SaveDataOnPartiedBlockedSector4) // TODO: add to test.cpp
@@ -806,6 +810,8 @@ TEST_F(StorageFixtureAsync, SaveDataOnPartiedBlockedSector4) // TODO: add to tes
     ASSERT_EQ(SF::asyncLoad(tmpAddress, rdata, sizeof(rdata)), STORAGE_OK);
     ASSERT_FALSE(memcmp(wdata, rdata, sizeof(wdata)));
     ASSERT_NE(address, tmpAddress);
+    ASSERT_EQ(address, StorageMacroblock::RESERVED_PAGES_COUNT * STORAGE_PAGE_SIZE);
+    ASSERT_EQ(tmpAddress, (StorageMacroblock::PAGES_COUNT + StorageMacroblock::RESERVED_PAGES_COUNT) * STORAGE_PAGE_SIZE);
 }
 
 TEST_F(StorageFixtureAsync, SaveDataOnPartiedBlockedSector5) // TODO: add to test.cpp
@@ -824,15 +830,17 @@ TEST_F(StorageFixtureAsync, SaveDataOnPartiedBlockedSector5) // TODO: add to tes
     }
 
     ASSERT_EQ(SF::asyncSave(address, shortPrefix, 1, wdata, sizeof(wdata)), STORAGE_OK);
-    ASSERT_EQ(StorageMacroblock::loadHeader(&header), STORAGE_ERROR);
+    ASSERT_EQ(StorageMacroblock::loadHeader(&header), STORAGE_OK);
 
     for (unsigned i = 0; i < Header::PAGES_COUNT; i++) {
-        ASSERT_TRUE(header.isAddressBlocked((i + StorageMacroblock::RESERVED_PAGES_COUNT) * STORAGE_PAGE_SIZE));
+        ASSERT_FALSE(header.isAddressBlocked((i + StorageMacroblock::RESERVED_PAGES_COUNT) * STORAGE_PAGE_SIZE));
     }
     ASSERT_EQ(SF::asyncFind(FIND_MODE_EQUAL, &tmpAddress, shortPrefix, 1), STORAGE_OK);
     ASSERT_EQ(SF::asyncLoad(tmpAddress, rdata, sizeof(rdata)), STORAGE_OK);
     ASSERT_FALSE(memcmp(wdata, rdata, sizeof(wdata)));
     ASSERT_NE(address, tmpAddress);
+    ASSERT_EQ(address, StorageMacroblock::RESERVED_PAGES_COUNT * STORAGE_PAGE_SIZE);
+    ASSERT_EQ(tmpAddress, (StorageMacroblock::PAGES_COUNT + StorageMacroblock::RESERVED_PAGES_COUNT) * STORAGE_PAGE_SIZE);
 }
 
 TEST_F(StorageFixtureAsync, BlockAllMemory)
